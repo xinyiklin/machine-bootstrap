@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 3,
+  "skills": [
+    {
+      "name": "find-skills",
+      "repository": "https://github.com/vercel-labs/skills.git",
+      "sourcePath": "skills/find-skills",
+      "sourceRevision": "e173b8c88f2581cfdaa1b6767c6519a08155790e",
+      "contentSha256": "402765cd5b5d4246a9ff3e8fc19872619b543d758c3399c708f27680927579b0"
+    },
+    {
+      "name": "impeccable",
+      "repository": "https://github.com/pbakaus/impeccable.git",
+      "sourcePath": ".agents/skills/impeccable",
+      "sourceRevision": "fc2e694afca1ac0cc384b4fe56bab3335fea7912",
+      "expectedVersion": "4.0.2",
+      "contentSha256": "c882be322c5f25047191b0675f0dcd6000b0b0ac7a9ce3d7fba649bf58f6abe5"
+    },
+    {
+      "name": "playwright",
+      "repository": "https://github.com/openai/skills.git",
+      "sourcePath": "skills/.curated/playwright",
+      "sourceRevision": "49f948faa9258a0c61caceaf225e179651397431",
+      "contentSha256": "a03d3b6da01f4cf21602be3ce4b01f1c19f66007ac063061b67abb9091d18a28"
+    },
+    {
+      "name": "screenshot",
+      "repository": "https://github.com/openai/skills.git",
+      "sourcePath": "skills/.curated/screenshot",
+      "sourceRevision": "49f948faa9258a0c61caceaf225e179651397431",
+      "contentSha256": "4067b5add4905c91cc5c87089598a25019061f5b3bd91d6681e25f82a992be50"
+    },
+    {
+      "name": "systematic-debugging",
+      "repository": "https://github.com/obra/superpowers.git",
+      "sourcePath": "skills/systematic-debugging",
+      "sourceRevision": "3dcbd5c4b48e02263fbf4a3c01e3fe4f81d584d9",
+      "contentSha256": "912cbf0e9b769232f99fe80373ccd3b114441eb35115d35efab0974bd05ae754"
+    },
+    {
+      "name": "vercel-composition-patterns",
+      "repository": "https://github.com/vercel-labs/agent-skills.git",
+      "sourcePath": "skills/composition-patterns",
+      "sourceRevision": "7c180d9044c9ae2b442b567aad4e42a28dd5ed62",
+      "contentSha256": "d60442200d59e98efd41a696422bcb239791d3eb08855fa7ad9c399f4f97a1a2"
+    },
+    {
+      "name": "vercel-react-best-practices",
+      "repository": "https://github.com/vercel-labs/agent-skills.git",
+      "sourcePath": "skills/react-best-practices",
+      "sourceRevision": "7c180d9044c9ae2b442b567aad4e42a28dd5ed62",
+      "contentSha256": "5ec2c4c265afe01e6b5c38c7db4ea10010a1d329dc09230e3fcfe6d1986d00c2"
+    },
+    {
+      "name": "verification-before-completion",
+      "repository": "https://github.com/obra/superpowers.git",
+      "sourcePath": "skills/verification-before-completion",
+      "sourceRevision": "3dcbd5c4b48e02263fbf4a3c01e3fe4f81d584d9",
+      "contentSha256": "cd00be4ff6118de6bd8f52c564d78ea3dadb22d853081ff719a2447aba2f69b3"
+    }
+  ]
+}

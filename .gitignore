@@ -1,0 +1,28 @@
+# Machine-specific workspace facts
+MACHINE.md
+
+# Local environment and package-manager configuration
+.env
+.env.*
+!.env.example
+.npmrc
+.skill-lock.json
+CLAUDE.local.md
+.claude/
+
+# Dependencies, caches, and generated output
+node_modules/
+.cache/
+coverage/
+dist/
+tmp/
+*.log
+
+# Recoverable setup-script backups
+*.backup-*
+
+# OS and editor state
+.DS_Store
+.idea/
+.vscode/
+*.swp
