@@ -57,6 +57,31 @@ document.
 Target roughly 200 lines per imported guide. A child guide must be
 self-contained because it may be cloned without this parent workspace.
 
+## Product Delivery Workflow
+
+The bootstrap repository also owns a portable workflow foundation, installed at
+`~/.agents/workflows/product-delivery/`. Read its `WORKFLOW.md` for the full
+contract; this section is only the routing.
+
+- The **Product Partner** owns why and what: problem, workflow, requirements,
+  constraints, non-goals, acceptance criteria, and the Product Brief.
+- The **Delivery Lead** owns how and delivery: repository investigation,
+  technical design, the Delivery Plan, execution, and integration.
+- The **Verifier** independently checks the result against those artifacts and
+  reports passed, failed, unverified, and skipped checks honestly.
+
+Two approvals are distinct and both require the user's explicit approval of an
+exact artifact version: the Product Brief approves the problem and criteria,
+never a design; the Delivery Plan approves the technical approach and
+authorizes execution within that scope only. A discovery that changes
+user-facing behavior, weakens a criterion, expands scope, risks destructive
+migration, or adds a security or privacy implication requires a Change Request.
+
+Projects own their architecture and may add stricter workflow requirements in
+their own `AGENTS.md`; they may not weaken these approval rules. Provider
+subagents and profiles are generated adapters and optional implementation
+details — the handoff between roles is the shared versioned artifacts.
+
 ## Bootstrapping A Project
 
 1. Read the real manifests, configs, entry points, and existing directories.

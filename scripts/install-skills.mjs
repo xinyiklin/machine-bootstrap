@@ -26,9 +26,10 @@ import {
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const manifestPath = resolve(scriptDir, "..", "skills.json");
 const args = new Set(process.argv.slice(2));
-const allowedArgs = new Set(["--check", "--print-hashes"]);
+const allowedArgs = new Set(["--check", "--preflight", "--print-hashes"]);
 const unknownArgs = [...args].filter((arg) => !allowedArgs.has(arg));
 const checkOnly = args.has("--check");
+const preflightOnly = args.has("--preflight");
 const printHashes = args.has("--print-hashes");
 const userHome = homedir();
 const canonicalRoot = join(userHome, ".agents", "skills");
@@ -52,8 +53,8 @@ if (unknownArgs.length) {
   failSetup(`Unknown argument(s): ${unknownArgs.join(", ")}`);
 }
 
-if (checkOnly && printHashes) {
-  failSetup("--check and --print-hashes cannot be used together");
+if ([checkOnly, preflightOnly, printHashes].filter(Boolean).length > 1) {
+  failSetup("--check, --preflight, and --print-hashes cannot be combined");
 }
 
 function entryExists(path) {
@@ -341,6 +342,11 @@ if (failures.length) {
   console.error("\nSkill verification failed:");
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
+}
+
+if (preflightOnly) {
+  console.log(`\nPreflighted ${manifest.skills.length} shared skills.`);
+  process.exit(0);
 }
 
 if (missingSkills.length) {

@@ -27,15 +27,26 @@ After the command succeeds:
    node scripts/init-workspace.mjs --check
    ```
 
-4. Report installed guidance, skill verification, remaining `MACHINE.md`
-   placeholders, and anything that requires review. Do not initialize Git at
-   the workspace root and do not stage, commit, publish, or overwrite differing
-   files unless the user explicitly asks.
+4. Report installed guidance, skill verification, installed workflow paths,
+   remaining `MACHINE.md` placeholders, and anything that requires review. Do
+   not initialize Git at the workspace root and do not stage, commit, publish,
+   or overwrite differing files unless the user explicitly asks.
 
-If initialization reports differing workspace guides or templates, stop and
-show the differences. Use `--replace` only after the user reviews them; the
-replacement is recoverable because the existing files are renamed to
-timestamped backups.
+If initialization reports differing workspace guides, templates, workflow
+files, or provider adapters, stop and show the differences. Use `--replace`
+only after the user reviews them; the replacement is recoverable because the
+existing files are renamed to timestamped backups.
+
+Initialization also installs the portable `product-delivery` workflow to
+`~/.agents/workflows/product-delivery/` and generates its Claude and Codex
+adapters under `$CLAUDE_CONFIG_DIR/agents/` when that variable is set (otherwise
+`~/.claude/agents/`) and under `$CODEX_HOME/agents/` plus two
+`$CODEX_HOME/mb-*.config.toml` profiles when that variable is set (otherwise
+the equivalent paths under `~/.codex/`). It does not read or modify
+`settings.json` in the Claude configuration root or `config.toml` in the Codex
+home. Tell the user to start a new session so the provider rediscovers the
+definitions, and point them at `README.md` for the launch commands.
 
 Use `--skip-skills` only when the user explicitly wants workspace files without
-installing or verifying shared skills.
+installing or verifying shared skills, and `--skip-workflows` only when they
+explicitly want no workflow writes or verification.

@@ -1,8 +1,8 @@
 # Continuity Ledger — Machine Bootstrap
 
 Scope: the portable parent guides, project templates, shared-skill manifest,
-and safe setup scripts in this repository. Each computer's workspace state
-belongs in its parent `MACHINE.md` and local continuity ledger.
+workflow foundation, and safe setup scripts in this repository. Each computer's
+workspace state belongs in its parent `MACHINE.md` and local continuity ledger.
 
 ## Snapshot
 
@@ -99,6 +99,53 @@ belongs in its parent `MACHINE.md` and local continuity ledger.
   directories are atomically claimed before copying. A guide, machine file, or
   template path that appears during setup is never overwritten or written
   through.
+- 2026-07-31 [USER] The bootstrap now also owns a portable, provider-neutral
+  product-to-delivery workflow: Product Partner (why and what), Delivery Lead
+  (how and delivery), and Verifier (independent evidence), with two distinct
+  exact-version user approval gates.
+- 2026-07-31 [CODE] `workflows/registry.json` names the installed packages
+  explicitly; nothing is discovered by scanning directories. The
+  `product-delivery` package carries `manifest.json` (schema 1, version 1.0.0),
+  `WORKFLOW.md`, three role contracts, and seven artifact templates.
+- 2026-07-31 [CODE] Provider adapters are generated from the Markdown role
+  contracts rather than maintained separately: Claude subagents in
+  `$CLAUDE_CONFIG_DIR/agents/mb-*.md` when set (otherwise
+  `~/.claude/agents/mb-*.md`), Codex agents in `$CODEX_HOME/agents/mb_*.toml`
+  when set (otherwise `~/.codex/agents/mb_*.toml`), and Codex profiles following
+  the same `$CODEX_HOME` default. Each carries provenance naming its source
+  contract and pins no model.
+- 2026-07-31 [TOOL] Provider formats were verified against current official
+  documentation before implementation: Claude Code requires only `name` and
+  `description` frontmatter and runs a session-wide agent through
+  `claude --agent`; Codex custom agents require `name`, `description`, and
+  `developer_instructions`, and profiles are separate
+  `$CODEX_HOME/<name>.config.toml` files activated with `codex --profile`. The
+  legacy `[profiles.x]` table form is not used.
+- 2026-07-31 [CODE] `scripts/install-workflows.mjs` validates every manifest and
+  source, stages generated adapters in a temporary directory, preflights all
+  destinations, and only then writes. It owns exactly its namespaced paths and
+  never reads or writes `settings.json` in the Claude configuration root or
+  `config.toml` in the Codex home.
+- 2026-07-31 [CODE] Placement rules that guidance setup and workflow
+  installation share now live in `scripts/lib/fs-safety.mjs`; the portable path
+  predicate shared by reviewed skills and workflow sources lives in
+  `scripts/lib/portable-path.mjs`. `setup-guides.mjs` behavior is unchanged.
+- 2026-07-31 [CODE] The project template no longer ignores all of `.claude/`.
+  It excludes `CLAUDE.local.md`, `.claude/settings.local.json`, and
+  `.agent-work/`, so a project can track `.claude/agents/`, `.claude/rules/`,
+  `.claude/settings.json`, `.codex/agents/`, and `.codex/config.toml` when it
+  chooses. Nothing creates those files.
+- 2026-07-31 [TOOL] Environment-dependent checks now skip by name instead of
+  failing: a host that cannot create symbolic links skips five checks, and a
+  host that does not enforce POSIX permission bits skips one. The reviewed
+  Git-tree check accepts the Windows refusal of any reviewed symlink, still
+  asserting the escaping link is never materialized. Baseline confirmed these
+  same seven were already failing on this host before the change.
+- 2026-07-31 [TOOL] Every test that runs initialization now points `HOME` and
+  `USERPROFILE` at its disposable root. An earlier run of the suite, before that
+  fix, installed the workflow layer into the real user home; all twenty files
+  were verified byte-identical to generated artifacts and removed, leaving
+  skills and provider configuration untouched.
 
 ## Decisions
 
@@ -119,6 +166,28 @@ belongs in its parent `MACHINE.md` and local continuity ledger.
 - 2026-07-27 [CODE] D007 ACTIVE: the portable skill manifest pins both
   acquisition and reviewed content identity; updates require an intentional
   manifest revision rather than passing through presence-only checks.
+- 2026-07-31 [USER] D008 ACTIVE: this repository owns the portable workflow
+  foundation — role contracts, stages, approval and invalidation rules,
+  handoffs, artifact templates, and installation. `skills.json` stays
+  exclusively about reusable skills and is unchanged.
+- 2026-07-31 [USER] D009 ACTIVE: project architecture, engineering rules,
+  commands, and required verification remain project-owned. The workflow never
+  rewrites project guidance; a project references the installed contract rather
+  than copying it.
+- 2026-07-31 [CODE] D010 ACTIVE: the provider-neutral Markdown role contracts
+  are the single source of truth. Claude and Codex files are generated
+  deterministically from them, so no separate provider prompt can drift.
+- 2026-07-31 [USER] D011 ACTIVE: a project may strengthen the workflow with
+  extra high-risk triggers, mandatory plan sections, required verification, or
+  specialist reviews. It may not weaken exact user approval, scope-change
+  escalation, or honest verification reporting.
+- 2026-07-31 [CODE] D012 ACTIVE: workflow installation follows the same
+  fail-closed contract as guides and skills — validate before writing,
+  missing-only by default, reject differing destinations before any partial
+  write, and keep timestamped backups on reviewed `--replace`.
+- 2026-07-31 [CODE] D013 ACTIVE: approval recording is bookkeeping, not
+  authentication. No file or command in this repository claims to prove that a
+  human supplied an approval.
 
 ## Working Set
 
@@ -127,14 +196,23 @@ belongs in its parent `MACHINE.md` and local continuity ledger.
 - `guides/{AGENTS,CLAUDE,MACHINE.example}.md`
 - `project-templates/`
 - `skills.json`
-- `scripts/{init-workspace,install-skills,setup-guides,test-bootstrap}.mjs`
-- `scripts/lib/{skill-integrity,skill-manifest,skill-source}.mjs`
+- `workflows/registry.json`
+- `workflows/product-delivery/{manifest.json,WORKFLOW.md,roles/,templates/}`
+- `scripts/{init-workspace,install-skills,install-workflows,setup-guides,test-bootstrap}.mjs`
+- `scripts/lib/{fs-safety,portable-path,skill-integrity,skill-manifest,skill-source}.mjs`
+- `scripts/lib/{workflow-adapters,workflow-manifest}.mjs`
 
 ## Next
 
-- Review and commit the initial repository when ready.
+- Review and commit the workflow foundation when ready.
+- Run `node scripts/init-workspace.mjs --replace` after reviewing the workspace
+  `AGENTS.md` change; the installed copy now differs from its portable source
+  because the portable guide gained the workflow routing section.
 - Add a private remote only with explicit user authorization.
 
 ## Open Questions
 
 - 2026-07-27 [USER] UNCONFIRMED which private remote will host this repository.
+- 2026-07-31 [USER] UNCONFIRMED whether task artifacts should default to local
+  or tracked per project; the starter `.gitignore` currently ignores
+  `.agent-work/` and each project decides.

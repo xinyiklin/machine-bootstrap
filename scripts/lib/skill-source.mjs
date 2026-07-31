@@ -10,20 +10,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
 import { spawnSync } from "node:child_process";
-
-const windowsReservedName =
-  /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
-
-function isPortablePathPart(part) {
-  return (
-    Boolean(part) &&
-    part !== "." &&
-    part !== ".." &&
-    !/[<>:"\\|?*\u0000-\u001f]/.test(part) &&
-    !/[. ]$/.test(part) &&
-    !windowsReservedName.test(part)
-  );
-}
+import { isPortableRelativePath } from "./portable-path.mjs";
 
 export function isReviewedGitHubRepository(repository) {
   return (
@@ -35,12 +22,7 @@ export function isReviewedGitHubRepository(repository) {
 }
 
 export function isPortableSkillPath(path) {
-  return (
-    typeof path === "string" &&
-    Boolean(path) &&
-    !path.startsWith("/") &&
-    path.split("/").every(isPortablePathPart)
-  );
+  return isPortableRelativePath(path);
 }
 
 // Bootstrap runs unattended, so an unreachable or private repository must fail

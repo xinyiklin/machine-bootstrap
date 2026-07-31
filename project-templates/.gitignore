@@ -1,6 +1,7 @@
 # Personal AI-agent state
-.claude/
 CLAUDE.local.md
+.claude/settings.local.json
+.agent-work/
 
 # Local environment configuration
 .env

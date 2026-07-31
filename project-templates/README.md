@@ -8,6 +8,14 @@ Generic starter guides to copy into a **new** project.
 - `.gitignore` — baseline exclusions for personal AI-agent state, local
   environment configuration, and operating-system metadata.
 
+The starter `.gitignore` excludes only genuinely local agent state:
+`CLAUDE.local.md`, `.claude/settings.local.json`, and active task artifacts
+under `.agent-work/`. It deliberately does **not** ignore all of `.claude/`, so
+a project can track shared, reviewable agent configuration when it chooses to:
+`.claude/agents/`, `.claude/settings.json`, `.claude/rules/`, `.codex/agents/`,
+and `.codex/config.toml`. Nothing creates those for you — the template only
+keeps them trackable.
+
 ## Usage
 
 1. Copy the three starter files into the new project root.

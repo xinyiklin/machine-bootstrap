@@ -8,6 +8,13 @@ guidance, working in an unguided folder, or applying the portable baseline.
 Read `MACHINE.md` when local paths, project routing, sibling dependencies,
 ports, browser preferences, or machine-specific tools matter.
 
+The installed `product-delivery` roles are ordinary subagents. Run one as the
+whole session with `claude --agent mb-product-partner`,
+`claude --agent mb-delivery-lead`, or `claude --agent mb-verifier`; the
+Verifier is also delegable as a subagent. Their contracts come from
+`~/.agents/workflows/product-delivery/`, so edit that source rather than the
+generated agent files.
+
 The parent guide is deliberately not imported into every child session because
 child projects carry self-contained guidance and duplicated instruction dilutes
 both. `MACHINE.md` is also read on demand because its facts vary by computer.

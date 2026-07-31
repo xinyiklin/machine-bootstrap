@@ -68,6 +68,28 @@ file-format contracts (schema version + migration rules), or "must stay
 openable from `file://`". Delete this section only if the project genuinely has
 none. -->
 
+## Workflow Adaptations
+
+<!-- TODO: fill in or delete. Only fill rows this project actually needs. -->
+
+This project uses the portable `product-delivery` workflow (Product Partner →
+Delivery Lead → Verifier) installed at
+`~/.agents/workflows/product-delivery/`. That package owns the process: the
+role contracts, the two exact user approval gates, Change Request escalation,
+and honest verification reporting. Do not copy it here.
+
+This project may **strengthen** the workflow. It may not weaken exact user
+approval, scope-change escalation, or honest verification reporting.
+
+- Additional high-risk triggers requiring a Change Request: TODO — or "none
+  beyond the portable list".
+- Additional required Delivery Plan sections: TODO — or "none".
+- Required project-specific verification before a change is done: TODO — or
+  "the checks in Commands".
+- Project-specific specialist roles and what each owns: TODO — or "none".
+- Active task artifacts under `.agent-work/tasks/<task-id>/`: local (ignored)
+  or tracked? TODO.
+
 ## Commands
 
 <!-- TODO: replace with the project's real commands. -->

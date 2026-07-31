@@ -17,11 +17,17 @@ const bootstrapRoot = resolve(scriptDir, "..");
 const workspaceRoot = resolve(bootstrapRoot, "..");
 const canonicalWorkspaceRoot = realpathSync.native(workspaceRoot);
 const args = new Set(process.argv.slice(2));
-const allowedArgs = new Set(["--check", "--replace", "--skip-skills"]);
+const allowedArgs = new Set([
+  "--check",
+  "--replace",
+  "--skip-skills",
+  "--skip-workflows"
+]);
 const unknownArgs = [...args].filter((arg) => !allowedArgs.has(arg));
 const checkOnly = args.has("--check");
 const replace = args.has("--replace");
 const skipSkills = args.has("--skip-skills");
+const skipWorkflows = args.has("--skip-workflows");
 
 function fail(message) {
   console.error(`\nWorkspace initialization failed: ${message}`);
@@ -74,10 +80,16 @@ const requiredFiles = [
   "project-templates/.gitignore",
   "project-templates/README.md",
   "skills.json",
+  "workflows/registry.json",
   "scripts/install-skills.mjs",
+  "scripts/install-workflows.mjs",
+  "scripts/lib/fs-safety.mjs",
+  "scripts/lib/portable-path.mjs",
   "scripts/lib/skill-integrity.mjs",
   "scripts/lib/skill-manifest.mjs",
   "scripts/lib/skill-source.mjs",
+  "scripts/lib/workflow-adapters.mjs",
+  "scripts/lib/workflow-manifest.mjs",
   "scripts/setup-guides.mjs"
 ];
 
@@ -102,11 +114,22 @@ for (const relativePath of requiredFiles) {
   }
 }
 
+// Portable manifests are validated here, before any workspace write, so
+// malformed bootstrap data can never leave a half-initialized workspace.
 try {
   const { loadSkillManifest } = await import("./lib/skill-manifest.mjs");
   loadSkillManifest(join(bootstrapRoot, "skills.json"));
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error));
+}
+
+if (!skipWorkflows) {
+  try {
+    const { loadWorkflowPackages } = await import("./lib/workflow-manifest.mjs");
+    loadWorkflowPackages(join(bootstrapRoot, "workflows"));
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error));
+  }
 }
 
 function run(command, commandArgs, options = {}) {
@@ -153,6 +176,38 @@ console.log(`Bootstrap: ${bootstrapRoot}`);
 console.log(`Workspace: ${workspaceRoot}`);
 console.log(`Mode: ${checkOnly ? "check only" : "initialize"}`);
 if (skipSkills) console.log("Shared skills: skipped by request");
+if (skipWorkflows) console.log("Workflow foundation: skipped by request");
+
+// Every enabled layer validates its destinations before the first write. This
+// keeps a conflict in a later layer from leaving guidance or skills partially
+// initialized. Races after preflight are still handled by each installer.
+const guidePreflightArgs = [
+  join(scriptDir, "setup-guides.mjs"),
+  "--preflight"
+];
+if (replace) guidePreflightArgs.push("--replace");
+run(process.execPath, guidePreflightArgs, {
+  label: "workspace guidance preflight"
+});
+
+if (!skipSkills) {
+  run(
+    process.execPath,
+    [join(scriptDir, "install-skills.mjs"), "--preflight"],
+    { label: "shared skill preflight" }
+  );
+}
+
+if (!skipWorkflows) {
+  const workflowPreflightArgs = [
+    join(scriptDir, "install-workflows.mjs"),
+    "--preflight"
+  ];
+  if (replace) workflowPreflightArgs.push("--replace");
+  run(process.execPath, workflowPreflightArgs, {
+    label: "workflow foundation preflight"
+  });
+}
 
 const setupArgs = [join(scriptDir, "setup-guides.mjs")];
 if (checkOnly) setupArgs.push("--check");
@@ -163,6 +218,13 @@ if (!skipSkills) {
   const skillArgs = [join(scriptDir, "install-skills.mjs")];
   if (checkOnly) skillArgs.push("--check");
   run(process.execPath, skillArgs, { label: "shared skill setup" });
+}
+
+if (!skipWorkflows) {
+  const workflowArgs = [join(scriptDir, "install-workflows.mjs")];
+  if (checkOnly) workflowArgs.push("--check");
+  if (replace) workflowArgs.push("--replace");
+  run(process.execPath, workflowArgs, { label: "workflow foundation setup" });
 }
 
 if (!checkOnly) {
@@ -176,6 +238,13 @@ if (!checkOnly) {
       process.execPath,
       [join(scriptDir, "install-skills.mjs"), "--check"],
       { label: "shared skill verification" }
+    );
+  }
+  if (!skipWorkflows) {
+    run(
+      process.execPath,
+      [join(scriptDir, "install-workflows.mjs"), "--check"],
+      { label: "workflow foundation verification" }
     );
   }
 }
