@@ -70,6 +70,11 @@ contract; this section is only the routing.
 - The **Verifier** independently checks the result against those artifacts and
   reports passed, failed, unverified, and skipped checks honestly.
 
+After the implementer's own verification, at least one fresh independent review
+is required by default. Only the user may waive it for a specific change. The
+user may request more reviewers; after the mandatory review, give a firm
+risk-based recommendation on whether another review adds useful coverage.
+
 Two approvals are distinct and both require the user's explicit approval of an
 exact artifact version: the Product Brief approves the problem and criteria,
 never a design; the Delivery Plan approves the technical approach and

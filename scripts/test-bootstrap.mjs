@@ -792,8 +792,49 @@ await test("project template documents the workflow adaptation points", () => {
   assert.match(template, /## Workflow Adaptations/);
   assert.match(template, /~\/\.agents\/workflows\/product-delivery\//);
   assert.match(template, /may not weaken exact user\s+approval/);
+  assert.match(template, /one fresh reviewer after the\s+implementer's own verification/);
+  assert.match(template, /Only the user may waive it for a specific\s+change/);
   // The portable contract must be referenced, not copied into every project.
   assert.doesNotMatch(template, /Foundational Invariants/);
+});
+
+await test("workflow defaults to one independent review", () => {
+  const workflow = readFileSync(
+    join(bootstrapRoot, "workflows", "product-delivery", "WORKFLOW.md"),
+    "utf8"
+  );
+  const deliveryLead = readFileSync(
+    join(
+      bootstrapRoot,
+      "workflows",
+      "product-delivery",
+      "roles",
+      "delivery-lead.md"
+    ),
+    "utf8"
+  );
+
+  assert.match(workflow, /version `1\.1\.0`/);
+  assert.match(workflow, /one\s+independent review by default/);
+  assert.match(workflow, /Only the user may waive that review/);
+  assert.match(workflow, /inspect(?:ing)? the complete diff/);
+  assert.match(deliveryLead, /give a firm\s+recommendation/);
+  assert.match(deliveryLead, /Honor\s+the request/);
+  assert.match(deliveryLead, /inspect the complete diff yourself/);
+
+  const verificationReport = readFileSync(
+    join(
+      bootstrapRoot,
+      "workflows",
+      "product-delivery",
+      "templates",
+      "verification-report.md"
+    ),
+    "utf8"
+  );
+  assert.match(verificationReport, /Additional review recommendation/);
+  assert.match(verificationReport, /after\s+reviewing the first Verifier's evidence/);
+  assert.match(verificationReport, /not applicable — independent review waived/);
 });
 
 await test("clean workspace initializes the portable guidance layer", () => {

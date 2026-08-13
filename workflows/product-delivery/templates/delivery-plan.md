@@ -1,6 +1,6 @@
 # Delivery Plan — <task title>
 
-Owner: Delivery Lead · Workflow: `product-delivery` 1.0.0
+Owner: Delivery Lead · Workflow: `product-delivery` 1.1.0
 
 | Field | Value |
 | :--- | :--- |
@@ -94,8 +94,11 @@ than it saves.
 
 ## Testing And Verification
 
-The project's actual commands, plus what each one demonstrates. State whether
-independent verification is required and why.
+The project's actual commands, plus what each one demonstrates. Include the
+implementer's checks, the mandatory independent review, and any known triggers
+for considering additional reviewers after the first review. Only the user may
+waive independent review for this change; record an explicit waiver rather than
+treating it as a pass.
 
 - …
 

@@ -156,6 +156,12 @@ implication requires a structured Change Request rather than a quiet widening.
 These are process and authority rules, not authentication. No file or command
 here proves that a human approved anything.
 
+Every implementation is self-verified by the Delivery Lead and then reviewed by
+at least one fresh independent Verifier by default. Only the user may waive that
+review for a specific change. The user may request more reviewers; after the
+mandatory review, the Delivery Lead states firmly whether another review is
+warranted and why, then honors the request.
+
 ### Installed paths
 
 | What | Path |

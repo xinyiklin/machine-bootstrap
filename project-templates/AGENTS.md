@@ -80,12 +80,17 @@ and honest verification reporting. Do not copy it here.
 
 This project may **strengthen** the workflow. It may not weaken exact user
 approval, scope-change escalation, or honest verification reporting.
+Independent review follows the portable default: one fresh reviewer after the
+implementer's own verification. Only the user may waive it for a specific
+change. The user may request more reviewers; recommend firmly whether each
+additional review is warranted after considering existing coverage and risk.
 
 - Additional high-risk triggers requiring a Change Request: TODO — or "none
   beyond the portable list".
 - Additional required Delivery Plan sections: TODO — or "none".
 - Required project-specific verification before a change is done: TODO — or
   "the checks in Commands".
+- Changes requiring more than one independent reviewer: TODO — or "none".
 - Project-specific specialist roles and what each owns: TODO — or "none".
 - Active task artifacts under `.agent-work/tasks/<task-id>/`: local (ignored)
   or tracked? TODO.

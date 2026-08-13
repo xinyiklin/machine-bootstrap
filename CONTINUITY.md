@@ -10,6 +10,13 @@ workspace state belongs in its parent `MACHINE.md` and local continuity ledger.
   maintainable solution, discourages narrative comments and speculative
   abstractions, and requires user approval before implementing useful ideas
   outside the requested scope.
+- 2026-08-13 [USER] Every implementation now defaults to the implementer's own
+  verification plus one fresh independent review. Only the user may waive that
+  review for a specific change; requested additional reviewers are honored
+  after a firm risk-based recommendation.
+- 2026-08-13 [CODE] Product Delivery workflow 1.1.0 makes implementer diff
+  review and one independent review the default, and records the Delivery
+  Lead's post-review recommendation on whether additional reviewers are needed.
 - 2026-07-27 [USER] This repository exists so the same general agent guidance
   and shared Claude Code/Codex skills can be restored on another machine.
 - 2026-07-27 [CODE] The skill manifest declares eight portable skills. The
@@ -192,6 +199,10 @@ workspace state belongs in its parent `MACHINE.md` and local continuity ledger.
 - 2026-07-31 [CODE] D013 ACTIVE: approval recording is bookkeeping, not
   authentication. No file or command in this repository claims to prove that a
   human supplied an approval.
+- 2026-08-13 [USER] D014 ACTIVE: one independent review is mandatory by default
+  after implementer verification. The user may explicitly waive it per change
+  or request more reviewers; additional-review recommendations are firm and
+  based on risk and coverage.
 
 ## Working Set
 

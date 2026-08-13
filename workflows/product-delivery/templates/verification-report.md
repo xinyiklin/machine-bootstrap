@@ -1,12 +1,20 @@
 # Verification Report — <task title>
 
-Drafted by: Verifier · Recorded by: Delivery Lead · Workflow: `product-delivery` 1.0.0
+Drafted by: Verifier · Recorded by: Delivery Lead · Workflow: `product-delivery` 1.1.0
 
 | Field | Value |
 | :--- | :--- |
 | Task id | `<task-id>` |
 | Date | `<YYYY-MM-DD>` |
-| Verification | independent / Delivery Lead self-verification |
+| Implementer verification | `<commands and evidence>` |
+| Independent review | completed / explicitly waived by user |
+| Reviewer(s) | `<identity or waiver reason>` |
+| Additional review recommendation | required / optional — `<risk and coverage rationale>` / not applicable — independent review waived |
+
+When independent review is completed, the Delivery Lead records this
+recommendation after reviewing the first Verifier's evidence, then honors any
+user request for more reviewers. If the user waived independent review, record
+the recommendation as not applicable.
 
 ## Artifacts Reviewed
 

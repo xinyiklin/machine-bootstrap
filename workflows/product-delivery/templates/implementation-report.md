@@ -1,6 +1,6 @@
 # Implementation Report — <task title>
 
-Owner: Delivery Lead · Workflow: `product-delivery` 1.0.0
+Owner: Delivery Lead · Workflow: `product-delivery` 1.1.0
 
 | Field | Value |
 | :--- | :--- |
@@ -42,8 +42,10 @@ failed first and how they were resolved.
 | :--- | :--- | :--- |
 | … | `<command>` | passed / failed / unverified / skipped |
 
-State whether independent verification was requested. If it was skipped, say so
-and give the reason.
+State the implementer's verification and the mandatory independent review
+separately. If the user explicitly waived independent review for this change,
+record the waiver and reason. The final recommendation on additional reviewers
+belongs in the Verification Report after the first independent review.
 
 ## Deviations From The Approved Plan
 

@@ -1,6 +1,6 @@
 # Product Delivery Workflow
 
-Workflow id: `product-delivery` · version `1.0.0` · schema `1`
+Workflow id: `product-delivery` · version `1.1.0` · schema `1`
 
 Portable, provider-neutral contract for taking work from a broad idea to
 accepted delivery. Installed from the `machine-bootstrap` repository to
@@ -51,8 +51,8 @@ not the role names. Use Product Partner, Delivery Lead, and Verifier.
    brief.
 7. **Delivery Plan approval** — the user approves an exact plan version.
 8. **Execution** — Delivery Lead implements, delegating where it helps.
-9. **Verification** — Verifier (or, for small changes, the Delivery Lead)
-   validates against the artifacts.
+9. **Verification** — after self-verification, Delivery Lead delegates at least
+   one independent review unless the user explicitly waives it for this change.
 10. **User acceptance** — the user accepts, or returns the work.
 
 Small work may move quickly through these stages, but no stage is skipped
@@ -97,6 +97,9 @@ summary never replaces the artifact.
    Missing evidence is never reported as a successful result.
 10. The full Product Brief and Delivery Plan remain authoritative. Summaries
     may assist the user but never replace the source artifact.
+11. Every implementation receives the implementer's own verification and one
+    independent review by default. Only the user may waive that review for a
+    specific change.
 
 These are process and authority rules, not authentication. No local file, CLI
 command, or artifact field proves that a human supplied an approval. Recording
@@ -129,14 +132,24 @@ automatic inter-agent messaging.
 
 ## Verification Expectations
 
-Independent verification is strongly recommended, and a project may require it,
-for: destructive operations, migrations, authentication or authorization,
-sensitive-data handling, document serialization or file formats, major
-persistence changes, and cross-layer workflows with substantial regression
-risk.
+Every implementation receives the Delivery Lead's own verification and at least
+one independent Verifier review before it is called merge-ready or complete.
+The Delivery Lead's verification includes inspecting the complete diff for
+correctness, regressions, maintainability, unintended scope, and unrelated
+changes. The independent reviewer must not have implemented the change and must
+inspect the actual diff and verification evidence rather than accept the
+implementation report at face value.
 
-Small and obvious changes may use Delivery Lead self-verification. Skipping
-independent review is a stated choice, never a silent one.
+The user may explicitly waive independent review for a specific change. Record
+the waiver and its reason; missing independent evidence remains waived, not
+passed.
+
+The user may request additional independent reviewers. After the mandatory
+review, the Delivery Lead gives a firm recommendation on whether another review
+is warranted, based on risk, changed surfaces, unresolved uncertainty, and the
+coverage already obtained. Honor the user's request even when the recommendation
+is that another review is optional. Record the recommendation in the Verification
+Report. Do not add reviewers without a material reason or a user request.
 
 The Verifier normally does not edit application source. It returns its report
 to the Delivery Lead, which remains responsible for recording the final

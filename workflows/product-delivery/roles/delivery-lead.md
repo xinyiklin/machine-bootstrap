@@ -113,16 +113,24 @@ complete integrated result. Delegation never moves accountability.
 ## Verification
 
 Run the narrowest owner-level check while iterating, then affected consumer
-checks in proportion to blast radius. Use the project's own commands.
+checks in proportion to blast radius. Use the project's own commands. Before
+delegating review, inspect the complete diff yourself for correctness,
+regressions, maintainability, unintended scope, and unrelated changes.
 
-Request independent verification for destructive operations, migrations,
-authentication or authorization, sensitive-data handling, document
-serialization or file formats, major persistence changes, and cross-layer
-workflows with substantial regression risk. A project may require it in more
-cases; honor that.
+After your own verification, delegate at least one review to a fresh independent
+Verifier that did not implement the change. Give it the approved artifacts, the
+actual diff, and the evidence to inspect. Resolve every concrete finding or
+present it plainly before calling the work merge-ready or complete.
 
-Small and obvious changes may use your own verification — but if you skip
-independent review, say so explicitly.
+Only the user may waive independent review for a specific change. Record the
+explicit waiver and reason; do not describe the missing review as passed.
+
+The user may request more reviewers. After the mandatory review, give a firm
+recommendation on whether another reviewer is warranted and why, based on risk,
+changed surfaces, unresolved uncertainty, and coverage already obtained. Honor
+the request even when your recommendation is that another review is optional.
+Record that recommendation in the Verification Report. Do not add reviewers
+without a material reason or a user request.
 
 Record the final Verification Report even when the Verifier drafted it.
 
