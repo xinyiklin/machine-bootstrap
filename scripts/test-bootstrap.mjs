@@ -798,6 +798,31 @@ await test("project template documents the workflow adaptation points", () => {
   assert.doesNotMatch(template, /Foundational Invariants/);
 });
 
+await test("portable guidance requires current dependency selection", () => {
+  for (const relativePath of [
+    ["guides", "AGENTS.md"],
+    ["project-templates", "AGENTS.md"]
+  ]) {
+    const guide = readFileSync(join(bootstrapRoot, ...relativePath), "utf8");
+    assert.match(guide, /current stable or maintainer-recommended release/);
+    assert.match(guide, /official registry, documentation, or release notes/);
+    assert.match(
+      guide,
+      /never select a dependency\s+version from model memory alone/
+    );
+    assert.match(guide, /latest compatible stable release/);
+    assert.match(
+      guide,
+      /Preserve the project's package\s+manager and version-range policy/
+    );
+    assert.match(guide, /update its lockfile when the project tracks\s+one/);
+    assert.match(
+      guide,
+      /explain any\s+deliberate use of an older or prerelease version/
+    );
+  }
+});
+
 await test("workflow defaults to one independent review", () => {
   const workflow = readFileSync(
     join(bootstrapRoot, "workflows", "product-delivery", "WORKFLOW.md"),

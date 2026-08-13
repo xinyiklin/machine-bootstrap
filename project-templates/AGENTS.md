@@ -208,6 +208,14 @@ release notes, security advisories, or compatibility:
 - Do not leave empty `catch` blocks or silently swallow errors.
 - Do not reinvent the wheel. When a mature library would reduce risk, ask before
   adding it and help qualify the choice.
+- Before adding or upgrading a dependency, inspect the project's runtime,
+  manifest, lockfile when present, compatibility constraints, and versioning
+  policy. Verify the current stable or maintainer-recommended release from an
+  official registry, documentation, or release notes; never select a dependency
+  version from model memory alone.
+- Prefer the latest compatible stable release. Preserve the project's package
+  manager and version-range policy, update its lockfile when the project tracks
+  one, and explain any deliberate use of an older or prerelease version.
 - Design UI for the end user and workflow, not for the database schema.
 - Browser QA is flag-first (see Verification): skip it by default and name the
   risk instead of starting a dev server unasked. Tool choice lives in

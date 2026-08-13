@@ -132,6 +132,14 @@ Before changing code or project files:
 - Do not add silent fallbacks, empty catches, or error swallowing.
 - Ask before adding dependencies or changing public schemas, deployment,
   authentication, paid services, or production infrastructure.
+- Before adding or upgrading a dependency, inspect the project's runtime,
+  manifest, lockfile when present, compatibility constraints, and versioning
+  policy. Verify the current stable or maintainer-recommended release from an
+  official registry, documentation, or release notes; never select a dependency
+  version from model memory alone.
+- Prefer the latest compatible stable release. Preserve the project's package
+  manager and version-range policy, update its lockfile when the project tracks
+  one, and explain any deliberate use of an older or prerelease version.
 - Design UI for the user and workflow, not the storage schema.
 
 ### Modularity And Reuse

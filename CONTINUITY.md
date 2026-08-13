@@ -21,6 +21,10 @@ workspace state belongs in its parent `MACHINE.md` and local continuity ledger.
   artifacts and makes Decision Log and Change Request conditional. Active work
   stays local by default; tracked continuity references require the matching
   completed task folder to be tracked too.
+- 2026-08-13 [USER] Dependency versions must be established from current
+  official sources rather than model memory. Prefer the latest compatible
+  stable release, preserve each project's package-manager/version-range policy,
+  update tracked lockfiles, and explain deliberate older or prerelease choices.
 - 2026-07-27 [USER] This repository exists so the same general agent guidance
   and shared Claude Code/Codex skills can be restored on another machine.
 - 2026-07-27 [CODE] The skill manifest declares eight portable skills. The
@@ -211,6 +215,11 @@ workspace state belongs in its parent `MACHINE.md` and local continuity ledger.
   five standard reports for completed referenced work; create Decision Logs and
   Change Requests only when needed. A tracked `[TASK <task-id>]` continuity
   reference must not point to an untracked local task folder.
+- 2026-08-13 [USER] D016 ACTIVE: dependency additions and upgrades require a
+  current official-source check for the stable or maintainer-recommended
+  release. Use the latest compatible stable version by default, preserve the
+  project's package-manager and version-range policy, update any tracked
+  lockfile, and explain any intentional older or prerelease choice.
 
 ## Working Set
 
