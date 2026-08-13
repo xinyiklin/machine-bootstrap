@@ -17,6 +17,10 @@ workspace state belongs in its parent `MACHINE.md` and local continuity ledger.
 - 2026-08-13 [CODE] Product Delivery workflow 1.1.0 makes implementer diff
   review and one independent review the default, and records the Delivery
   Lead's post-review recommendation on whether additional reviewers are needed.
+- 2026-08-13 [USER] Product Delivery workflow 1.2.0 keeps five standard task
+  artifacts and makes Decision Log and Change Request conditional. Active work
+  stays local by default; tracked continuity references require the matching
+  completed task folder to be tracked too.
 - 2026-07-27 [USER] This repository exists so the same general agent guidance
   and shared Claude Code/Codex skills can be restored on another machine.
 - 2026-07-27 [CODE] The skill manifest declares eight portable skills. The
@@ -203,6 +207,10 @@ workspace state belongs in its parent `MACHINE.md` and local continuity ledger.
   after implementer verification. The user may explicitly waive it per change
   or request more reviewers; additional-review recommendations are firm and
   based on risk and coverage.
+- 2026-08-13 [USER] D015 ACTIVE: do not create empty task artifacts. Track the
+  five standard reports for completed referenced work; create Decision Logs and
+  Change Requests only when needed. A tracked `[TASK <task-id>]` continuity
+  reference must not point to an untracked local task folder.
 
 ## Working Set
 
@@ -226,6 +234,6 @@ workspace state belongs in its parent `MACHINE.md` and local continuity ledger.
 ## Open Questions
 
 - 2026-07-27 [USER] UNCONFIRMED which private remote will host this repository.
-- 2026-07-31 [USER] UNCONFIRMED whether task artifacts should default to local
-  or tracked per project; the starter `.gitignore` currently ignores
-  `.agent-work/` and each project decides.
+- 2026-07-31 [USER] RESOLVED 2026-08-13 by D015: task artifacts stay local while
+  active by default. Completed task folders referenced by tracked continuity are
+  tracked with it; otherwise the continuity summary is self-contained.

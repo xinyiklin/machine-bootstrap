@@ -1,6 +1,6 @@
 # Decision Log — <task title>
 
-Owner: Product Partner · Workflow: `product-delivery` 1.1.0
+Owner: Product Partner · Workflow: `product-delivery` 1.2.0
 
 Durable product decisions for task `<task-id>`. One entry per decision. Never
 rewrite a decision in place: supersede it and leave the original readable.

@@ -814,7 +814,7 @@ await test("workflow defaults to one independent review", () => {
     "utf8"
   );
 
-  assert.match(workflow, /version `1\.1\.0`/);
+  assert.match(workflow, /version `1\.2\.0`/);
   assert.match(workflow, /one\s+independent review by default/);
   assert.match(workflow, /Only the user may waive that review/);
   assert.match(workflow, /inspect(?:ing)? the complete diff/);
@@ -835,6 +835,25 @@ await test("workflow defaults to one independent review", () => {
   assert.match(verificationReport, /Additional review recommendation/);
   assert.match(verificationReport, /after\s+reviewing the first Verifier's evidence/);
   assert.match(verificationReport, /not applicable — independent review waived/);
+
+  assert.match(workflow, /normal completed task uses Product Brief, Delivery Plan/);
+  assert.match(workflow, /Decision Log only for\s+material product decisions/);
+  assert.match(workflow, /Never create empty placeholder artifacts/);
+  assert.match(workflow, /\[TASK <task-id>\]/);
+  assert.match(workflow, /removes that ignore rule and also tracks each completed/);
+
+  const productPartner = readFileSync(
+    join(
+      bootstrapRoot,
+      "workflows",
+      "product-delivery",
+      "roles",
+      "product-partner.md"
+    ),
+    "utf8"
+  );
+  assert.match(productPartner, /Decision Log only when a\s+material product decision/);
+  assert.match(productPartner, /do not create an empty one/);
 });
 
 await test("clean workspace initializes the portable guidance layer", () => {

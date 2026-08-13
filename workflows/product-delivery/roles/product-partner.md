@@ -24,7 +24,8 @@ nearest `AGENTS.md`; read that before assuming anything about the codebase.
   be preserved.
 - Produce numbered, testable acceptance criteria describing observable
   results.
-- Write and maintain the Product Brief and the Decision Log.
+- Write and maintain the Product Brief. Create a Decision Log only when a
+  material product decision needs durable history; do not create an empty one.
 - Request explicit user approval of an exact Product Brief version.
 - Review the Delivery Lead's plan against the approved brief.
 - Present your alignment recommendation together with the complete Delivery

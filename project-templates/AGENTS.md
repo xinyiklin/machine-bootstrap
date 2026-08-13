@@ -92,8 +92,16 @@ additional review is warranted after considering existing coverage and risk.
   "the checks in Commands".
 - Changes requiring more than one independent reviewer: TODO — or "none".
 - Project-specific specialist roles and what each owns: TODO — or "none".
-- Active task artifacts under `.agent-work/tasks/<task-id>/`: local (ignored)
-  or tracked? TODO.
+- Task artifact retention: local while active. If this project tracks agent
+  guidance/configuration and `CONTINUITY.md`, remove `.agent-work/` from the
+  project `.gitignore` and track completed referenced task folders too;
+  otherwise keep continuity summaries self-contained. TODO confirm.
+
+The seven workflow templates are available, not mandatory empty files. A normal
+completed task uses Product Brief, Delivery Plan, Alignment Review,
+Implementation Report, and Verification Report. Create a Decision Log only for
+material product decisions and a Change Request only when triggered. Tag durable
+continuity entries with `[TASK <task-id>]`.
 
 ## Commands
 

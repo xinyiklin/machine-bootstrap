@@ -1,6 +1,6 @@
 # Product Brief — <task title>
 
-Owner: Product Partner · Workflow: `product-delivery` 1.1.0
+Owner: Product Partner · Workflow: `product-delivery` 1.2.0
 
 | Field | Value |
 | :--- | :--- |

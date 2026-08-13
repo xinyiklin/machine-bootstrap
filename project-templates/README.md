@@ -9,12 +9,11 @@ Generic starter guides to copy into a **new** project.
   environment configuration, and operating-system metadata.
 
 The starter `.gitignore` excludes only genuinely local agent state:
-`CLAUDE.local.md`, `.claude/settings.local.json`, and active task artifacts
-under `.agent-work/`. It deliberately does **not** ignore all of `.claude/`, so
-a project can track shared, reviewable agent configuration when it chooses to:
-`.claude/agents/`, `.claude/settings.json`, `.claude/rules/`, `.codex/agents/`,
-and `.codex/config.toml`. Nothing creates those for you — the template only
-keeps them trackable.
+`CLAUDE.local.md`, `.claude/settings.local.json`, and active task artifacts under
+`.agent-work/`. It deliberately keeps shared agent configuration trackable. A
+project that chooses to track agent guidance/configuration and `CONTINUITY.md`
+removes the `.agent-work/` ignore rule and also tracks completed task folders
+referenced by that ledger. Nothing creates or commits those files for you.
 
 ## Usage
 

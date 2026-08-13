@@ -1,6 +1,6 @@
 # Product Delivery Workflow
 
-Workflow id: `product-delivery` · version `1.1.0` · schema `1`
+Workflow id: `product-delivery` · version `1.2.0` · schema `1`
 
 Portable, provider-neutral contract for taking work from a broad idea to
 accepted delivery. Installed from the `machine-bootstrap` repository to
@@ -169,9 +169,22 @@ Templates live in `~/.agents/workflows/product-delivery/templates/`.
 | Implementation Report | Delivery Lead | `implementation-report.md` |
 | Verification Report | Verifier drafts, Delivery Lead records | `verification-report.md` |
 
+The seven templates are a library, not a requirement to create seven files.
+A normal completed task uses Product Brief, Delivery Plan, Alignment Review,
+Implementation Report, and Verification Report. Create a Decision Log only for
+material product decisions and a Change Request only when its trigger occurs.
+Never create empty placeholder artifacts.
+
 The default location for task artifacts is `.agent-work/tasks/<task-id>/`
-inside the project. A project decides whether those artifacts stay local or are
-tracked; the starter project `.gitignore` ignores `.agent-work/` by default.
+inside the project. Keep active artifacts local by default; the starter project
+`.gitignore` excludes `.agent-work/`.
+
+When a project tracks its agent guidance/configuration and `CONTINUITY.md`, it
+removes that ignore rule and also tracks each completed
+`.agent-work/tasks/<task-id>/` directory referenced by that continuity ledger.
+Use `[TASK <task-id>]` in the continuity entry. Never commit a continuity link
+to an unavailable local artifact; if task artifacts remain local, make the
+durable continuity summary self-contained.
 
 Artifact versions are simple and monotonic: `v1`, `v2`, `v3`. Status is one of
 `draft`, `awaiting approval`, `approved`, or `superseded`.

@@ -1,6 +1,6 @@
 # Verification Report — <task title>
 
-Drafted by: Verifier · Recorded by: Delivery Lead · Workflow: `product-delivery` 1.1.0
+Drafted by: Verifier · Recorded by: Delivery Lead · Workflow: `product-delivery` 1.2.0
 
 | Field | Value |
 | :--- | :--- |

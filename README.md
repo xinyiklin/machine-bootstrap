@@ -177,6 +177,15 @@ Markdown role contracts are the source of truth; every provider file is
 generated from them, carries a provenance comment naming its source contract,
 and pins no model, so each provider keeps its own default.
 
+The seven templates are available building blocks, not seven mandatory files.
+A normal completed task uses five: Product Brief, Delivery Plan, Alignment
+Review, Implementation Report, and Verification Report. Decision Logs and
+Change Requests are created only when needed; empty placeholder artifacts are
+not created. Active task artifacts stay local by default. If a project tracks
+agent guidance/configuration and `CONTINUITY.md`, it removes the starter
+`.agent-work/` ignore rule and also tracks completed task folders referenced
+with `[TASK <task-id>]` so continuity never points to missing local files.
+
 The installer owns exactly those namespaced paths. It never treats the whole
 `~/.agents`, Claude configuration root, or Codex home as bootstrap-owned, and
 it does not read or write `settings.json` in the Claude configuration root or
