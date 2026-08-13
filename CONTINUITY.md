@@ -1,11 +1,30 @@
 # Continuity Ledger — Machine Bootstrap
 
 Scope: the portable parent guides, project templates, shared-skill manifest,
-and safe setup scripts in this repository. Each computer's workspace state
-belongs in its parent `MACHINE.md` and local continuity ledger.
+workflow foundation, and safe setup scripts in this repository. Each computer's
+workspace state belongs in its parent `MACHINE.md` and local continuity ledger.
 
 ## Snapshot
 
+- 2026-08-13 [USER] Implementation guidance now requires the smallest
+  maintainable solution, discourages narrative comments and speculative
+  abstractions, and requires user approval before implementing useful ideas
+  outside the requested scope.
+- 2026-08-13 [USER] Every implementation now defaults to the implementer's own
+  verification plus one fresh independent review. Only the user may waive that
+  review for a specific change; requested additional reviewers are honored
+  after a firm risk-based recommendation.
+- 2026-08-13 [CODE] Product Delivery workflow 1.1.0 makes implementer diff
+  review and one independent review the default, and records the Delivery
+  Lead's post-review recommendation on whether additional reviewers are needed.
+- 2026-08-13 [USER] Product Delivery workflow 1.2.0 keeps five standard task
+  artifacts and makes Decision Log and Change Request conditional. Active work
+  stays local by default; tracked continuity references require the matching
+  completed task folder to be tracked too.
+- 2026-08-13 [USER] Dependency versions must be established from current
+  official sources rather than model memory. Prefer the latest compatible
+  stable release, preserve each project's package-manager/version-range policy,
+  update tracked lockfiles, and explain deliberate older or prerelease choices.
 - 2026-07-27 [USER] This repository exists so the same general agent guidance
   and shared Claude Code/Codex skills can be restored on another machine.
 - 2026-07-27 [CODE] The skill manifest declares eight portable skills. The
@@ -99,6 +118,53 @@ belongs in its parent `MACHINE.md` and local continuity ledger.
   directories are atomically claimed before copying. A guide, machine file, or
   template path that appears during setup is never overwritten or written
   through.
+- 2026-07-31 [USER] The bootstrap now also owns a portable, provider-neutral
+  product-to-delivery workflow: Product Partner (why and what), Delivery Lead
+  (how and delivery), and Verifier (independent evidence), with two distinct
+  exact-version user approval gates.
+- 2026-07-31 [CODE] `workflows/registry.json` names the installed packages
+  explicitly; nothing is discovered by scanning directories. The
+  `product-delivery` package carries `manifest.json` (schema 1, version 1.0.0),
+  `WORKFLOW.md`, three role contracts, and seven artifact templates.
+- 2026-07-31 [CODE] Provider adapters are generated from the Markdown role
+  contracts rather than maintained separately: Claude subagents in
+  `$CLAUDE_CONFIG_DIR/agents/mb-*.md` when set (otherwise
+  `~/.claude/agents/mb-*.md`), Codex agents in `$CODEX_HOME/agents/mb_*.toml`
+  when set (otherwise `~/.codex/agents/mb_*.toml`), and Codex profiles following
+  the same `$CODEX_HOME` default. Each carries provenance naming its source
+  contract and pins no model.
+- 2026-07-31 [TOOL] Provider formats were verified against current official
+  documentation before implementation: Claude Code requires only `name` and
+  `description` frontmatter and runs a session-wide agent through
+  `claude --agent`; Codex custom agents require `name`, `description`, and
+  `developer_instructions`, and profiles are separate
+  `$CODEX_HOME/<name>.config.toml` files activated with `codex --profile`. The
+  legacy `[profiles.x]` table form is not used.
+- 2026-07-31 [CODE] `scripts/install-workflows.mjs` validates every manifest and
+  source, stages generated adapters in a temporary directory, preflights all
+  destinations, and only then writes. It owns exactly its namespaced paths and
+  never reads or writes `settings.json` in the Claude configuration root or
+  `config.toml` in the Codex home.
+- 2026-07-31 [CODE] Placement rules that guidance setup and workflow
+  installation share now live in `scripts/lib/fs-safety.mjs`; the portable path
+  predicate shared by reviewed skills and workflow sources lives in
+  `scripts/lib/portable-path.mjs`. `setup-guides.mjs` behavior is unchanged.
+- 2026-07-31 [CODE] The project template no longer ignores all of `.claude/`.
+  It excludes `CLAUDE.local.md`, `.claude/settings.local.json`, and
+  `.agent-work/`, so a project can track `.claude/agents/`, `.claude/rules/`,
+  `.claude/settings.json`, `.codex/agents/`, and `.codex/config.toml` when it
+  chooses. Nothing creates those files.
+- 2026-07-31 [TOOL] Environment-dependent checks now skip by name instead of
+  failing: a host that cannot create symbolic links skips five checks, and a
+  host that does not enforce POSIX permission bits skips one. The reviewed
+  Git-tree check accepts the Windows refusal of any reviewed symlink, still
+  asserting the escaping link is never materialized. Baseline confirmed these
+  same seven were already failing on this host before the change.
+- 2026-07-31 [TOOL] Every test that runs initialization now points `HOME` and
+  `USERPROFILE` at its disposable root. An earlier run of the suite, before that
+  fix, installed the workflow layer into the real user home; all twenty files
+  were verified byte-identical to generated artifacts and removed, leaving
+  skills and provider configuration untouched.
 
 ## Decisions
 
@@ -119,6 +185,41 @@ belongs in its parent `MACHINE.md` and local continuity ledger.
 - 2026-07-27 [CODE] D007 ACTIVE: the portable skill manifest pins both
   acquisition and reviewed content identity; updates require an intentional
   manifest revision rather than passing through presence-only checks.
+- 2026-07-31 [USER] D008 ACTIVE: this repository owns the portable workflow
+  foundation — role contracts, stages, approval and invalidation rules,
+  handoffs, artifact templates, and installation. `skills.json` stays
+  exclusively about reusable skills and is unchanged.
+- 2026-07-31 [USER] D009 ACTIVE: project architecture, engineering rules,
+  commands, and required verification remain project-owned. The workflow never
+  rewrites project guidance; a project references the installed contract rather
+  than copying it.
+- 2026-07-31 [CODE] D010 ACTIVE: the provider-neutral Markdown role contracts
+  are the single source of truth. Claude and Codex files are generated
+  deterministically from them, so no separate provider prompt can drift.
+- 2026-07-31 [USER] D011 ACTIVE: a project may strengthen the workflow with
+  extra high-risk triggers, mandatory plan sections, required verification, or
+  specialist reviews. It may not weaken exact user approval, scope-change
+  escalation, or honest verification reporting.
+- 2026-07-31 [CODE] D012 ACTIVE: workflow installation follows the same
+  fail-closed contract as guides and skills — validate before writing,
+  missing-only by default, reject differing destinations before any partial
+  write, and keep timestamped backups on reviewed `--replace`.
+- 2026-07-31 [CODE] D013 ACTIVE: approval recording is bookkeeping, not
+  authentication. No file or command in this repository claims to prove that a
+  human supplied an approval.
+- 2026-08-13 [USER] D014 ACTIVE: one independent review is mandatory by default
+  after implementer verification. The user may explicitly waive it per change
+  or request more reviewers; additional-review recommendations are firm and
+  based on risk and coverage.
+- 2026-08-13 [USER] D015 ACTIVE: do not create empty task artifacts. Track the
+  five standard reports for completed referenced work; create Decision Logs and
+  Change Requests only when needed. A tracked `[TASK <task-id>]` continuity
+  reference must not point to an untracked local task folder.
+- 2026-08-13 [USER] D016 ACTIVE: dependency additions and upgrades require a
+  current official-source check for the stable or maintainer-recommended
+  release. Use the latest compatible stable version by default, preserve the
+  project's package-manager and version-range policy, update any tracked
+  lockfile, and explain any intentional older or prerelease choice.
 
 ## Working Set
 
@@ -127,14 +228,21 @@ belongs in its parent `MACHINE.md` and local continuity ledger.
 - `guides/{AGENTS,CLAUDE,MACHINE.example}.md`
 - `project-templates/`
 - `skills.json`
-- `scripts/{init-workspace,install-skills,setup-guides,test-bootstrap}.mjs`
-- `scripts/lib/{skill-integrity,skill-manifest,skill-source}.mjs`
+- `workflows/registry.json`
+- `workflows/product-delivery/{manifest.json,WORKFLOW.md,roles/,templates/}`
+- `scripts/{init-workspace,install-skills,install-workflows,setup-guides,test-bootstrap}.mjs`
+- `scripts/lib/{fs-safety,portable-path,skill-integrity,skill-manifest,skill-source}.mjs`
+- `scripts/lib/{workflow-adapters,workflow-manifest}.mjs`
 
 ## Next
 
-- Review and commit the initial repository when ready.
+- Do not expand the workflow beyond a user's requested scope. Present useful
+  follow-up recommendations and wait for approval before implementing them.
 - Add a private remote only with explicit user authorization.
 
 ## Open Questions
 
 - 2026-07-27 [USER] UNCONFIRMED which private remote will host this repository.
+- 2026-07-31 [USER] RESOLVED 2026-08-13 by D015: task artifacts stay local while
+  active by default. Completed task folders referenced by tracked continuity are
+  tracked with it; otherwise the continuity summary is self-contained.

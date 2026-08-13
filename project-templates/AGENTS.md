@@ -68,6 +68,41 @@ file-format contracts (schema version + migration rules), or "must stay
 openable from `file://`". Delete this section only if the project genuinely has
 none. -->
 
+## Workflow Adaptations
+
+<!-- TODO: fill in or delete. Only fill rows this project actually needs. -->
+
+This project uses the portable `product-delivery` workflow (Product Partner →
+Delivery Lead → Verifier) installed at
+`~/.agents/workflows/product-delivery/`. That package owns the process: the
+role contracts, the two exact user approval gates, Change Request escalation,
+and honest verification reporting. Do not copy it here.
+
+This project may **strengthen** the workflow. It may not weaken exact user
+approval, scope-change escalation, or honest verification reporting.
+Independent review follows the portable default: one fresh reviewer after the
+implementer's own verification. Only the user may waive it for a specific
+change. The user may request more reviewers; recommend firmly whether each
+additional review is warranted after considering existing coverage and risk.
+
+- Additional high-risk triggers requiring a Change Request: TODO — or "none
+  beyond the portable list".
+- Additional required Delivery Plan sections: TODO — or "none".
+- Required project-specific verification before a change is done: TODO — or
+  "the checks in Commands".
+- Changes requiring more than one independent reviewer: TODO — or "none".
+- Project-specific specialist roles and what each owns: TODO — or "none".
+- Task artifact retention: local while active. If this project tracks agent
+  guidance/configuration and `CONTINUITY.md`, remove `.agent-work/` from the
+  project `.gitignore` and track completed referenced task folders too;
+  otherwise keep continuity summaries self-contained. TODO confirm.
+
+The seven workflow templates are available, not mandatory empty files. A normal
+completed task uses Product Brief, Delivery Plan, Alignment Review,
+Implementation Report, and Verification Report. Create a Decision Log only for
+material product decisions and a Change Request only when triggered. Tag durable
+continuity entries with `[TASK <task-id>]`.
+
 ## Commands
 
 <!-- TODO: replace with the project's real commands. -->
@@ -134,8 +169,11 @@ release notes, security advisories, or compatibility:
 
 - Think before coding. State important assumptions, surface tradeoffs, and ask
   when confusion would change the solution.
-- Keep it simple. Write the minimum durable code that solves the request; do not
-  add speculative features, knobs, abstractions, or future-proofing.
+- Keep it simple. Write the smallest maintainable code that solves the request;
+  do not add speculative features, knobs, abstractions, or future-proofing.
+- Keep implementation scope literal. If an extra improvement or recommendation
+  is not required by the request, present it to the user and wait for approval
+  before implementing it.
 - Make surgical changes. Every changed line should trace to the request, a
   cleanup caused by it, or a verification fix.
 - Match the codebase. Prefer existing style, naming, patterns, framework choices,
@@ -158,6 +196,8 @@ release notes, security advisories, or compatibility:
 - Prefer patch-style edits over full rewrites unless a clean replacement is
   requested or the file is no longer relevant.
 - Preserve existing style and conventions.
+- Comment only when it explains non-obvious rationale, constraints, or safety;
+  do not narrate self-explanatory code.
 - Keep hand-written source files modular. Treat files over ~300 lines as a prompt
   to check boundaries; split when it improves readability or future change. Do
   not cap necessary scope just to hit a line count.
@@ -168,6 +208,14 @@ release notes, security advisories, or compatibility:
 - Do not leave empty `catch` blocks or silently swallow errors.
 - Do not reinvent the wheel. When a mature library would reduce risk, ask before
   adding it and help qualify the choice.
+- Before adding or upgrading a dependency, inspect the project's runtime,
+  manifest, lockfile when present, compatibility constraints, and versioning
+  policy. Verify the current stable or maintainer-recommended release from an
+  official registry, documentation, or release notes; never select a dependency
+  version from model memory alone.
+- Prefer the latest compatible stable release. Preserve the project's package
+  manager and version-range policy, update its lockfile when the project tracks
+  one, and explain any deliberate use of an older or prerelease version.
 - Design UI for the end user and workflow, not for the database schema.
 - Browser QA is flag-first (see Verification): skip it by default and name the
   risk instead of starting a dev server unasked. Tool choice lives in

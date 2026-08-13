@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "workflowId": "product-delivery",
+  "workflowVersion": "1.2.0",
+  "title": "Product Delivery",
+  "summary": "Provider-neutral product-to-delivery workflow with two exact user approval gates.",
+  "workflowDocument": "WORKFLOW.md",
+  "taskArtifactPath": ".agent-work/tasks/<task-id>/",
+  "roles": [
+    {
+      "id": "product-partner",
+      "title": "Product Partner",
+      "source": "roles/product-partner.md",
+      "summary": "Discovery and product alignment partner. Use to turn a broad idea into a testable Product Brief, to review a Delivery Plan against an approved brief, and to request exact user approval of either artifact.",
+      "claude": {
+        "name": "mb-product-partner",
+        "primarySession": true
+      },
+      "codex": {
+        "name": "mb_product_partner",
+        "profile": "mb-product-partner"
+      }
+    },
+    {
+      "id": "delivery-lead",
+      "title": "Delivery Lead",
+      "source": "roles/delivery-lead.md",
+      "summary": "Repository-aware technical owner and execution lead. Use to investigate the real codebase, produce an implementation-ready Delivery Plan from an approved Product Brief, execute approved work, and report implementation results.",
+      "claude": {
+        "name": "mb-delivery-lead",
+        "primarySession": true
+      },
+      "codex": {
+        "name": "mb_delivery_lead",
+        "profile": "mb-delivery-lead"
+      }
+    },
+    {
+      "id": "verifier",
+      "title": "Verifier",
+      "source": "roles/verifier.md",
+      "summary": "Independent evidence-oriented reviewer. Use proactively after execution to check the actual changes against the approved Product Brief and Delivery Plan, and to report passed, failed, unverified, and skipped checks with evidence.",
+      "claude": {
+        "name": "mb-verifier",
+        "primarySession": false
+      },
+      "codex": {
+        "name": "mb_verifier"
+      }
+    }
+  ],
+  "templates": [
+    { "id": "product-brief", "source": "templates/product-brief.md" },
+    { "id": "decision-log", "source": "templates/decision-log.md" },
+    { "id": "delivery-plan", "source": "templates/delivery-plan.md" },
+    { "id": "alignment-review", "source": "templates/alignment-review.md" },
+    { "id": "change-request", "source": "templates/change-request.md" },
+    { "id": "implementation-report", "source": "templates/implementation-report.md" },
+    { "id": "verification-report", "source": "templates/verification-report.md" }
+  ]
+}

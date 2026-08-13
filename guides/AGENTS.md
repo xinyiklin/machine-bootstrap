@@ -57,6 +57,36 @@ document.
 Target roughly 200 lines per imported guide. A child guide must be
 self-contained because it may be cloned without this parent workspace.
 
+## Product Delivery Workflow
+
+The bootstrap repository also owns a portable workflow foundation, installed at
+`~/.agents/workflows/product-delivery/`. Read its `WORKFLOW.md` for the full
+contract; this section is only the routing.
+
+- The **Product Partner** owns why and what: problem, workflow, requirements,
+  constraints, non-goals, acceptance criteria, and the Product Brief.
+- The **Delivery Lead** owns how and delivery: repository investigation,
+  technical design, the Delivery Plan, execution, and integration.
+- The **Verifier** independently checks the result against those artifacts and
+  reports passed, failed, unverified, and skipped checks honestly.
+
+After the implementer's own verification, at least one fresh independent review
+is required by default. Only the user may waive it for a specific change. The
+user may request more reviewers; after the mandatory review, give a firm
+risk-based recommendation on whether another review adds useful coverage.
+
+Two approvals are distinct and both require the user's explicit approval of an
+exact artifact version: the Product Brief approves the problem and criteria,
+never a design; the Delivery Plan approves the technical approach and
+authorizes execution within that scope only. A discovery that changes
+user-facing behavior, weakens a criterion, expands scope, risks destructive
+migration, or adds a security or privacy implication requires a Change Request.
+
+Projects own their architecture and may add stricter workflow requirements in
+their own `AGENTS.md`; they may not weaken these approval rules. Provider
+subagents and profiles are generated adapters and optional implementation
+details — the handoff between roles is the shared versioned artifacts.
+
 ## Bootstrapping A Project
 
 1. Read the real manifests, configs, entry points, and existing directories.
@@ -90,7 +120,11 @@ Before changing code or project files:
 
 ## Engineering Principles
 
-- Write the minimum durable change that solves the request.
+- Write the smallest maintainable change that fully solves the request; avoid
+  speculative abstraction, configuration, and future-proofing.
+- Keep implementation scope literal. If an extra improvement or recommendation
+  is not required by the request, present it to the user and wait for approval
+  before implementing it.
 - Prefer existing patterns, naming, framework choices, and helper APIs.
 - Keep edits surgical and remove only cleanup caused by the change.
 - Diagnose root causes before patching symptoms.
@@ -98,6 +132,14 @@ Before changing code or project files:
 - Do not add silent fallbacks, empty catches, or error swallowing.
 - Ask before adding dependencies or changing public schemas, deployment,
   authentication, paid services, or production infrastructure.
+- Before adding or upgrading a dependency, inspect the project's runtime,
+  manifest, lockfile when present, compatibility constraints, and versioning
+  policy. Verify the current stable or maintainer-recommended release from an
+  official registry, documentation, or release notes; never select a dependency
+  version from model memory alone.
+- Prefer the latest compatible stable release. Preserve the project's package
+  manager and version-range policy, update its lockfile when the project tracks
+  one, and explain any deliberate use of an older or prerelease version.
 - Design UI for the user and workflow, not the storage schema.
 
 ### Modularity And Reuse
@@ -113,7 +155,9 @@ Before changing code or project files:
 - Reuse must preserve validation, accessibility, error reporting, privacy, and
   determinism for every consumer.
 - Treat files around 300 lines as a cohesion prompt, not an automatic split.
-- Comment why, not what; durable rationale belongs in the owning guide.
+- Comment only when it explains non-obvious rationale, constraints, or safety;
+  do not narrate self-explanatory code. Durable rationale belongs in the owning
+  guide.
 
 ## Accuracy And Privacy
 
