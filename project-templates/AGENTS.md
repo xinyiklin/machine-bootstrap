@@ -156,8 +156,11 @@ release notes, security advisories, or compatibility:
 
 - Think before coding. State important assumptions, surface tradeoffs, and ask
   when confusion would change the solution.
-- Keep it simple. Write the minimum durable code that solves the request; do not
-  add speculative features, knobs, abstractions, or future-proofing.
+- Keep it simple. Write the smallest maintainable code that solves the request;
+  do not add speculative features, knobs, abstractions, or future-proofing.
+- Keep implementation scope literal. If an extra improvement or recommendation
+  is not required by the request, present it to the user and wait for approval
+  before implementing it.
 - Make surgical changes. Every changed line should trace to the request, a
   cleanup caused by it, or a verification fix.
 - Match the codebase. Prefer existing style, naming, patterns, framework choices,
@@ -180,6 +183,8 @@ release notes, security advisories, or compatibility:
 - Prefer patch-style edits over full rewrites unless a clean replacement is
   requested or the file is no longer relevant.
 - Preserve existing style and conventions.
+- Comment only when it explains non-obvious rationale, constraints, or safety;
+  do not narrate self-explanatory code.
 - Keep hand-written source files modular. Treat files over ~300 lines as a prompt
   to check boundaries; split when it improves readability or future change. Do
   not cap necessary scope just to hit a line count.

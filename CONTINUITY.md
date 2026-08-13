@@ -6,6 +6,10 @@ workspace state belongs in its parent `MACHINE.md` and local continuity ledger.
 
 ## Snapshot
 
+- 2026-08-13 [USER] Implementation guidance now requires the smallest
+  maintainable solution, discourages narrative comments and speculative
+  abstractions, and requires user approval before implementing useful ideas
+  outside the requested scope.
 - 2026-07-27 [USER] This repository exists so the same general agent guidance
   and shared Claude Code/Codex skills can be restored on another machine.
 - 2026-07-27 [CODE] The skill manifest declares eight portable skills. The
@@ -204,10 +208,8 @@ workspace state belongs in its parent `MACHINE.md` and local continuity ledger.
 
 ## Next
 
-- Review and commit the workflow foundation when ready.
-- Run `node scripts/init-workspace.mjs --replace` after reviewing the workspace
-  `AGENTS.md` change; the installed copy now differs from its portable source
-  because the portable guide gained the workflow routing section.
+- Do not expand the workflow beyond a user's requested scope. Present useful
+  follow-up recommendations and wait for approval before implementing them.
 - Add a private remote only with explicit user authorization.
 
 ## Open Questions

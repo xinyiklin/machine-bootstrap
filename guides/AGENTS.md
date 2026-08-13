@@ -115,7 +115,11 @@ Before changing code or project files:
 
 ## Engineering Principles
 
-- Write the minimum durable change that solves the request.
+- Write the smallest maintainable change that fully solves the request; avoid
+  speculative abstraction, configuration, and future-proofing.
+- Keep implementation scope literal. If an extra improvement or recommendation
+  is not required by the request, present it to the user and wait for approval
+  before implementing it.
 - Prefer existing patterns, naming, framework choices, and helper APIs.
 - Keep edits surgical and remove only cleanup caused by the change.
 - Diagnose root causes before patching symptoms.
@@ -138,7 +142,9 @@ Before changing code or project files:
 - Reuse must preserve validation, accessibility, error reporting, privacy, and
   determinism for every consumer.
 - Treat files around 300 lines as a cohesion prompt, not an automatic split.
-- Comment why, not what; durable rationale belongs in the owning guide.
+- Comment only when it explains non-obvious rationale, constraints, or safety;
+  do not narrate self-explanatory code. Durable rationale belongs in the owning
+  guide.
 
 ## Accuracy And Privacy
 

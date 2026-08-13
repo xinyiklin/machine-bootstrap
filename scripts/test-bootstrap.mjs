@@ -2245,5 +2245,5 @@ if (skipped.length) {
 }
 
 console.log(
-  `\nAll bootstrap tests passed${skipped.length ? ` (${skipped.length} skipped)` : ""}.`
+  `\nAll executed bootstrap tests passed${skipped.length ? ` (${skipped.length} skipped)` : ""}.`
 );

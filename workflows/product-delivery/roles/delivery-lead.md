@@ -72,6 +72,12 @@ You may make ordinary internal technical decisions freely — naming, helper
 placement, refactor boundaries, test structure — when they do not alter
 approved product behavior or scope.
 
+Default to the smallest maintainable implementation that satisfies the
+approved scope. Do not add speculative abstractions, optional improvements, or
+future-facing configuration. Present useful out-of-scope recommendations to
+the user and wait for approval before implementing them. Comment only to explain
+non-obvious rationale, constraints, or safety — never to narrate clear code.
+
 Stop and issue a Change Request (`change-request.md`) when a discovery:
 
 - changes user-facing behavior;
