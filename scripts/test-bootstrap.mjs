@@ -798,6 +798,47 @@ await test("project template documents the workflow adaptation points", () => {
   assert.doesNotMatch(template, /Foundational Invariants/);
 });
 
+await test("portable GitHub workflow and PR templates are present", () => {
+  const portableGuide = readFileSync(
+    join(bootstrapRoot, "guides", "git-workflow.md"),
+    "utf8"
+  );
+  const projectGuide = readFileSync(
+    join(
+      bootstrapRoot,
+      "project-templates",
+      "docs",
+      "engineering",
+      "git-workflow.md"
+    ),
+    "utf8"
+  );
+  const projectTemplate = readFileSync(
+    join(
+      bootstrapRoot,
+      "project-templates",
+      ".github",
+      "pull_request_template.md"
+    ),
+    "utf8"
+  );
+  const bootstrapTemplate = readFileSync(
+    join(bootstrapRoot, ".github", "pull_request_template.md"),
+    "utf8"
+  );
+
+  for (const guide of [portableGuide, projectGuide]) {
+    assert.match(guide, /Conventional Commit/);
+    assert.match(guide, /exact reviewed head/);
+    assert.match(guide, /squash merge/);
+    assert.match(guide, /Publication receipt/);
+  }
+  assert.match(projectTemplate, /## Summary/);
+  assert.match(projectTemplate, /## Verification/);
+  assert.match(projectTemplate, /## Publication/);
+  assert.match(bootstrapTemplate, /guides\/git-workflow\.md/);
+});
+
 await test("portable guidance requires current dependency selection", () => {
   for (const relativePath of [
     ["guides", "AGENTS.md"],
