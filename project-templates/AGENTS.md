@@ -1,346 +1,184 @@
 # Project Agent Guide
 
-> Template — copy into a project root as `AGENTS.md`, then replace the `TODO`
-> placeholders with the project's real shape, commands, and constraints. Delete
-> this note and anything that does not apply.
->
-> This file is a **superset**, not a target. It is longer than a finished guide
-> should be, so cut aggressively: a project guide is imported into every
-> session, and the finished file should land under ~200 lines. Anything that
-> survives should be something an agent would otherwise get wrong.
+> Template — copy into a project root as `AGENTS.md`, replace every `TODO` with
+> verified project facts, and delete this note and irrelevant sections.
 
-Generic working agreements for coding agents on this project. `AGENTS.md` is the
-provider-agnostic source of truth; `CLAUDE.md` adds Claude-specific overrides.
-A more specific or deeper doc (a nested `AGENTS.md`, README, or engineering doc)
-wins over this file when it is current.
+Provider-agnostic instructions for this project. `CLAUDE.md` imports this file
+and adds Claude-only tool mechanics. Keep this guide self-contained because the
+repository may be cloned outside its current workspace.
 
-<!-- TODO: one or two lines on what this project is, who uses it, and its stack. -->
+## Instruction precedence
 
-## Instruction Precedence
-
-1. User instructions for the current task.
-2. Safety, data integrity, and secret handling — before stylistic preferences.
-3. The nearest, most specific guidance file, when current.
-4. Durable facts in the nearest `CONTINUITY.md`, over older chat context.
+1. The user's current request.
+2. Safety, data integrity, secret handling, and truthful claims.
+3. The nearest current scoped guide and its owning documentation.
+4. Durable facts in `CONTINUITY.md`, over older chat context.
 5. Existing architecture and conventions.
 
-Do not preserve stale rules. If the project shape changes, update the relevant
-docs and the continuity ledger together.
+Keep this file a router. Put detailed product, design, architecture, testing,
+and subsystem contracts in their narrowest owning document and point to them
+instead of duplicating them here.
 
-Keep this file a router: state agent behavior and high-level conventions here,
-and keep detailed rules in the narrowest relevant document (a nested `AGENTS.md`,
-README, or engineering doc). When content overlaps, point to the deeper doc
-instead of duplicating it.
+## Project and guidance map
 
-## Project Shape
+- Purpose and users: TODO.
+- Stack, runtime, and package manager: TODO.
+- Layout and entry points: TODO.
+- External services and deployment: TODO — or “none; local-only.”
+- `PRODUCT.md`: TODO product contract — or delete.
+- `DESIGN.md`: TODO visual/interaction contract — or delete.
+- `docs/`: TODO architecture, engineering, and testing owners — or delete.
+- `docs/engineering/git-workflow.md`: branch through publication rules.
+- Nested `AGENTS.md`: TODO scoped guide locations — or “none.”
+- `README.md`: human-facing setup and usage.
+- `CONTINUITY.md`: bounded current handoff state — or “none.”
+- `docs/continuity/`: rotated history, read only when needed.
 
-<!-- TODO: fill in; delete rows that do not apply. -->
+Before scoped work, explicitly read the nearest nested guide. Claude does not
+discover `AGENTS.md`; Codex includes only files from its project root down to
+its starting directory.
 
-- Stack: TODO (language, framework, runtime, package manager).
-- Layout: TODO (key directories and what lives in each).
-- Entry points: TODO (app/server entry, CLI, main modules).
-- External services: TODO (database, APIs, storage) — or "none; local-only".
-- Deployment: TODO — or "none yet".
+Codex defaults to a 32 KiB combined budget for that active guide chain. Keep
+the cumulative root-to-working-directory chain below 28 KiB so the nearest
+rules remain available. Move detailed inventories, examples, and verification
+matrices to owning docs read on demand; line counts alone are not a byte budget.
 
-Treat the project as local/offline unless a remote service, production system, or
-deployment target is explicitly in scope.
+## Hard invariants
 
-## Guidance Map
+<!-- TODO: list only rules whose violation is a bug or safety incident: privacy,
+dependency direction, determinism, network exposure, schema/migration behavior,
+data-loss boundaries, or required compatibility. Delete examples afterward. -->
 
-<!-- TODO: list the docs that own each concern, and delete the rows you don't
-have. This section is what keeps the guide a router instead of a dumping
-ground. -->
-
-- `PRODUCT.md` — TODO (product purpose, users, tone, boundaries) — or delete.
-- `DESIGN.md` — TODO (tokens, typography, components) — or delete.
-- `docs/` — TODO (architecture, engineering contracts, testing) — or delete.
-- `docs/engineering/git-workflow.md` — branch, commit, PR, review, merge, and
-  publication rules; keep project-specific commands here.
-- Nested `AGENTS.md` — TODO (which directories own their own scoped guide).
-- `README.md` — human-facing setup and usage.
-- `CONTINUITY.md` — durable handoff state — or state that there is none.
-
-## Hard Invariants
-
-<!-- TODO: the rules that are bugs if broken, not preferences. Examples from
-sibling projects: content privacy (never persist or log user text), dependency
-limits (no npm deps in this package), determinism (ids are pure functions of
-source coordinates), network posture (loopback-only unless explicitly opened),
-file-format contracts (schema version + migration rules), or "must stay
-openable from `file://`". Delete this section only if the project genuinely has
-none. -->
+- TODO.
 
 ## Workflow Adaptations
 
-<!-- TODO: fill in or delete. Only fill rows this project actually needs. -->
+This project uses the portable `product-delivery` workflow installed at
+`~/.agents/workflows/product-delivery/`. That package owns role contracts, two
+exact user approval gates, Change Request escalation, artifact templates, and
+honest verification reporting; do not copy that contract here.
 
-This project uses the portable `product-delivery` workflow (Product Partner →
-Delivery Lead → Verifier) installed at
-`~/.agents/workflows/product-delivery/`. That package owns the process: the
-role contracts, the two exact user approval gates, Change Request escalation,
-and honest verification reporting. Do not copy it here.
+The project may strengthen the workflow but may not weaken exact user approval,
+scope-change escalation, or honest verification. Independent review defaults
+to one fresh reviewer after the implementer's own verification. Only the user may waive it for a specific
+change.
 
-This project may **strengthen** the workflow. It may not weaken exact user
-approval, scope-change escalation, or honest verification reporting.
-Independent review follows the portable default: one fresh reviewer after the
-implementer's own verification. Only the user may waive it for a specific
-change. The user may request more reviewers; recommend firmly whether each
-additional review is warranted after considering existing coverage and risk.
+- Additional Change Request triggers: TODO — or “none.”
+- Additional Delivery Plan sections: TODO — or “none.”
+- Required project verification: TODO — or “the commands below.”
+- Specialist roles or additional reviewers: TODO — or “none.”
+- Task artifact retention: local while active. If tracked continuity references
+  a completed `[TASK <task-id>]`, track that task folder too; otherwise keep the
+  continuity summary self-contained. TODO confirm project policy.
 
-- Additional high-risk triggers requiring a Change Request: TODO — or "none
-  beyond the portable list".
-- Additional required Delivery Plan sections: TODO — or "none".
-- Required project-specific verification before a change is done: TODO — or
-  "the checks in Commands".
-- Changes requiring more than one independent reviewer: TODO — or "none".
-- Project-specific specialist roles and what each owns: TODO — or "none".
-- Task artifact retention: local while active. If this project tracks agent
-  guidance/configuration and `CONTINUITY.md`, remove `.agent-work/` from the
-  project `.gitignore` and track completed referenced task folders too;
-  otherwise keep continuity summaries self-contained. TODO confirm.
-
-The seven workflow templates are available, not mandatory empty files. A normal
-completed task uses Product Brief, Delivery Plan, Alignment Review,
-Implementation Report, and Verification Report. Create a Decision Log only for
-material product decisions and a Change Request only when triggered. Tag durable
-continuity entries with `[TASK <task-id>]`.
+Use Product Brief, Delivery Plan, Alignment Review, Implementation Report, and
+Verification Report for a normal completed task. Create Decision Logs only for
+material decisions and Change Requests only when triggered; never create empty
+placeholder artifacts.
 
 ## Commands
 
-<!-- TODO: replace with the project's real commands. -->
+Run commands from the repository root. Replace every TODO.
 
 - Install: TODO
-- Run / dev: TODO
+- Dev/run: TODO
 - Build: TODO
 - Test: TODO
-- Lint / typecheck / format: TODO
+- Lint/typecheck/format: TODO
 
-Run the smallest meaningful subset for the change at hand, and say what was
-skipped.
+Use the smallest meaningful check while iterating and report what was skipped.
+If this workspace reserves ports, claim one in the parent `MACHINE.md`, pin it
+in project configuration, and reuse an existing listener instead of silently
+switching ports.
 
-### Port reservations
+## Start of task
 
-<!-- TODO: claim an unused range, pin this project's canonical dev port, add
-this project to the table below, and mirror the addition into each sibling
-guide. -->
+1. Read `CONTINUITY.md` if present and the nearest guides that apply.
+2. Identify the goal, acceptance criteria, scope, and constraints.
+3. Inspect affected files, callers, state owners, and consumers.
+4. Inspect the dirty tree and preserve unrelated work.
+5. For non-trivial work, state a compact plan and verification checks.
+6. Ask only when ambiguity could change behavior or authorize risky work;
+   otherwise make a stated reasonable assumption and proceed.
 
-Sibling projects in this workspace use fixed, non-overlapping dev-server ranges
-so a bound port means "the app is already running," not "pick another." Pin the
-port (e.g. Vite `strictPort: true`); when a reserved port is bound, connect to
-the running app instead of starting a second server or switching ports.
+For current APIs, versions, prices, schedules, laws, or advisories, establish
+the date and verify against official or primary sources. Cross-check high-stakes
+medical, legal, financial, compatibility, privacy, and security claims.
 
-The workspace registry belongs in the parent `MACHINE.md`. Claim the next free
-range there first, then record this project's canonical port here.
+## Engineering and safety
 
-- TODO this project: canonical port(s), and the range claimed in the
-  machine-local registry.
-
-## Start-Of-Task Checklist
-
-Before changing code or project files:
-
-1. Read `CONTINUITY.md` if it exists.
-2. Read the nearest `AGENTS.md`, `CLAUDE.md`, README, or docs that apply.
-3. Identify the goal, acceptance criteria, scope, and constraints.
-4. Inspect the files you will touch before choosing an implementation.
-5. If the request depends on current or recency-sensitive facts, establish the
-   date/time and prefer authoritative sources.
-6. For non-trivial tasks, state a compact plan with concrete verification checks.
-7. Ask one targeted clarifying question only when ambiguity could cause
-   user-facing confusion or irreversible work. Otherwise make a reasonable
-   assumption and proceed.
-
-## Accuracy, Recency, And Sourcing
-
-When a request depends on "latest", "current", "today", recent APIs, pricing,
-release notes, security advisories, or compatibility:
-
-- Establish the current date/time (e.g. `date -Is`; on macOS,
-  `date '+%Y-%m-%dT%H:%M:%S%z'`) and state it when it affects the answer.
-- Prefer official or primary sources: vendor docs, upstream repositories,
-  changelogs, release notes, standards, or maintainer announcements.
-- For safety-, compatibility-, legal-, medical-, or financial-sensitive details,
-  cross-check reputable sources and call out source dates when relevant.
-- Use library/API documentation tools when available. Pin the library and version
-  when known, fetch only the focused docs needed, and summarize rather than
-  dumping large source text.
-- Use web search when it materially improves correctness; prefer official docs
-  before secondary explainers.
-
-## Agent Operating Principles
-
-- Think before coding. State important assumptions, surface tradeoffs, and ask
-  when confusion would change the solution.
-- Keep it simple. Write the smallest maintainable code that solves the request;
-  do not add speculative features, knobs, abstractions, or future-proofing.
-- Keep implementation scope literal. If an extra improvement or recommendation
-  is not required by the request, present it to the user and wait for approval
-  before implementing it.
-- Make surgical changes. Every changed line should trace to the request, a
-  cleanup caused by it, or a verification fix.
-- Match the codebase. Prefer existing style, naming, patterns, framework choices,
-  and helper APIs over personal preference.
-- Clean up only your own wake. Remove imports, state, helpers, files, or docs
-  made obsolete by your change; mention unrelated dead code instead of deleting
-  it.
-- Define success in verifiable terms: reproduce the issue, make the change, run
-  the relevant test/build, and inspect the result.
-- Loop until verified. If a check fails, use the failure as evidence, adjust, and
-  rerun the smallest meaningful check before broader ones.
-- Use judgment on tiny tasks. A typo or one-line answer does not need ceremony.
-- Push back when the requested path is riskier, broader, or more brittle than a
-  simpler way to satisfy the same goal.
-
-## Development And Editing
-
-- Default to read-only exploration before edits.
-- Keep changes scoped and reviewable.
-- Prefer patch-style edits over full rewrites unless a clean replacement is
-  requested or the file is no longer relevant.
-- Preserve existing style and conventions.
-- Comment only when it explains non-obvious rationale, constraints, or safety;
-  do not narrate self-explanatory code.
-- Keep hand-written source files modular. Treat files over ~300 lines as a prompt
-  to check boundaries; split when it improves readability or future change. Do
-  not cap necessary scope just to hit a line count.
-- Keep public entrypoints stable where practical; isolate volatile logic behind
-  smaller helpers.
-- Do not add default fallbacks during development just to hide failures. If a
-  required value is missing, fail visibly enough to fix the real cause.
-- Do not leave empty `catch` blocks or silently swallow errors.
-- Do not reinvent the wheel. When a mature library would reduce risk, ask before
-  adding it and help qualify the choice.
-- Before adding or upgrading a dependency, inspect the project's runtime,
-  manifest, lockfile when present, compatibility constraints, and versioning
-  policy. Verify the current stable or maintainer-recommended release from an
-  official registry, documentation, or release notes; never select a dependency
-  version from model memory alone.
+- Implement the smallest maintainable change that satisfies the request. Do not
+  add speculative features, abstractions, configuration, or drive-by cleanup.
+- Match existing style and ownership. Every changed line must trace to requested
+  behavior, necessary cleanup, or a verification fix.
+- Comment only for non-obvious rationale, constraints, or safety. Do not hide
+  failures with fallback defaults, empty catches, or swallowed errors.
+- Treat files around 300 lines as a cohesion prompt, not an automatic split.
+- Ask before adding dependencies or changing schemas, deployment, authentication,
+  destructive storage behavior, paid services, or public network exposure.
+- Before adding or upgrading a dependency, inspect runtime compatibility,
+  manifests, lockfiles, and version policy. Verify the current stable or maintainer-recommended release
+  from an official registry, documentation, or release notes; never select a dependency version from model memory alone.
 - Prefer the latest compatible stable release. Preserve the project's package
   manager and version-range policy, update its lockfile when the project tracks
   one, and explain any deliberate use of an older or prerelease version.
-- Design UI for the end user and workflow, not for the database schema.
-- Browser QA is flag-first (see Verification): skip it by default and name the
-  risk instead of starting a dev server unasked. Tool choice lives in
+- Never expose or commit secrets, credentials, private documents, `.env` files,
+  provider bodies, or broad environment output. Do not ask users to paste them.
+- Remote writes require explicit user authorization. Resolve exact targets and
+  prefer recoverable operations before destructive changes.
+- Never install host-level system packages unless the user explicitly asks;
+  prefer the project's existing container or documented setup.
+
+## Continuity
+
+Keep `CONTINUITY.md` at or below the project-defined total line cap (about 160
+lines by default), counting every section. It holds only current snapshot,
+compact active decision indexes, working set, next actions, and open questions.
+Detailed rationale belongs in the owning contract or a focused decision record.
+
+Rotate resolved or superseded entries verbatim into
+`docs/continuity/YYYY-MM.md`, leaving a dated milestone link. Archives are
+append-only and read only when a task needs history. Never store transcripts,
+raw logs, or chat dumps. Tag entries with an ISO date and `[USER]`, `[CODE]`,
+`[TOOL]`, or `[ASSUMPTION]`; write `UNCONFIRMED` instead of guessing.
+
+<!-- TODO: set the exact cap and whether continuity is tracked. -->
+
+## Verification and definition of done
+
+Run the narrowest owner check while iterating, then affected consumer checks in
+proportion to blast radius. Before completion, inspect the complete diff and
+surrounding code for correctness, regressions, scope, maintainability, stale
+paths, accidental complexity, and unrelated changes.
+
+- UI: browser QA is flag-first unless the project requires it. Name concrete
+  visual risk and report whether it ran; Claude-specific tooling lives in
   `CLAUDE.md`.
+- Refactors: prove behavior preservation and removal of stale symbols/paths.
+- Docs: verify links, paths, commands, and internal consistency.
+- Output/file formats: inspect the real artifact and test round trips plus
+  malformed-input rejection where applicable.
+- No harness: run the strongest available lightweight check and name the gap.
 
-## Secrets And Safety
+Done means the requested outcome works, affected contracts agree, relevant
+checks and independent review are reported honestly, skipped checks and risks
+are explicit, and documentation/continuity reflects durable changes.
 
-- Never print secrets, tokens, private keys, credentials, or broad environment
-  dumps. Do not ask the user to paste secrets.
-- Never commit secrets or `.env` files; keep them git-ignored.
-- Avoid commands that may expose secrets (dumping shell environments, reading
-  private key files). Redact sensitive strings in shared output.
-- Remote API calls must be read-only unless the user explicitly requests a write;
-  dry-run requested writes first when possible.
-- Pause and confirm before irreversible or destructive actions: bulk deletes,
-  history rewrites, schema or data drops, production/remote writes, or adding
-  paid or vendor dependencies.
+## Git and existing work
 
-## Containers And Tooling
+Read `docs/engineering/git-workflow.md` before branch, commit, push, PR, review,
+merge, release, deploy, or cleanup work.
 
-- Never install system packages on the host unless the user explicitly asks.
-- Prefer the project's existing workflow when one exists (`Dockerfile`, compose
-  files, Make targets, or documented scripts).
-- If no workflow exists and dependencies are needed, discuss a minimal,
-  project-scoped setup before adding one.
+- Do not stage, commit, push, amend, reset, rebase, switch branches, publish, or
+  deploy unless the user asks. Never bypass hooks or force-push shared history.
+- Stage exact paths. Preserve unrelated dirty files, branches, refs, stashes,
+  generated output, and user-authored work.
+- Treat tracked `AGENTS.md`, `CLAUDE.md`, continuity, and task artifacts like
+  normal project files; keep personal agent state and machine config excluded.
+- Treat a push or merge that triggers deployment as a deployment requiring
+  explicit authorization and a verified completion receipt.
+- Prefer one coherent commit per reviewable unit and the project's documented
+  commit convention; otherwise use Conventional Commit subjects.
 
-## Reading Documents And Data
-
-For PDFs, uploads, long documents, spreadsheets, or CSVs:
-
-- Read the full source before drafting.
-- Draft the requested output.
-- Before finalizing, re-check the source for factual accuracy, invented details,
-  and wording/style constraints.
-- Label paraphrases explicitly when source-faithful handling matters.
-
-## Continuity Ledger
-
-Maintain one compact `CONTINUITY.md` for the project. It is the durable handoff
-memory; keep it factual and bounded — no transcripts, raw logs, or chat dumps.
-
-- Read it at the start of each task before acting.
-- Update it only for meaningful deltas: goal, constraints, durable decisions,
-  state, open questions, working set, or important tool outcomes.
-- Tag every entry with an ISO date and a provenance tag: `[USER]`, `[CODE]`,
-  `[TOOL]`, or `[ASSUMPTION]`. Write `UNCONFIRMED` rather than guessing.
-- Supersede changed facts explicitly instead of silently rewriting history.
-- Keep `Snapshot` to ~25 lines, `Done (recent)` to ~7 bullets, and `Working set`
-  to ~12 paths. Compress older noise into milestone bullets that point to a
-  commit, PR, doc, or log.
-- Record durable choices as ADR-lite entries, e.g.
-  `D001 ACTIVE: chosen stack is ...`.
-- In replies after material work, include a brief snapshot: Goal, Now, Next, and
-  Open Questions. Print the full ledger only when it changed materially or the
-  user asks.
-
-## Verification And Definition Of Done
-
-Run the narrowest owner-level check while iterating, then every affected
-consumer check in proportion to blast radius.
-
-A task is done when:
-
-- The requested change is implemented or the question is answered.
-- Relevant verification was attempted — build, lint, tests, typecheck, document
-  rendering, or runtime smoke checks (see Commands).
-- Skipped checks, residual risks, and follow-ups are stated explicitly.
-- Errors and warnings are fixed or explicitly listed as out of scope.
-- Impact is explained: what changed, where, and why.
-- Docs are updated for impacted behavior, setup, or workflow.
-- `CONTINUITY.md` is updated when the change materially affects state, decisions,
-  risks, or next steps.
-
-Check-type specifics:
-
-<!-- TODO: tune per change type this project actually has, and set the UI
-default below to what this project wants. -->
-
-- **UI — flag-first, skip by default.** Do not run browser QA unsolicited. When
-  a change carries real layout, interaction, responsive, or theming risk, name
-  the risk and let the user decide; otherwise say why it wasn't needed. Tooling
-  lives in `CLAUDE.md`.
-- **Refactors:** behavior preserved, builds/tests pass, and a search confirms
-  old symbols and stale paths are gone.
-- **Docs-only:** verify paths, links, commands, and internal consistency; no
-  runtime build unless documented behavior changed.
-- **Output artifacts:** inspect the rendered artifact, not just a successful
-  build. File-format work needs a real round trip plus a malformed-input
-  rejection check.
-- **No harness:** say so, and verify with the strongest available lightweight
-  check — syntax checks, a small assembly script, or opening the local app.
-
-## Git And Existing Work
-
-- Read `docs/engineering/git-workflow.md` before branch naming, committing,
-  pushing, drafting PR copy, reviewing, merging, or cleaning branches. It is a
-  self-contained copy of the portable bootstrap baseline and may add project
-  rules, but must not weaken its safety or verification requirements.
-- The working tree may contain user edits or generated output.
-- Run git commands from the relevant repository root; use non-interactive flags.
-- Do not stage, commit, push, amend, reset, rebase, or switch branches unless the
-  user asks.
-- Stage and commit `AGENTS.md` and `CLAUDE.md` like any other tracked file when
-  they're part of the change; do not single them out to exclude. Keep personal
-  agent state, environment configuration, and OS metadata excluded through the
-  starter `.gitignore`; verify any additional local-only paths before staging.
-  <!-- TODO: state whether this project tracks or ignores `CONTINUITY.md`. -->
-- Never bypass hooks (`--no-verify`, `--no-gpg-sign`); fix the cause instead.
-- Treat a merge or push that triggers a deploy workflow as a deploy, and get
-  explicit authorization for it.
-- Never revert, delete, or overwrite changes you did not make unless explicitly
-  asked.
-- Never force-push a shared branch or rewrite published history without an
-  explicit request.
-- Avoid broad cleanup, drive-by refactors, and formatting churn.
-- When asked to commit, prefer one coherent commit per reviewable unit. Follow
-  project-specific commit rules when present; otherwise use Conventional Commit
-  subjects such as `fix(scope): preserve calendar scroll`.
-
-## Communication
-
-Think privately; do not print raw reasoning. Report actions, blockers,
-verification performed, checks skipped, residual risks, and final outputs, and
-skip preambles unless they help the user act. After material work, lead with a
-brief snapshot: Goal, Now, Next, and Open Questions. Trivial questions and
-one-line answers may skip the snapshot.
+Report useful progress, blockers, verification, skipped checks, residual risks,
+and final outputs. Keep simple answers simple.

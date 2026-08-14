@@ -43,6 +43,8 @@ repository.
 
 ## What belongs here
 
+- `AGENTS.md` and `CLAUDE.md` — self-contained instructions for working on this
+  repository; the Claude overlay imports the canonical repository guide.
 - `guides/AGENTS.md` — portable, provider-agnostic working agreements.
 - `guides/git-workflow.md` — portable Git/GitHub branch, commit, PR, review,
   merge, and publication baseline.
@@ -63,6 +65,8 @@ repository.
 - `scripts/setup-guides.mjs` — installs workspace guides and seeds `_templates/`
   beside this repository.
 - `scripts/test-bootstrap.mjs` — isolated regression checks for bootstrap safety.
+- `docs/continuity/` — rotated historical ledger entries, read only when a task
+  needs them; current state remains in `CONTINUITY.md`.
 
 ## What stays machine-local
 
@@ -285,8 +289,11 @@ node scripts/test-bootstrap.mjs
 node scripts/init-workspace.mjs --check
 ```
 
-The regression suite uses disposable workspaces and disposable home directories
-for clean initialization, reviewed replacement recovery, portable drift,
+The regression suite uses disposable workspaces and disposable home directories.
+Fixture copies exclude ignored generated roots plus machine-local files such as
+`MACHINE.md`, `.env*`, `.npmrc`, local Claude overrides, logs, and backups;
+`.env.example` remains portable. Coverage includes clean
+initialization, reviewed replacement recovery, portable drift,
 malformed machine state, deterministic skill integrity, reviewed Git-tree
 materialization, safe target boundaries, invalid manifests and portable
 sources, missing prerequisites, rejected arguments, and concise acquisition

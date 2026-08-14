@@ -1,44 +1,23 @@
-# Parent Workspace — Claude Code Overlay
+# Parent Workspace - Claude Code Overlay
 
-This portable file sits above child projects. The nearest project's
-`CLAUDE.md`, `AGENTS.md`, and owning documentation govern its scope.
+This file loads in every Claude Code session beneath this workspace. Keep it
+limited to universal routing that child projects do not own. The nearest
+project guidance and owning documentation govern project work.
 
-Read the `AGENTS.md` beside this file when creating or revising project
-guidance, working in an unguided folder, or applying the portable baseline.
-Read `MACHINE.md` when local paths, project routing, sibling dependencies,
-ports, browser preferences, or machine-specific tools matter.
+Do not import the sibling `AGENTS.md` here. It is the Codex workspace-root
+router and unguided-folder fallback; child repositories carry self-contained
+guidance. A child project's `CLAUDE.md` should import that project's own
+`AGENTS.md` exactly once.
 
-The installed `product-delivery` roles are ordinary subagents. Run one as the
-whole session with `claude --agent mb-product-partner`,
-`claude --agent mb-delivery-lead`, or `claude --agent mb-verifier`; the
-Verifier is also delegable as a subagent. Their contracts come from
-`~/.agents/workflows/product-delivery/`, so edit that source rather than the
-generated agent files.
-
-The parent guide is deliberately not imported into every child session because
-child projects carry self-contained guidance and duplicated instruction dilutes
-both. `MACHINE.md` is also read on demand because its facts vary by computer.
-
-## Tool Use
-
-- Read before editing and prefer targeted patches over full replacement.
-- Prefer focused discovery and `rg`; keep command output narrow.
-- Run Git from the actual child repository, not an assumed parent root.
-- Do not stage, commit, push, deploy, or make remote writes unless requested.
-- Never expose secrets, credentials, private documents, provider responses, or
-  broad environment output.
-- Inspect exact targets before deletion or overwrite and keep recovery possible.
-
-## Visual QA
-
-Browser QA is flag-first and skipped by default. When a change carries concrete
-layout, interaction, responsive, or theming risk, explain the risk and let the
-user decide unless the project requires rendered verification.
-
-When browser QA is authorized, use the best available browser surface for the
-needed session and report platform or rendering gaps honestly.
-
-## Communication
-
-Think privately. Report useful progress, blockers, verification, skipped
-checks, residual risks, and final outputs. Keep simple answers simple.
+- Read `MACHINE.md` only when local paths, sibling projects, ports, or machine
+  capabilities matter.
+- Read the current project's `CONTINUITY.md` fresh before acting; read its
+  archive only when history is relevant.
+- Inspect `/memory` or use an `InstructionsLoaded` hook when exact Claude
+  instruction loading matters.
+- Product-delivery role contracts live in
+  `~/.agents/workflows/product-delivery/`; load them only for that workflow.
+- In an unguided folder, read before editing, preserve unrelated work, protect
+  secrets and personal data, inspect destructive targets, and require explicit
+  authority for remote writes, Git publication, or deployment.
+- Report verification, skipped checks, blockers, and residual risk honestly.

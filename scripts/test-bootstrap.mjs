@@ -74,16 +74,51 @@ function detectCapabilities() {
 
 const capabilities = detectCapabilities();
 
+// Test workspaces need the repository's source and fixtures, not ignored local
+// caches or generated output. Copying those directories can turn a small test
+// fixture into gigabytes and make every integration test repeat that cost.
+const fixtureExcludedDirectoryNames = new Set([
+  ".git",
+  ".agents",
+  ".claude",
+  ".cache",
+  "coverage",
+  "dist",
+  "node_modules",
+  "tmp"
+]);
+
+const fixtureExcludedFileNames = new Set([
+  ".env",
+  ".npmrc",
+  ".skill-lock.json",
+  "CLAUDE.local.md",
+  "MACHINE.md"
+]);
+
+function includeInTestFixture(source) {
+  if (source === bootstrapRoot) return true;
+
+  const pathParts = source.slice(bootstrapRoot.length + 1).split(sep);
+  if (pathParts.some((part) => fixtureExcludedDirectoryNames.has(part))) {
+    return false;
+  }
+
+  const name = pathParts.at(-1);
+  if (fixtureExcludedFileNames.has(name)) return false;
+  if (name.startsWith(".env.") && name !== ".env.example") return false;
+  if (name.endsWith(".log") || name.includes(".backup-")) return false;
+  return true;
+}
+
 function createTestWorkspace() {
   const testRoot = mkdtempSync(join(tmpdir(), "machine-bootstrap-test-"));
   const workspaceRoot = join(testRoot, "Workspace");
   const checkoutRoot = join(workspaceRoot, "machine-bootstrap");
   mkdirSync(checkoutRoot, { recursive: true });
-  const gitRoot = join(bootstrapRoot, ".git");
   cpSync(bootstrapRoot, checkoutRoot, {
     recursive: true,
-    filter: (source) =>
-      source !== gitRoot && !source.startsWith(`${gitRoot}${sep}`)
+    filter: includeInTestFixture
   });
   return { testRoot, workspaceRoot, checkoutRoot };
 }
@@ -782,6 +817,118 @@ await test("project template keeps its existing safety exclusions", () => {
   assert.match(ignore, /^!\.env\.example$/m);
   assert.match(ignore, /^\.DS_Store$/m);
   assert.match(ignore, /^Thumbs\.db$/m);
+});
+
+await test("repository guidance is self-contained for Codex and Claude", () => {
+  const agents = readFileSync(join(bootstrapRoot, "AGENTS.md"), "utf8");
+  const claude = readFileSync(join(bootstrapRoot, "CLAUDE.md"), "utf8");
+  assert.match(agents, /# Machine Bootstrap Repository Guide/);
+  assert.match(agents, /guides\/.*portable workspace guidance/s);
+  assert.match(claude, /^@AGENTS\.md$/m);
+});
+
+await test("test fixtures exclude generated and machine-local state", () => {
+  for (const name of [
+    ".git",
+    ".agents",
+    ".claude",
+    ".cache",
+    "coverage",
+    "dist",
+    "node_modules",
+    "tmp"
+  ]) {
+    assert.equal(includeInTestFixture(join(bootstrapRoot, name, "artifact")), false);
+  }
+  for (const name of [
+    ".env",
+    ".env.local",
+    ".npmrc",
+    ".skill-lock.json",
+    "CLAUDE.local.md",
+    "MACHINE.md",
+    "error.log",
+    "AGENTS.md.backup-2026-08-14"
+  ]) {
+    assert.equal(includeInTestFixture(join(bootstrapRoot, name)), false);
+  }
+  assert.equal(includeInTestFixture(join(bootstrapRoot, ".env.example")), true);
+  assert.equal(includeInTestFixture(join(bootstrapRoot, "guides", "AGENTS.md")), true);
+});
+
+await test("guidance documents the verified instruction boundaries", () => {
+  const files = [
+    join(bootstrapRoot, "guides", "AGENTS.md"),
+    join(bootstrapRoot, "guides", "CLAUDE.md"),
+    join(bootstrapRoot, "project-templates", "AGENTS.md"),
+    join(bootstrapRoot, "project-templates", "CLAUDE.md"),
+    join(bootstrapRoot, "project-templates", "README.md")
+  ];
+  const contents = files.map((path) => readFileSync(path, "utf8"));
+  const portableAgents = contents[0];
+  const portableClaude = contents[1];
+  const templateReadme = contents[4];
+
+  assert.match(portableAgents, /project root \(normally the Git root\)/);
+  assert.match(portableAgents, /workspace `AGENTS\.md` above a child Git root is not/);
+  assert.doesNotMatch(portableClaude, /^\s*@AGENTS\.md\s*$/m);
+  assert.match(portableClaude, /Do not import the sibling `AGENTS\.md`/);
+  assert.match(templateReadme, /workspace guide\s+above a child Git root is not inherited/);
+  for (const content of contents) {
+    assert.doesNotMatch(content, /loads? (?:it|the same file) twice/i);
+    assert.doesNotMatch(content, /put(?:s)? it in context twice/i);
+  }
+});
+
+await test("always-loaded guidance stays within line and byte budgets", () => {
+  for (const [relativePath, lineLimit, byteLimit] of [
+    ["AGENTS.md", 80, 4 * 1024],
+    ["CLAUDE.md", 20, 1024],
+    ["guides/AGENTS.md", 140, 8 * 1024],
+    ["guides/CLAUDE.md", 30, 2 * 1024],
+    ["project-templates/AGENTS.md", 200, 12 * 1024],
+    ["project-templates/CLAUDE.md", 50, 4 * 1024]
+  ]) {
+    const contents = readFileSync(join(bootstrapRoot, relativePath), "utf8");
+    const lineCount = contents.trimEnd().split(/\r?\n/).length;
+    assert.ok(
+      lineCount <= lineLimit,
+      `${relativePath} has ${lineCount} lines; limit is ${lineLimit}`
+    );
+    const byteCount = Buffer.byteLength(contents, "utf8");
+    assert.ok(
+      byteCount <= byteLimit,
+      `${relativePath} has ${byteCount} bytes; limit is ${byteLimit}`
+    );
+  }
+});
+
+await test("project guidance reserves room for the nearest Codex guide", () => {
+  for (const relativePath of [
+    "guides/AGENTS.md",
+    "project-templates/AGENTS.md",
+    "project-templates/README.md"
+  ]) {
+    const contents = readFileSync(join(bootstrapRoot, relativePath), "utf8");
+    assert.match(contents, /32 KiB combined/);
+    assert.match(contents, /(?:below|less than) 28 KiB/);
+  }
+});
+
+await test("continuity stays bounded and preserves rotated history", () => {
+  const continuity = readFileSync(join(bootstrapRoot, "CONTINUITY.md"), "utf8");
+  const archive = readFileSync(
+    join(bootstrapRoot, "docs", "continuity", "2026-07.md"),
+    "utf8"
+  );
+  const lineCount = continuity.trimEnd().split(/\r?\n/).length;
+
+  assert.ok(lineCount <= 160, `CONTINUITY.md has ${lineCount} lines; limit is 160`);
+  assert.match(continuity, /counting every section/);
+  assert.doesNotMatch(continuity, /decisions are uncapped/);
+  assert.match(continuity, /docs\/continuity\/2026-07\.md/);
+  assert.match(archive, /# Continuity Archive — 2026-07/);
+  assert.match(archive, /Entries are preserved verbatim/);
 });
 
 await test("project template documents the workflow adaptation points", () => {
