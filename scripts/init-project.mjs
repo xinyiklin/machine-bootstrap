@@ -9,7 +9,6 @@ import {
   readFileSync,
   realpathSync,
   renameSync,
-  rmdirSync,
   statSync,
   unlinkSync,
   writeFileSync
@@ -59,8 +58,8 @@ if (positional.length !== 1) {
 const [nodeMajor] = process.versions.node
   .split(".")
   .map((part) => Number.parseInt(part, 10));
-if (!Number.isInteger(nodeMajor) || nodeMajor < 18) {
-  fail(`Node.js 18 or newer is required; found ${process.versions.node}`);
+if (!Number.isInteger(nodeMajor) || nodeMajor < 24) {
+  fail(`Node.js 24 or newer is required; found ${process.versions.node}`);
 }
 
 const homeCandidates = [homedir(), process.env.HOME, process.env.USERPROFILE]
@@ -225,31 +224,199 @@ const safetyEntries = readFileSync(join(templateRoot, ".gitignore"), "utf8")
   .split(/\r?\n/)
   .map((line) => line.trim())
   .filter((line) => line && !line.startsWith("#"));
-const mergeableSafetyEntries = safetyEntries.filter(
-  (entry) => !entry.startsWith("!")
+const environmentSafetyEntries = [".env", ".env.*", "!.env.example"];
+if (!environmentSafetyEntries.every((entry) => safetyEntries.includes(entry))) {
+  fail("Project .gitignore template must contain the complete environment policy");
+}
+const simpleSafetyEntries = safetyEntries.filter(
+  (entry) => !environmentSafetyEntries.includes(entry)
 );
+
+// Existing managed paths and the order-sensitive ignore policy are preflighted
+// before the first write, so review-required state never leaves partial seeds.
+if (targetExisted) {
+  for (const relativePath of [...seedFiles, ".gitignore"]) {
+    const destination = join(canonicalTarget, ...relativePath.split("/"));
+    if (!entryExists(destination)) continue;
+    const stat = lstatSync(destination);
+    if (stat.isSymbolicLink() || !stat.isFile()) {
+      fail(`Managed project path must be a real file: ${destination}`);
+    }
+    try {
+      accessSync(destination, constants.R_OK);
+    } catch {
+      fail(`Managed project path must be readable: ${destination}`);
+    }
+  }
+}
+
+const gitignorePath = join(canonicalTarget, ".gitignore");
+let plannedGitignoreOriginal = null;
+let plannedGitignoreAdditions = [...safetyEntries];
+if (targetExisted && entryExists(gitignorePath)) {
+  plannedGitignoreOriginal = readFileSync(gitignorePath);
+  const presentEntries = plannedGitignoreOriginal
+    .toString("utf8")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("#"));
+  const presentEntrySet = new Set(presentEntries);
+  const presentEnvironmentEntries = presentEntries.filter((entry) =>
+    entry.includes(".env")
+  );
+  if (presentEnvironmentEntries.length) {
+    const hasCanonicalEnvironmentPolicy =
+      presentEnvironmentEntries.length === environmentSafetyEntries.length &&
+      presentEnvironmentEntries.every(
+        (entry, index) => entry === environmentSafetyEntries[index]
+      );
+    if (!hasCanonicalEnvironmentPolicy) {
+      fail(
+        "Existing .gitignore environment rules require manual review before " +
+          `initialization: ${presentEnvironmentEntries.join(", ")}`
+      );
+    }
+    plannedGitignoreAdditions = simpleSafetyEntries.filter(
+      (entry) => !presentEntrySet.has(entry)
+    );
+  } else {
+    plannedGitignoreAdditions = safetyEntries.filter(
+      (entry) => !presentEntrySet.has(entry)
+    );
+  }
+}
+
 const createdFiles = [];
 const createdDirectories = [];
 const preservedFiles = [];
-let createdTarget = false;
+const transactions = [];
+let createdTarget = null;
 let gitignoreBackup = null;
-let gitignoreOriginal = null;
+let gitignoreTransaction = null;
 let gitignoreAdded = [];
 
+function fileIdentity(path) {
+  const stat = lstatSync(path, { bigint: true });
+  return { dev: stat.dev, ino: stat.ino, birthtimeNs: stat.birthtimeNs };
+}
+
+function isOwnedFile(transaction, path) {
+  if (!transaction.identity || !entryExists(path)) return false;
+  try {
+    const identity = fileIdentity(path);
+    return (
+      identity.dev === transaction.identity.dev &&
+      identity.ino === transaction.identity.ino &&
+      identity.birthtimeNs === transaction.identity.birthtimeNs &&
+      readFileSync(path).equals(transaction.expectedContents)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function restoreNoClobber(source, destination, warnings, label) {
+  if (!entryExists(source)) return false;
+  if (entryExists(destination)) {
+    warnings.push(`${label} preserved at ${source}; ${destination} is occupied`);
+    return false;
+  }
+  try {
+    copyFileSync(source, destination, constants.COPYFILE_EXCL);
+    try {
+      unlinkSync(source);
+    } catch (error) {
+      warnings.push(`${label} also remains at ${source}: ${error.message}`);
+    }
+    return true;
+  } catch (error) {
+    warnings.push(`${label} preserved at ${source}: ${error.message}`);
+    return false;
+  }
+}
+
 function rollback() {
-  if (gitignoreBackup) {
-    try { unlinkSync(join(canonicalTarget, ".gitignore")); } catch {}
-    try { renameSync(gitignoreBackup, join(canonicalTarget, ".gitignore")); } catch {}
+  const warnings = [];
+  for (const transaction of [...transactions].reverse()) {
+    if (transaction.identity && entryExists(transaction.destination)) {
+      const quarantine =
+        `${transaction.destination}.rollback-${process.pid}-${randomUUID()}`;
+      try {
+        // Rename first so identity/content cannot change between verification
+        // and removal. Unknown content is copied back without clobbering.
+        renameSync(transaction.destination, quarantine);
+        if (isOwnedFile(transaction, quarantine)) {
+          unlinkSync(quarantine);
+        } else {
+          warnings.push(`${transaction.destination} changed concurrently`);
+          restoreNoClobber(
+            quarantine,
+            transaction.destination,
+            warnings,
+            "concurrent entry"
+          );
+        }
+      } catch (error) {
+        if (error?.code !== "ENOENT") {
+          warnings.push(
+            `could not quarantine ${transaction.destination}: ${error.message}`
+          );
+        }
+      }
+    } else if (transaction.writeCompleted && entryExists(transaction.destination)) {
+      warnings.push(
+        `${transaction.destination} was written but ownership could not be verified`
+      );
+    }
+
+    if (transaction.backupPath) {
+      restoreNoClobber(
+        transaction.backupPath,
+        transaction.destination,
+        warnings,
+        "original"
+      );
+    }
   }
-  for (const path of createdFiles.reverse()) {
-    try { unlinkSync(path); } catch {}
+  transactions.length = 0;
+
+  // Node does not expose a portable atomic "remove this directory only if it
+  // is still the same directory" operation. Never delete a directory during
+  // rollback: even an identity check followed by rmdir has a replacement race.
+  for (const path of [...createdDirectories].reverse()) {
+    if (entryExists(path)) {
+      warnings.push(
+        `${path} was not removed during rollback; review directory cleanup manually`
+      );
+    }
   }
-  for (const path of createdDirectories.reverse()) {
-    try { rmdirSync(path); } catch {}
+  createdDirectories.length = 0;
+  if (createdTarget && entryExists(createdTarget)) {
+    warnings.push(
+      `${createdTarget} was not removed during rollback; review target cleanup manually`
+    );
   }
-  if (createdTarget) {
-    try { rmdirSync(canonicalTarget); } catch {}
+  createdTarget = null;
+
+  if (warnings.length) {
+    console.error("\nRollback requires attention:");
+    for (const warning of warnings) console.error(`- ${warning}`);
   }
+}
+
+function copyTrackedFile(source, destination) {
+  const transaction = {
+    destination,
+    expectedContents: readFileSync(source),
+    backupPath: null,
+    identity: null,
+    writeCompleted: false
+  };
+  transactions.push(transaction);
+  copyFileSync(source, destination, constants.COPYFILE_EXCL);
+  transaction.writeCompleted = true;
+  transaction.identity = fileIdentity(destination);
+  createdFiles.push(destination);
 }
 
 function ensureDirectory(path) {
@@ -267,17 +434,7 @@ function ensureDirectory(path) {
 try {
   if (!targetExisted) {
     mkdirSync(canonicalTarget);
-    createdTarget = true;
-  }
-
-  for (const relativePath of [...seedFiles, ".gitignore"]) {
-    const destination = join(canonicalTarget, ...relativePath.split("/"));
-    if (!entryExists(destination)) continue;
-    const stat = lstatSync(destination);
-    if (stat.isSymbolicLink() || !stat.isFile()) {
-      throw new Error(`Managed project path must be a real file: ${destination}`);
-    }
-    accessSync(destination, constants.R_OK);
+    createdTarget = canonicalTarget;
   }
 
   for (const relativePath of seedFiles) {
@@ -292,49 +449,57 @@ try {
       preservedFiles.push(relativePath);
       continue;
     }
-    copyFileSync(join(templateRoot, ...parts), destination, constants.COPYFILE_EXCL);
-    createdFiles.push(destination);
+    copyTrackedFile(join(templateRoot, ...parts), destination);
   }
 
-  const gitignorePath = join(canonicalTarget, ".gitignore");
   if (!entryExists(gitignorePath)) {
-    copyFileSync(join(templateRoot, ".gitignore"), gitignorePath, constants.COPYFILE_EXCL);
-    createdFiles.push(gitignorePath);
+    if (plannedGitignoreOriginal !== null) {
+      throw new Error(`${gitignorePath} disappeared during initialization`);
+    }
+    copyTrackedFile(join(templateRoot, ".gitignore"), gitignorePath);
     gitignoreAdded = [...safetyEntries];
   } else {
+    if (plannedGitignoreOriginal === null) {
+      throw new Error(`${gitignorePath} appeared during initialization; rerun`);
+    }
     preservedFiles.push(".gitignore");
-    gitignoreOriginal = readFileSync(gitignorePath);
-    const presentEntries = new Set(
-      gitignoreOriginal
-        .toString("utf8")
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter((line) => line && !line.startsWith("#"))
-    );
-    gitignoreAdded = mergeableSafetyEntries.filter(
-      (entry) => !presentEntries.has(entry)
-    );
+    const currentStat = lstatSync(gitignorePath);
+    if (currentStat.isSymbolicLink() || !currentStat.isFile()) {
+      throw new Error(`Managed project path must be a real file: ${gitignorePath}`);
+    }
+    gitignoreAdded = [...plannedGitignoreAdditions];
     if (gitignoreAdded.length) {
       const current = readFileSync(gitignorePath);
-      if (!current.equals(gitignoreOriginal)) {
+      if (!current.equals(plannedGitignoreOriginal)) {
         throw new Error(`${gitignorePath} changed during initialization`);
       }
       gitignoreBackup = join(
         canonicalTarget,
         `.gitignore.machine-bootstrap-${process.pid}-${randomUUID()}.backup`
       );
-      renameSync(gitignorePath, gitignoreBackup);
-      const originalText = gitignoreOriginal.toString("utf8");
+      const originalText = plannedGitignoreOriginal.toString("utf8");
       const newline = originalText.includes("\r\n") ? "\r\n" : "\n";
       const separator =
         originalText.length && !originalText.endsWith("\n") ? newline : "";
       const addition =
         `${separator}${newline}# Added by machine-bootstrap project initializer${newline}` +
         `${gitignoreAdded.join(newline)}${newline}`;
-      writeFileSync(gitignorePath, originalText + addition, {
+      const updatedContents = Buffer.from(originalText + addition, "utf8");
+      gitignoreTransaction = {
+        destination: gitignorePath,
+        expectedContents: updatedContents,
+        backupPath: gitignoreBackup,
+        identity: null,
+        writeCompleted: false
+      };
+      transactions.push(gitignoreTransaction);
+      renameSync(gitignorePath, gitignoreBackup);
+      writeFileSync(gitignorePath, updatedContents, {
         encoding: "utf8",
         flag: "wx"
       });
+      gitignoreTransaction.writeCompleted = true;
+      gitignoreTransaction.identity = fileIdentity(gitignorePath);
     }
   }
 
@@ -348,9 +513,18 @@ try {
   }
 
   if (gitignoreBackup) {
-    unlinkSync(gitignoreBackup);
+    try {
+      unlinkSync(gitignoreBackup);
+    } catch (error) {
+      console.error(
+        `Project initialization warning: .gitignore backup remains at ` +
+          `${gitignoreBackup}: ${error.message}`
+      );
+    }
+    if (gitignoreTransaction) gitignoreTransaction.backupPath = null;
     gitignoreBackup = null;
   }
+  transactions.length = 0;
 
   console.log(`\nProject initialized: ${canonicalTarget}`);
   console.log(

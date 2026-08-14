@@ -1,9 +1,16 @@
 # Initialize This Workspace
 
-Agent-facing entry point for a fresh checkout. Prerequisites: Git and Node.js 18
+Agent-facing entry point for a fresh checkout. Prerequisites: Git and Node.js 24
 or newer.
 
 ## Instruction for an AI agent
+
+The user may request setup in ordinary language without naming any script. Treat
+“Set up this workspace using machine-bootstrap; follow `INIT.md`” as the
+agent-assisted entry point. Explain the intended scope, use the audited scripts
+below for execution and verification, stop for review-required conditions, and
+report the resulting state. Do not require the user to translate the request
+into CLI commands.
 
 Read this file, `README.md`, and `CONTINUITY.md`. Confirm this repository is a
 direct child of the intended dedicated, non-Git workspace folder, then run:
@@ -23,16 +30,9 @@ node scripts/init-workspace.mjs --check
 ```
 
 If the parent contains a legacy `AGENTS.md`, `CLAUDE.md`, or `_templates/`, stop
-and report it. After confirming the entries are unchanged bootstrap-generated
-files, migrate them recoverably with:
-
-```bash
-node scripts/init-workspace.mjs --migrate-legacy-layout
-```
-
-The migration rejects unknown differences and moves recognized entries under
-`../.machine-bootstrap-backup/<timestamp>/`; it never touches sibling projects
-or `MACHINE.md`.
+and report it. Automatic migration is not currently supported. Review the
+entries and move them manually outside the workspace root before rerunning;
+never move sibling projects or `MACHINE.md` as part of that cleanup.
 
 Initialize one project explicitly:
 
@@ -41,11 +41,17 @@ node scripts/init-project.mjs ../project-a
 ```
 
 Add `--create` only when the target directory does not yet exist. The command
-seeds missing project-owned guidance directly from `project-templates/`,
-preserves existing files, and merges missing positive `.gitignore` safety
-entries without adding negation rules to an existing file. It
-does not initialize Git, copy `TEMPLATE-USAGE.md`, replace a README, or edit any
-sibling project.
+seeds missing project-owned guidance directly from `project-templates/` and
+preserves existing files. With no existing environment ignore rules it appends
+the complete ordered environment block plus missing independent safety rules;
+incomplete or ambiguous environment rules stop for manual review before any
+write. It does not initialize Git, copy `TEMPLATE-USAGE.md`, replace a README,
+or edit any sibling project.
+
+The user may instead say “Initialize `<target-project>` using
+machine-bootstrap.” Resolve and repeat the exact target before execution, then
+use the same initializer and safety rules above; do not copy template files by
+hand.
 
 Report the initialized paths, shared capability state, remaining placeholders,
 and review-required conditions. Do not initialize Git at the workspace root or

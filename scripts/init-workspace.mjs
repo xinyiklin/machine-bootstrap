@@ -5,15 +5,10 @@ import {
   constants,
   copyFileSync,
   lstatSync,
-  mkdirSync,
-  readdirSync,
   readFileSync,
   realpathSync,
-  renameSync,
-  rmdirSync,
   statSync
 } from "node:fs";
-import { createHash, randomUUID } from "node:crypto";
 import { homedir } from "node:os";
 import { dirname, join, parse, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -28,13 +23,11 @@ const rawArgs = process.argv.slice(2);
 const args = new Set(rawArgs);
 const allowedArgs = new Set([
   "--check",
-  "--migrate-legacy-layout",
   "--skip-skills",
   "--skip-workflows"
 ]);
 const unknownArgs = rawArgs.filter((arg) => !allowedArgs.has(arg));
 const checkOnly = args.has("--check");
-const migrateLegacy = args.has("--migrate-legacy-layout");
 const skipSkills = args.has("--skip-skills");
 const skipWorkflows = args.has("--skip-workflows");
 
@@ -44,9 +37,6 @@ function fail(message) {
 }
 
 if (unknownArgs.length) fail(`Unknown argument(s): ${unknownArgs.join(", ")}`);
-if (checkOnly && migrateLegacy) {
-  fail("--check and --migrate-legacy-layout cannot be used together");
-}
 if (canonicalWorkspaceRoot === parse(canonicalWorkspaceRoot).root) {
   fail("Workspace root cannot be the filesystem root");
 }
@@ -70,13 +60,12 @@ if (dirname(canonicalBootstrapRoot) !== canonicalWorkspaceRoot) {
 const [nodeMajor] = process.versions.node
   .split(".")
   .map((part) => Number.parseInt(part, 10));
-if (!Number.isInteger(nodeMajor) || nodeMajor < 18) {
-  fail(`Node.js 18 or newer is required; found ${process.versions.node}`);
+if (!Number.isInteger(nodeMajor) || nodeMajor < 24) {
+  fail(`Node.js 24 or newer is required; found ${process.versions.node}`);
 }
 
 const requiredFiles = [
   "machine-templates/MACHINE.example.md",
-  "machine-templates/legacy-layout-manifest.json",
   "project-templates/AGENTS.md",
   "project-templates/CLAUDE.md",
   "project-templates/.gitignore",
@@ -194,15 +183,12 @@ if (entryExists(machinePath)) {
 
 const legacyNames = ["AGENTS.md", "CLAUDE.md", "_templates"];
 const presentLegacy = legacyNames.filter((name) => entryExists(join(workspaceRoot, name)));
-if (presentLegacy.length && !migrateLegacy) {
+if (presentLegacy.length) {
   fail(
-    `Legacy workspace layout detected (${presentLegacy.join(", ")}); review it, then run with --migrate-legacy-layout`
+    `Legacy workspace layout detected (${presentLegacy.join(", ")}); ` +
+      "automatic migration is not supported. Review the entries, then move " +
+      "them manually out of the workspace root before rerunning"
   );
-}
-
-function normalizedHash(path) {
-  const normalized = readFileSync(path, "utf8").replaceAll("\r\n", "\n");
-  return createHash("sha256").update(normalized, "utf8").digest("hex");
 }
 
 function entryExists(path) {
@@ -215,148 +201,10 @@ function entryExists(path) {
   }
 }
 
-function collectEntries(
-  root,
-  relativePath = "",
-  snapshot = { directories: [], files: [] }
-) {
-  const entries = readdirSync(join(root, relativePath), { withFileTypes: true })
-    .sort((left, right) => left.name.localeCompare(right.name));
-  for (const entry of entries) {
-    const childRelative = relativePath
-      ? `${relativePath}/${entry.name}`
-      : entry.name;
-    if (entry.isDirectory()) {
-      snapshot.directories.push(childRelative);
-      collectEntries(root, childRelative, snapshot);
-    } else if (entry.isFile()) snapshot.files.push(childRelative);
-    else fail(`Legacy workspace entry is not a regular file: ${join(root, childRelative)}`);
-  }
-  return snapshot;
-}
-
-function loadLegacyFingerprints() {
-  const path = join(bootstrapRoot, "machine-templates", "legacy-layout-manifest.json");
-  let parsed;
-  try {
-    parsed = JSON.parse(readFileSync(path, "utf8"));
-  } catch (error) {
-    fail(`Could not read legacy layout fingerprints: ${error.message}`);
-  }
-  if (parsed?.schemaVersion !== 1 || !parsed.files || typeof parsed.files !== "object") {
-    fail("Legacy layout fingerprint manifest is invalid");
-  }
-  return parsed.files;
-}
-
-function verifyLegacyLayout() {
-  if (!presentLegacy.length) return;
-  const fingerprints = loadLegacyFingerprints();
-  const actualFiles = [];
-  const actualDirectories = [];
-  for (const name of presentLegacy) {
-    const path = join(workspaceRoot, name);
-    const stat = lstatSync(path);
-    if (stat.isSymbolicLink()) fail(`Legacy workspace entry is a symbolic link: ${path}`);
-    if (name === "_templates") {
-      if (!stat.isDirectory()) fail(`${path} must be a directory for migration`);
-      const snapshot = collectEntries(path);
-      for (const child of snapshot.files) actualFiles.push(`_templates/${child}`);
-      for (const child of snapshot.directories) {
-        actualDirectories.push(`_templates/${child}`);
-      }
-    } else {
-      if (!stat.isFile()) fail(`${path} must be a regular file for migration`);
-      actualFiles.push(name);
-    }
-  }
-  const unrecognized = [];
-  for (const relativePath of actualFiles) {
-    const expectedHash = fingerprints[relativePath];
-    const actualHash = normalizedHash(join(workspaceRoot, ...relativePath.split("/")));
-    if (!expectedHash || expectedHash !== actualHash) unrecognized.push(relativePath);
-  }
-  const missingExpected = Object.keys(fingerprints).filter((path) => {
-    const top = path.split("/")[0];
-    return presentLegacy.includes(top) && !actualFiles.includes(path);
-  });
-  const expectedDirectories = new Set();
-  for (const path of Object.keys(fingerprints).filter((path) => path.startsWith("_templates/"))) {
-    const parts = path.split("/").slice(0, -1);
-    for (let index = 2; index <= parts.length; index += 1) {
-      expectedDirectories.add(parts.slice(0, index).join("/"));
-    }
-  }
-  const unrecognizedDirectories = actualDirectories.filter(
-    (path) => !expectedDirectories.has(path)
-  );
-  const missingDirectories = [...expectedDirectories].filter(
-    (path) => presentLegacy.includes("_templates") && !actualDirectories.includes(path)
-  );
-  if (
-    unrecognized.length ||
-    missingExpected.length ||
-    unrecognizedDirectories.length ||
-    missingDirectories.length
-  ) {
-    const details = [
-      ...unrecognized,
-      ...unrecognizedDirectories,
-      ...missingExpected.map((path) => `${path} (missing)`),
-      ...missingDirectories.map((path) => `${path}/ (missing)`)
-    ].join(", ");
-    fail(`Legacy layout contains unrecognized or user-authored differences: ${details}`);
-  }
-}
-
-function migrateLegacyLayout() {
-  if (!presentLegacy.length) {
-    console.log("No legacy workspace guidance found; migration was not needed.");
-    return;
-  }
-  verifyLegacyLayout();
-  const backupParent = join(workspaceRoot, ".machine-bootstrap-backup");
-  let createdParent = false;
-  if (entryExists(backupParent)) {
-    const stat = lstatSync(backupParent);
-    if (stat.isSymbolicLink() || !stat.isDirectory()) {
-      fail(`${backupParent} must be a real directory`);
-    }
-  } else {
-    mkdirSync(backupParent);
-    createdParent = true;
-  }
-  const timestamp = new Date().toISOString().replaceAll(":", "-");
-  const backupRoot = join(backupParent, `${timestamp}-${process.pid}-${randomUUID()}`);
-  mkdirSync(backupRoot);
-  const moved = [];
-  try {
-    for (const name of presentLegacy) {
-      const source = join(workspaceRoot, name);
-      const destination = join(backupRoot, name);
-      renameSync(source, destination);
-      moved.push([source, destination]);
-    }
-  } catch (error) {
-    for (const [source, destination] of moved.reverse()) {
-      try {
-        renameSync(destination, source);
-      } catch {
-        // Report the original failure plus the recoverable backup root below.
-      }
-    }
-    try { rmdirSync(backupRoot); } catch {}
-    if (createdParent) {
-      try { rmdirSync(backupParent); } catch {}
-    }
-    fail(`Legacy migration could not complete: ${error.message}; inspect ${backupRoot}`);
-  }
-  console.log(`Moved legacy workspace guidance to ${backupRoot}`);
-}
 
 console.log(`Bootstrap: ${bootstrapRoot}`);
 console.log(`Workspace: ${workspaceRoot}`);
-console.log(`Mode: ${checkOnly ? "check only" : migrateLegacy ? "migrate and initialize" : "initialize"}`);
+console.log(`Mode: ${checkOnly ? "check only" : "initialize"}`);
 if (skipSkills) console.log("Shared skills: skipped by request");
 if (skipWorkflows) console.log("Workflow foundation: skipped by request");
 
@@ -371,7 +219,6 @@ if (!checkOnly) {
       label: "workflow foundation preflight"
     });
   }
-  if (migrateLegacy) migrateLegacyLayout();
   if (!entryExists(machinePath)) {
     try {
       copyFileSync(machineSource, machinePath, constants.COPYFILE_EXCL);

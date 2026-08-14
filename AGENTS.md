@@ -12,7 +12,7 @@ facts. It is not an agent-policy source.
 ## Ownership map
 
 - `README.md` and `INIT.md` — purpose, setup contract, and operator workflow.
-- `machine-templates/` — inert machine registry starter and legacy fingerprints.
+- `machine-templates/` — inert machine registry starter.
 - `project-templates/` — the only canonical project starter source; seeded
   files become project-owned and are not synchronized afterward.
 - `docs/engineering/git-workflow.md` — this repository's Git/publication
@@ -32,12 +32,12 @@ facts. It is not an agent-policy source.
 - The checkout's direct parent is the intended non-Git workspace root.
   Initialization rejects a filesystem root, user home, or Git-owned parent.
 - The workspace root never owns live `AGENTS.md`, `CLAUDE.md`, or `_templates/`.
-  Legacy entries require an explicit, fingerprint-verified, recoverable
-  migration.
+  Legacy entries stop initialization for explicit manual review and cleanup;
+  automatic migration is not supported.
 - Project initialization targets exactly one path inside the workspace, never
   this repository or an arbitrary subdirectory of an existing Git repository.
-  Existing project-owned files are preserved; `.gitignore` gains only missing
-  safety entries.
+  Existing project-owned files are preserved. `.gitignore` updates keep the
+  environment policy ordered and fail closed on ambiguous existing rules.
 - Bootstrap-owned global installations are missing-only by default. Differing
   destinations fail closed; reviewed workflow `--replace` operations preserve
   recoverable backups.

@@ -39,8 +39,6 @@ the current session.
 - `AGENTS.md` and `CLAUDE.md` — instructions for this repository only.
 - `machine-templates/MACHINE.example.md` — starter for the optional inert parent
   registry.
-- `machine-templates/legacy-layout-manifest.json` — fingerprints used only to
-  recognize safely migratable files from the retired workspace-router layout.
 - `project-templates/` — the single canonical starter source for project-owned
   guidance, Git workflow, PR template, and ignore entries.
 - `docs/engineering/git-workflow.md` — this repository's Git/publication
@@ -77,7 +75,20 @@ policy. Promote durable work into its own sibling project with its own guidance.
 
 ## Set up another machine
 
-Prerequisites: Git, Node.js 18 or newer, Claude Code and/or Codex.
+Prerequisites: Git, Node.js 24 or newer, Claude Code and/or Codex.
+
+Choose either setup style:
+
+- **Agent-assisted setup (recommended for normal use):** open an agent session in
+  this repository and ask: **“Set up this workspace using machine-bootstrap.
+  Follow `INIT.md`, preserve existing files, stop for anything requiring manual
+  review, and report what changed. Do not commit or publish anything.”** The user
+  does not need to name or memorize script commands. The agent reads the
+  contracts, confirms scope, requests any required filesystem permission, and
+  uses the repository's audited scripts for the actual setup and verification.
+- **Direct CLI setup:** follow the commands below yourself. This is useful for
+  automation, repeatable machine provisioning, or inspecting each command
+  directly.
 
 1. Clone this repository as a direct child of the dedicated non-Git folder that
    will contain sibling projects. The filesystem root and user home are rejected
@@ -103,15 +114,10 @@ Prerequisites: Git, Node.js 18 or newer, Claude Code and/or Codex.
    Use `--skip-skills` or `--skip-workflows` to omit that layer from both setup
    and verification.
 4. If an older bootstrap generated parent `AGENTS.md`, `CLAUDE.md`, or
-   `_templates/`, review and migrate recognized unchanged entries recoverably:
-
-   ```bash
-   node scripts/init-workspace.mjs --migrate-legacy-layout
-   ```
-
-   Unknown or user-authored differences stop for manual review. Recognized
-   entries move under `../.machine-bootstrap-backup/<timestamp>/`; `MACHINE.md`
-   and sibling project guidance are never moved.
+   `_templates/`, initialization stops without moving anything. Automatic
+   migration is not currently supported. Review those entries and move them
+   manually outside the workspace root before rerunning; never move
+   `MACHINE.md` or sibling project guidance as part of that cleanup.
 5. Seed one existing project root:
 
    ```bash
@@ -119,14 +125,22 @@ Prerequisites: Git, Node.js 18 or newer, Claude Code and/or Codex.
    ```
 
    For a missing directory, add `--create`. The initializer does not initialize
-   Git. It creates only missing project-owned files, preserves existing files,
-   merges missing positive `.gitignore` safety entries without adding negation
-   rules to an existing file, never copies
-   `TEMPLATE-USAGE.md`, and never creates or replaces a README.
+   Git. It creates only missing project-owned files and preserves existing
+   files. For an existing `.gitignore` with no environment rules, it appends
+   the complete ordered `.env`, `.env.*`, `!.env.example` policy plus missing
+   independent safety rules. An existing canonical environment block is
+   preserved; incomplete or ambiguous environment rules stop for manual review
+   before any project writes. The initializer never copies `TEMPLATE-USAGE.md`
+   and never creates or replaces a README. On failure, rollback removes only
+   verified run-owned files. It never deletes directories by pathname; any
+   leftover directory cleanup is reported for manual review.
 6. Replace project placeholders with verified project facts. Start a new Codex
    or Claude session in that project root or relevant scoped directory.
 
-To delegate setup, tell an AI agent: **“Follow `machine-bootstrap/INIT.md`.”**
+To initialize only one project through an agent, specify its exact path:
+**“Initialize `../project-a` using machine-bootstrap. Preserve existing files,
+stop for review-required conditions, verify the result, and do not commit or
+publish anything.”**
 
 ## Product delivery workflow
 
@@ -304,12 +318,13 @@ node scripts/init-workspace.mjs --check
 
 The regression suite uses disposable workspaces, projects, Git repositories, and
 home directories. It covers parent boundary checks, registry initialization,
-legacy detection and recoverable migration, explicit project target safety,
-missing-only seeding, existing guidance preservation, `.gitignore` merging,
-sibling byte isolation, import topology, byte budgets, skill integrity,
-workflow validation, deterministic adapter generation, rollback, check-only
-behavior, and Linux/Windows CI contracts. It makes no model or API calls and
-never points setup scripts at the live parent workspace or provider roots.
+manual-only legacy detection, explicit project target safety, missing-only
+seeding, existing guidance preservation, order-aware `.gitignore` handling,
+ownership-safe rollback, sibling byte isolation, import topology, byte budgets,
+skill integrity, workflow validation, deterministic adapter generation,
+check-only behavior, and Linux/Windows CI contracts. It makes no model or API
+calls and never points setup scripts at the live parent workspace or provider
+roots.
 
 Manual provider loading checks live in
 `docs/guidance-loading-smoke.md`. Static tests are not runtime loading evidence.

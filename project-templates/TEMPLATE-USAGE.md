@@ -18,11 +18,19 @@ project intentionally tracks completed task artifacts referenced by continuity.
 
 ## Initialize a project
 
+The user may either run the initializer directly or ask an agent: “Initialize
+`<target-project>` using machine-bootstrap. Preserve existing files, stop for
+review-required conditions, verify the result, and do not commit or publish
+anything.” The agent should use the canonical initializer rather than copying
+the template paths by hand.
+
 1. From `machine-bootstrap`, run
    `node scripts/init-project.mjs <target-project>`. Add `--create` only when the
    target directory does not exist. The initializer copies only missing starter
-   paths, preserves existing project-owned files, and merges missing positive
-   `.gitignore` safety entries without adding negation rules to an existing file.
+   paths and preserves existing project-owned files. With no environment rules,
+   it appends the complete ordered `.env`, `.env.*`, `!.env.example` block plus
+   missing independent safety rules. An incomplete or ambiguous existing
+   environment policy requires manual review before any write.
 2. Replace every placeholder with facts verified from the real project and
    delete irrelevant sections and template notes.
 3. Keep the single `@AGENTS.md` import immediately below the project

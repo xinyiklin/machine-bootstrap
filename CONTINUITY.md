@@ -18,11 +18,15 @@ is read only when a task needs it.
   are independent repositories with self-contained guidance.
 - 2026-08-14 [USER+CODE] Project templates have one canonical source and are
   seeded missing-only into one explicit target. Existing project policy remains
-  project-owned; `.gitignore` receives only missing safety entries.
-- 2026-08-14 [USER+CODE] Legacy parent guidance may move only through explicit,
-  fingerprint-verified migration to a recoverable timestamped backup. Unknown
-  differences stop for manual review; sibling projects and `MACHINE.md` are out
-  of migration scope.
+  project-owned; `.gitignore` keeps its environment rules ordered and ambiguous
+  existing policy stops before writes. Rollback removes only verified run-owned
+  files, never deletes directories by pathname, and reports manual cleanup.
+- 2026-08-14 [USER] Legacy parent guidance stops initialization for manual
+  review and cleanup. Automatic migration and its versioned manifest are
+  intentionally deferred (D022).
+- 2026-08-14 [USER] Workspace and project initialization support a first-class
+  agent-assisted entry point; users may describe the target and outcome without
+  naming scripts, while agents still use the audited initializers (D023).
 - 2026-08-14 [CODE] Test fixtures exclude ignored generated roots and
   machine-local/private files while preserving `.env.example` (D019).
 - 2026-08-14 [CODE] Active Codex guide chains target below 28 KiB (D020); line
@@ -98,6 +102,12 @@ Milestones — detail in `docs/continuity/2026-07.md`:
 - 2026-08-14 [USER] D021 ACTIVE: a bootstrap session may administer or route a
   sibling but is never its long-lived coding session. Access authorization does
   not inject sibling instructions; start a new session in the target project.
+- 2026-08-14 [USER] D022 ACTIVE: do not support automatic legacy workspace
+  migration yet. Detect parent guidance/templates and fail closed with manual
+  cleanup instructions.
+- 2026-08-14 [USER] D023 ACTIVE: document agent-assisted setup as a normal
+  interface. Natural-language requests select the target and outcome; audited
+  scripts remain the execution and verification layer.
 
 ## Working Set
 

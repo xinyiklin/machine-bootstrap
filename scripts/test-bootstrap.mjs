@@ -21,7 +21,6 @@ import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
-import { gunzipSync } from "node:zlib";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const bootstrapRoot = resolve(scriptDir, "..");
@@ -778,6 +777,8 @@ await test("project template keeps local-state safety exclusions trackable", () 
 await test("repository and project guidance are self-contained", () => {
   const rootAgents = readFileSync(join(bootstrapRoot, "AGENTS.md"), "utf8");
   const rootClaude = readFileSync(join(bootstrapRoot, "CLAUDE.md"), "utf8");
+  const readme = readFileSync(join(bootstrapRoot, "README.md"), "utf8");
+  const init = readFileSync(join(bootstrapRoot, "INIT.md"), "utf8");
   const projectAgents = readFileSync(
     join(bootstrapRoot, "project-templates", "AGENTS.md"),
     "utf8"
@@ -798,6 +799,12 @@ await test("repository and project guidance are self-contained", () => {
   assert.match(projectAgents, /repository may be cloned outside its current workspace/);
   assert.match(usage, /node scripts\/init-project\.mjs <target-project>/);
   assert.match(usage, /not a project README/);
+  assert.match(readme, /Agent-assisted setup \(recommended for normal use\)/);
+  assert.match(readme, /Set up this workspace using machine-bootstrap/);
+  assert.match(readme, /Initialize `\.\.\/project-a` using machine-bootstrap/);
+  assert.match(init, /ordinary language without naming any script/);
+  assert.match(init, /use the audited scripts/);
+  assert.match(usage, /canonical initializer rather than copying/);
   assert.equal(existsSync(join(bootstrapRoot, "project-templates", "README.md")), false);
   const retiredGuides = join(bootstrapRoot, "guides");
   assert.equal(
@@ -950,6 +957,20 @@ await test("CI covers the full bootstrap suite on Linux and Windows", () => {
   assert.match(workflow, /actions\/setup-node@v7/);
   assert.match(workflow, /node-version:\s*24/);
   assert.match(workflow, /node scripts\/test-bootstrap\.mjs/);
+
+  for (const relativePath of [
+    "README.md",
+    "INIT.md",
+    "scripts/init-workspace.mjs",
+    "scripts/init-project.mjs"
+  ]) {
+    const contents = readFileSync(
+      join(bootstrapRoot, ...relativePath.split("/")),
+      "utf8"
+    );
+    assert.match(contents, /Node\.js 24\s+or newer/, relativePath);
+    assert.doesNotMatch(contents, /Node\.js 18\s+or newer/, relativePath);
+  }
 });
 
 await test("clean workspace initialization creates only the machine registry", () => {
@@ -1130,49 +1151,14 @@ await test("a checkout directly under the user home is rejected before writes", 
   }
 });
 
-function loadLegacyFixture(root = bootstrapRoot) {
-  return JSON.parse(
-    readFileSync(
-      join(root, "scripts", "test-fixtures", "legacy-layout.json"),
-      "utf8"
-    )
-  );
-}
-
-function materializeLegacyFixture(checkoutRoot, workspaceRoot) {
-  const fixture = loadLegacyFixture(checkoutRoot);
-  assert.equal(fixture.schemaVersion, 1);
-  assert.equal(fixture.encoding, "gzip+base64");
-  for (const [relativePath, encoded] of Object.entries(fixture.files)) {
-    const destination = join(workspaceRoot, ...relativePath.split("/"));
-    mkdirSync(dirname(destination), { recursive: true });
-    writeFileSync(destination, gunzipSync(Buffer.from(encoded, "base64")));
-  }
-}
-
-await test("committed legacy fixtures match migration fingerprints", () => {
-  const fixture = loadLegacyFixture();
-  const manifest = JSON.parse(
-    readFileSync(
-      join(bootstrapRoot, "machine-templates", "legacy-layout-manifest.json"),
-      "utf8"
-    )
-  );
-  assert.deepEqual(Object.keys(fixture.files).sort(), Object.keys(manifest.files).sort());
-  for (const [relativePath, encoded] of Object.entries(fixture.files)) {
-    const normalized = gunzipSync(Buffer.from(encoded, "base64"))
-      .toString("utf8")
-      .replaceAll("\r\n", "\n");
-    const actual = createHash("sha256").update(normalized, "utf8").digest("hex");
-    assert.equal(actual, manifest.files[relativePath], relativePath);
-  }
-});
-
-await test("legacy workspace files require explicit recoverable migration", () => {
+await test("legacy workspace entries stop for manual review without writes", () => {
   const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
   try {
     const legacyTemplates = join(workspaceRoot, "_templates");
-    materializeLegacyFixture(checkoutRoot, workspaceRoot);
+    mkdirSync(legacyTemplates);
+    writeFileSync(join(workspaceRoot, "AGENTS.md"), "existing workspace policy\n");
+    writeFileSync(join(workspaceRoot, "CLAUDE.md"), "existing Claude policy\n");
+    writeFileSync(join(legacyTemplates, "README.md"), "existing templates\n");
     writeFileSync(join(workspaceRoot, "MACHINE.md"), "verified local facts\n");
     const sibling = join(workspaceRoot, "project-b");
     mkdirSync(sibling);
@@ -1194,62 +1180,21 @@ await test("legacy workspace files require explicit recoverable migration", () =
     );
     assert.notEqual(normal.status, 0);
     assert.match(normal.stderr, /Legacy workspace layout detected/);
+    assert.match(normal.stderr, /automatic migration is not supported/i);
+    assert.match(normal.stderr, /move .* manually/i);
     assert.equal(existsSync(legacyTemplates), true);
-
-    const migrated = spawnSync(
-      process.execPath,
-      [
-        join(checkoutRoot, "scripts", "init-workspace.mjs"),
-        "--migrate-legacy-layout",
-        "--skip-skills",
-        "--skip-workflows"
-      ],
-      {
-        encoding: "utf8",
-        env: isolatedEnvironment(testRoot),
-        shell: false
-      }
+    assert.equal(
+      readFileSync(join(workspaceRoot, "AGENTS.md"), "utf8"),
+      "existing workspace policy\n"
     );
-    assert.equal(migrated.status, 0, migrated.stderr);
-    assert.equal(existsSync(legacyTemplates), false);
+    assert.equal(existsSync(join(workspaceRoot, ".machine-bootstrap-backup")), false);
     assert.equal(
       readFileSync(join(workspaceRoot, "MACHINE.md"), "utf8"),
       "verified local facts\n"
     );
     assert.deepEqual(readFileSync(join(sibling, "owned.txt")), siblingBefore);
-    const backupParent = join(workspaceRoot, ".machine-bootstrap-backup");
-    const backupRoots = readdirSync(backupParent);
-    assert.equal(backupRoots.length, 1);
-    assert.equal(
-      existsSync(join(backupParent, backupRoots[0], "_templates", "AGENTS.md")),
-      true
-    );
 
-    const check = spawnSync(
-      process.execPath,
-      [
-        join(checkoutRoot, "scripts", "init-workspace.mjs"),
-        "--check",
-        "--skip-skills",
-        "--skip-workflows"
-      ],
-      {
-        encoding: "utf8",
-        env: isolatedEnvironment(testRoot),
-        shell: false
-      }
-    );
-    assert.equal(check.status, 0, check.stderr);
-  } finally {
-    rmSync(testRoot, { recursive: true, force: true });
-  }
-});
-
-await test("legacy migration rejects user-authored differences", () => {
-  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
-  try {
-    writeFileSync(join(workspaceRoot, "AGENTS.md"), "user-authored policy\n");
-    const result = spawnSync(
+    const removedOption = spawnSync(
       process.execPath,
       [
         join(checkoutRoot, "scripts", "init-workspace.mjs"),
@@ -1263,14 +1208,9 @@ await test("legacy migration rejects user-authored differences", () => {
         shell: false
       }
     );
-    assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /unrecognized or user-authored differences/);
-    assert.equal(
-      readFileSync(join(workspaceRoot, "AGENTS.md"), "utf8"),
-      "user-authored policy\n"
-    );
-    assert.equal(existsSync(join(workspaceRoot, ".machine-bootstrap-backup")), false);
-    assert.equal(existsSync(join(workspaceRoot, "MACHINE.md")), false);
+    assert.notEqual(removedOption.status, 0);
+    assert.match(removedOption.stderr, /Unknown argument.*--migrate-legacy-layout/);
+    assert.equal(existsSync(legacyTemplates), true);
   } finally {
     rmSync(testRoot, { recursive: true, force: true });
   }
@@ -1286,6 +1226,14 @@ function runProjectInitializer(checkoutRoot, target, testHome, extraArgs = []) {
       env: isolatedEnvironment(testHome),
       shell: false
     }
+  );
+}
+
+function gitCheckIgnore(project, relativePath) {
+  return spawnSync(
+    "git",
+    ["-C", project, "check-ignore", "--quiet", "--no-index", "--", relativePath],
+    { encoding: "utf8", shell: false }
   );
 }
 
@@ -1358,7 +1306,8 @@ await test("existing project guidance is preserved and gitignore entries merge",
     assert.equal(gitResult.status, 0, gitResult.stderr);
     writeFileSync(join(project, "AGENTS.md"), "custom project policy\n");
     writeFileSync(join(project, "CLAUDE.md"), "@AGENTS.md\ncustom adapter\n");
-    writeFileSync(join(project, ".gitignore"), "dist/\n.env\n");
+    writeFileSync(join(project, ".gitignore"), "dist/\n");
+    writeFileSync(join(project, ".env.example"), "SAFE=value\n");
 
     const result = runProjectInitializer(checkoutRoot, project, testRoot);
     assert.equal(result.status, 0, result.stderr);
@@ -1372,23 +1321,227 @@ await test("existing project guidance is preserved and gitignore entries merge",
     );
     const ignore = readFileSync(join(project, ".gitignore"), "utf8");
     assert.match(ignore, /^dist\/$/m);
-    assert.equal((ignore.match(/^\.env$/gm) ?? []).length, 1);
     for (const entry of [
       "CLAUDE.local.md",
       ".claude/settings.local.json",
       ".agent-work/",
+      ".env",
       ".env.*",
+      "!.env.example",
       ".DS_Store",
       "Thumbs.db"
     ]) {
       const escaped = entry.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       assert.match(ignore, new RegExp(`^${escaped}$`, "m"));
     }
-    assert.doesNotMatch(ignore, /^!\.env\.example$/m);
+    assert.ok(ignore.indexOf(".env\n.env.*\n!.env.example") >= 0);
+    assert.equal(gitCheckIgnore(project, ".env.example").status, 1);
+    assert.equal(gitCheckIgnore(project, ".env.local").status, 0);
+    assert.equal(gitCheckIgnore(project, ".env.production").status, 0);
     assert.match(result.stdout, /Preserved: AGENTS\.md, CLAUDE\.md/);
   } finally {
     rmSync(testRoot, { recursive: true, force: true });
   }
+});
+
+await test("ambiguous existing environment ignore policy is preserved for review", () => {
+  for (const original of [
+    ".env\n!.env.example\n",
+    ".env.*\n!.env.example\n"
+  ]) {
+    const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+    try {
+      const project = join(workspaceRoot, "project-a");
+      mkdirSync(project);
+      const gitResult = spawnSync("git", ["init", "-q"], {
+        cwd: project,
+        encoding: "utf8",
+        shell: false
+      });
+      assert.equal(gitResult.status, 0, gitResult.stderr);
+      writeFileSync(join(project, ".gitignore"), original);
+
+      const result = runProjectInitializer(checkoutRoot, project, testRoot);
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, /environment rules.*manual review/i);
+      assert.equal(readFileSync(join(project, ".gitignore"), "utf8"), original);
+      assert.equal(existsSync(join(project, "AGENTS.md")), false);
+    } finally {
+      rmSync(testRoot, { recursive: true, force: true });
+    }
+  }
+});
+
+await test("project rollback preserves a concurrent gitignore and its original backup", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const project = join(workspaceRoot, "project-a");
+    mkdirSync(project);
+    assert.equal(
+      spawnSync("git", ["init", "-q"], { cwd: project, encoding: "utf8" }).status,
+      0
+    );
+    writeFileSync(join(project, ".gitignore"), "dist/\n");
+
+    const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
+    const initializer = readFileSync(initializerPath, "utf8");
+    const needle =
+      "      renameSync(gitignorePath, gitignoreBackup);\n" +
+      "      writeFileSync(gitignorePath, updatedContents, {";
+    assert.ok(initializer.includes(needle), "rollback injection point must exist");
+    writeFileSync(
+      initializerPath,
+      initializer.replace(
+        needle,
+        "      renameSync(gitignorePath, gitignoreBackup);\n" +
+          "      writeFileSync(gitignorePath, \"concurrent ignore\\n\", { flag: \"wx\" });\n" +
+          "      writeFileSync(gitignorePath, updatedContents, {"
+      )
+    );
+
+    const result = runProjectInitializer(checkoutRoot, project, testRoot);
+    assert.notEqual(result.status, 0);
+    assert.equal(
+      readFileSync(join(project, ".gitignore"), "utf8"),
+      "concurrent ignore\n"
+    );
+    const backups = readdirSync(project).filter((name) =>
+      name.startsWith(".gitignore.machine-bootstrap-") && name.endsWith(".backup")
+    );
+    assert.equal(backups.length, 1);
+    assert.equal(readFileSync(join(project, backups[0]), "utf8"), "dist/\n");
+    assert.match(result.stderr, /Rollback requires attention:/);
+    assert.match(result.stderr, /original preserved at/);
+    assert.equal(existsSync(join(project, "AGENTS.md")), false);
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
+await test("project rollback preserves a concurrently changed starter file", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const project = join(workspaceRoot, "project-a");
+    mkdirSync(project);
+    assert.equal(
+      spawnSync("git", ["init", "-q"], { cwd: project, encoding: "utf8" }).status,
+      0
+    );
+
+    const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
+    const initializer = readFileSync(initializerPath, "utf8");
+    const needle = "  const placeholderFiles = [...seedFiles, \".gitignore\"];";
+    assert.ok(initializer.includes(needle), "late rollback injection point must exist");
+    writeFileSync(
+      initializerPath,
+      initializer.replace(
+        needle,
+        "  writeFileSync(join(canonicalTarget, \"AGENTS.md\"), \"concurrent user policy\\n\");\n" +
+          "  throw new Error(\"injected late failure\");\n\n" +
+          needle
+      )
+    );
+
+    const result = runProjectInitializer(checkoutRoot, project, testRoot);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /injected late failure/);
+    assert.match(result.stderr, /Rollback requires attention:/);
+    assert.equal(
+      readFileSync(join(project, "AGENTS.md"), "utf8"),
+      "concurrent user policy\n"
+    );
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
+await test("project rollback preserves a concurrently replaced empty directory", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const project = join(workspaceRoot, "project-a");
+    mkdirSync(project);
+    assert.equal(
+      spawnSync("git", ["init", "-q"], { cwd: project, encoding: "utf8" }).status,
+      0
+    );
+
+    const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
+    const initializer = readFileSync(initializerPath, "utf8");
+    const needle = "  const placeholderFiles = [...seedFiles, \".gitignore\"];";
+    assert.ok(initializer.includes(needle), "directory rollback injection point must exist");
+    writeFileSync(
+      initializerPath,
+      initializer.replace(
+        needle,
+        "  const concurrentDirectory = join(canonicalTarget, \"docs\", \"engineering\");\n" +
+          "  renameSync(concurrentDirectory, `${concurrentDirectory}.concurrent-original`);\n" +
+          "  mkdirSync(concurrentDirectory);\n" +
+          "  throw new Error(\"injected directory replacement\");\n\n" +
+          needle
+      )
+    );
+
+    const result = runProjectInitializer(checkoutRoot, project, testRoot);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /injected directory replacement/);
+    assert.match(result.stderr, /Rollback requires attention:/);
+    assert.match(result.stderr, /docs.*engineering.*not removed.*manually/i);
+    assert.equal(existsSync(join(project, "docs", "engineering")), true);
+    assert.equal(
+      existsSync(join(project, "docs", "engineering.concurrent-original")),
+      true
+    );
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
+await test("project rollback reports a run-created directory with concurrent content", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const project = join(workspaceRoot, "project-a");
+    mkdirSync(project);
+    assert.equal(
+      spawnSync("git", ["init", "-q"], { cwd: project, encoding: "utf8" }).status,
+      0
+    );
+
+    const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
+    const initializer = readFileSync(initializerPath, "utf8");
+    const needle = "  const placeholderFiles = [...seedFiles, \".gitignore\"];";
+    assert.ok(initializer.includes(needle), "directory content injection point must exist");
+    writeFileSync(
+      initializerPath,
+      initializer.replace(
+        needle,
+        "  writeFileSync(join(canonicalTarget, \".github\", \"concurrent.txt\"), \"keep me\\n\");\n" +
+          "  throw new Error(\"injected concurrent directory content\");\n\n" +
+          needle
+      )
+    );
+
+    const result = runProjectInitializer(checkoutRoot, project, testRoot);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /injected concurrent directory content/);
+    assert.match(result.stderr, /Rollback requires attention:/);
+    assert.match(result.stderr, /\.github.*not removed.*manually/i);
+    assert.equal(
+      readFileSync(join(project, ".github", "concurrent.txt"), "utf8"),
+      "keep me\n"
+    );
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
+await test("project rollback never deletes directories by pathname", () => {
+  const initializer = readFileSync(
+    join(bootstrapRoot, "scripts", "init-project.mjs"),
+    "utf8"
+  );
+  assert.doesNotMatch(initializer, /\brmdirSync\b/);
+  assert.match(initializer, /review directory cleanup manually/);
+  assert.match(initializer, /review target cleanup manually/);
 });
 
 await test("project initialization rejects a Git-owned workspace", () => {
