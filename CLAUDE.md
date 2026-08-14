@@ -3,5 +3,5 @@
 @AGENTS.md
 
 Use Claude Code's current official loading and configuration documentation when
-changing portable Claude guidance or generated adapters. Keep provider-specific
+changing project starter guidance or generated adapters. Keep provider-specific
 tool mechanics here; shared policy belongs in `AGENTS.md`.

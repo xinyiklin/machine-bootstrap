@@ -18,8 +18,11 @@ project intentionally tracks completed task artifacts referenced by continuity.
 
 ## Initialize a project
 
-1. Copy only the starter paths listed above. Merge `.gitignore`, `.github/`, and
-   `docs/` into an existing project rather than replacing project-owned files.
+1. From `machine-bootstrap`, run
+   `node scripts/init-project.mjs <target-project>`. Add `--create` only when the
+   target directory does not exist. The initializer copies only missing starter
+   paths, preserves existing project-owned files, and merges missing positive
+   `.gitignore` safety entries without adding negation rules to an existing file.
 2. Replace every placeholder with facts verified from the real project and
    delete irrelevant sections and template notes.
 3. Keep the single `@AGENTS.md` import immediately below the project
@@ -37,9 +40,8 @@ project intentionally tracks completed task artifacts referenced by continuity.
 - With no detected project root, Codex checks only the starting directory. It
   does not walk upward to an arbitrary workspace guide or rebuild its chain
   after navigating elsewhere. Start or restart at the intended root or scope.
-- Claude loads ancestor and project `CLAUDE.md` files and expands explicit
-  imports. Files are concatenated context, not a safe override hierarchy; do
-  not create intentional contradictions.
+- Claude expands the project's explicit `@AGENTS.md` import. Do not depend on a
+  workspace parent for project policy or create intentional contradictions.
 - Use `/context` to inspect live context composition. Use an
   `InstructionsLoaded` hook when exact Claude file-level events are required.
   Use a Codex instruction-summary or session-log smoke check for Codex.

@@ -21,6 +21,7 @@ import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { gunzipSync } from "node:zlib";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const bootstrapRoot = resolve(scriptDir, "..");
@@ -135,6 +136,12 @@ function createTestWorkspace() {
     recursive: true,
     filter: includeInTestFixture
   });
+  const gitResult = spawnSync("git", ["init", "-q"], {
+    cwd: checkoutRoot,
+    encoding: "utf8",
+    shell: false
+  });
+  assert.equal(gitResult.status, 0, gitResult.stderr);
   return { testRoot, workspaceRoot, checkoutRoot };
 }
 
@@ -680,10 +687,11 @@ await test("hash report fails concisely when a skill is not installed", () => {
 
 await test("setup scripts reject bad arguments without stack traces", () => {
   for (const [script, scriptArgs] of [
-    ["setup-guides.mjs", ["--bogus"]],
-    ["setup-guides.mjs", ["--check", "--replace"]],
     ["install-skills.mjs", ["--bogus"]],
-    ["init-workspace.mjs", ["--bogus"]]
+    ["init-workspace.mjs", ["--bogus"]],
+    ["init-workspace.mjs", ["--check", "--migrate-legacy-layout"]],
+    ["init-project.mjs", []],
+    ["init-project.mjs", ["../project-a", "--bogus"]]
   ]) {
     const result = runScript(script, scriptArgs);
     const label = `${script} ${scriptArgs.join(" ")}`;
@@ -697,7 +705,6 @@ await test("an invalid skill manifest fails before workspace writes", () => {
   const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
   try {
     writeFileSync(join(checkoutRoot, "skills.json"), "{ invalid json\n");
-
     const result = spawnSync(
       process.execPath,
       [join(checkoutRoot, "scripts", "init-workspace.mjs")],
@@ -707,226 +714,96 @@ await test("an invalid skill manifest fails before workspace writes", () => {
         shell: false
       }
     );
-
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /skills\.json must contain valid JSON/);
     assert.doesNotMatch(result.stderr, /file:\/\/|node:internal|SyntaxError/);
-    assert.equal(existsSync(join(workspaceRoot, "AGENTS.md")), false);
-    assert.equal(existsSync(join(workspaceRoot, "CLAUDE.md")), false);
     assert.equal(existsSync(join(workspaceRoot, "MACHINE.md")), false);
-    assert.equal(existsSync(join(workspaceRoot, "_templates")), false);
+    for (const name of ["AGENTS.md", "CLAUDE.md", "_templates"]) {
+      assert.equal(existsSync(join(workspaceRoot, name)), false);
+    }
   } finally {
     rmSync(testRoot, { recursive: true, force: true });
   }
 });
 
-await test("an invalid manifest entry fails before workspace writes", () => {
+await test("a wrong-typed machine template fails before workspace writes", () => {
   const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
   try {
-    const manifestPath = join(checkoutRoot, "skills.json");
-    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-    manifest.skills[0].sourceRevision = "main";
-    writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
-
+    const source = join(checkoutRoot, "machine-templates", "MACHINE.example.md");
+    rmSync(source);
+    mkdirSync(source);
     const result = spawnSync(
       process.execPath,
-      [join(checkoutRoot, "scripts", "init-workspace.mjs")],
+      [
+        join(checkoutRoot, "scripts", "init-workspace.mjs"),
+        "--skip-skills",
+        "--skip-workflows"
+      ],
       {
         encoding: "utf8",
         env: isolatedEnvironment(testRoot),
         shell: false
       }
     );
-
     assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /Invalid skill entry in .*skills\.json/);
-    assert.doesNotMatch(result.stderr, /file:\/\/|node:internal/);
-    assert.equal(existsSync(join(workspaceRoot, "AGENTS.md")), false);
-    assert.equal(existsSync(join(workspaceRoot, "CLAUDE.md")), false);
+    assert.match(result.stderr, /machine-templates\/MACHINE\.example\.md must be a readable regular file/);
     assert.equal(existsSync(join(workspaceRoot, "MACHINE.md")), false);
-    assert.equal(existsSync(join(workspaceRoot, "_templates")), false);
   } finally {
     rmSync(testRoot, { recursive: true, force: true });
   }
 });
 
-await test("a wrong-typed portable source fails before workspace writes", () => {
-  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
-  try {
-    rmSync(join(checkoutRoot, "guides", "AGENTS.md"));
-    mkdirSync(join(checkoutRoot, "guides", "AGENTS.md"));
-
-    const result = spawnSync(
-      process.execPath,
-      [join(checkoutRoot, "scripts", "init-workspace.mjs"), "--skip-skills"],
-      {
-        encoding: "utf8",
-        env: isolatedEnvironment(testRoot),
-        shell: false
-      }
-    );
-
-    assert.notEqual(result.status, 0);
-    assert.match(
-      result.stderr,
-      /guides\/AGENTS\.md must be a readable regular file/
-    );
-    assert.doesNotMatch(result.stderr, /EISDIR|file:\/\/|node:internal/);
-    assert.equal(existsSync(join(workspaceRoot, "AGENTS.md")), false);
-    assert.equal(existsSync(join(workspaceRoot, "CLAUDE.md")), false);
-    assert.equal(existsSync(join(workspaceRoot, "MACHINE.md")), false);
-    assert.equal(existsSync(join(workspaceRoot, "_templates")), false);
-  } finally {
-    rmSync(testRoot, { recursive: true, force: true });
-  }
-});
-
-await test("project template ignores local agent state", () => {
-  const ignorePath = join(bootstrapRoot, "project-templates", ".gitignore");
-  assert.equal(existsSync(ignorePath), true);
-  const ignore = readFileSync(ignorePath, "utf8");
-  assert.match(ignore, /^CLAUDE\.local\.md$/m);
-  assert.match(ignore, /^\.claude\/settings\.local\.json$/m);
-  assert.match(ignore, /^\.agent-work\/$/m);
-});
-
-await test("project template no longer ignores all of .claude/", () => {
+await test("project template keeps local-state safety exclusions trackable", () => {
   const ignore = readFileSync(
     join(bootstrapRoot, "project-templates", ".gitignore"),
     "utf8"
   );
+  for (const pattern of [
+    "CLAUDE.local.md",
+    ".claude/settings.local.json",
+    ".agent-work/",
+    ".env",
+    ".env.*",
+    "!.env.example",
+    ".DS_Store",
+    "Thumbs.db"
+  ]) {
+    const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    assert.match(ignore, new RegExp(`^${escaped}$`, "m"));
+  }
   assert.doesNotMatch(ignore, /^\.claude\/?$/m);
   assert.doesNotMatch(ignore, /^\.codex\/?$/m);
-
-  // A project that chooses to own reviewable agent configuration must be able
-  // to track it. These paths are only allowed, never created.
-  for (const trackable of [
-    ".claude/agents/reviewer.md",
-    ".claude/settings.json",
-    ".claude/rules/api.md",
-    ".codex/agents/reviewer.toml",
-    ".codex/config.toml"
-  ]) {
-    assert.equal(
-      ignore.split(/\r?\n/).some((line) => {
-        const pattern = line.trim();
-        if (!pattern || pattern.startsWith("#") || pattern.startsWith("!")) {
-          return false;
-        }
-        const bare = pattern.replace(/\/$/, "");
-        return trackable === bare || trackable.startsWith(`${bare}/`);
-      }),
-      false,
-      `${trackable} must stay trackable`
-    );
-  }
 });
 
-await test("project template keeps its existing safety exclusions", () => {
-  const ignore = readFileSync(
-    join(bootstrapRoot, "project-templates", ".gitignore"),
+await test("repository and project guidance are self-contained", () => {
+  const rootAgents = readFileSync(join(bootstrapRoot, "AGENTS.md"), "utf8");
+  const rootClaude = readFileSync(join(bootstrapRoot, "CLAUDE.md"), "utf8");
+  const projectAgents = readFileSync(
+    join(bootstrapRoot, "project-templates", "AGENTS.md"),
     "utf8"
   );
-  assert.match(ignore, /^\.env$/m);
-  assert.match(ignore, /^\.env\.\*$/m);
-  assert.match(ignore, /^!\.env\.example$/m);
-  assert.match(ignore, /^\.DS_Store$/m);
-  assert.match(ignore, /^Thumbs\.db$/m);
-});
-
-await test("repository guidance is self-contained for Codex and Claude", () => {
-  const agents = readFileSync(join(bootstrapRoot, "AGENTS.md"), "utf8");
-  const claude = readFileSync(join(bootstrapRoot, "CLAUDE.md"), "utf8");
-  assert.match(agents, /# Machine Bootstrap Repository Guide/);
-  assert.match(agents, /guides\/.*portable workspace guidance/s);
-  assert.match(claude, /^@AGENTS\.md$/m);
-});
-
-await test("test fixtures exclude generated and machine-local state", () => {
-  for (const name of [".agents", ".claude", ".codex", ".idea", ".vscode"]) {
-    assert.equal(includeInTestFixture(join(bootstrapRoot, name, "artifact")), false);
-  }
-  for (const name of [".git", ".cache", "coverage", "dist", "node_modules", "tmp"]) {
-    assert.equal(includeInTestFixture(join(bootstrapRoot, name, "artifact")), false);
-    assert.equal(
-      includeInTestFixture(join(bootstrapRoot, "project-templates", name, "artifact")),
-      false
-    );
-  }
-  for (const name of [
-    ".env",
-    ".env.local",
-    ".npmrc",
-    ".skill-lock.json",
-    ".DS_Store",
-    "CLAUDE.local.md",
-    "MACHINE.md",
-    "Thumbs.db",
-    "error.log",
-    "notes.swp",
-    "AGENTS.md.backup-2026-08-14"
-  ]) {
-    assert.equal(includeInTestFixture(join(bootstrapRoot, name)), false);
-  }
-  assert.equal(includeInTestFixture(join(bootstrapRoot, ".env.example")), true);
-  assert.equal(includeInTestFixture(join(bootstrapRoot, "guides", "AGENTS.md")), true);
-  for (const portablePath of [
-    ["project-templates", ".claude", "rules", "api.md"],
-    ["project-templates", ".agents", "skills", "review", "SKILL.md"],
-    ["project-templates", ".codex", "agents", "reviewer.toml"]
-  ]) {
-    assert.equal(includeInTestFixture(join(bootstrapRoot, ...portablePath)), true);
-  }
-  assert.equal(
-    includeInTestFixture(join(bootstrapRoot, "project-templates", ".git", "objects", "x")),
-    false
-  );
-});
-
-await test("guidance documents static provider boundaries without precedence claims", () => {
-  const files = [
-    join(bootstrapRoot, "guides", "AGENTS.md"),
-    join(bootstrapRoot, "guides", "CLAUDE.md"),
-    join(bootstrapRoot, "project-templates", "AGENTS.md"),
+  const projectClaude = readFileSync(
     join(bootstrapRoot, "project-templates", "CLAUDE.md"),
-    join(bootstrapRoot, "project-templates", "TEMPLATE-USAGE.md")
-  ];
-  const contents = files.map((path) => readFileSync(path, "utf8"));
-  const portableAgents = contents[0];
-  const portableClaude = contents[1];
-  const projectClaude = contents[3];
-  const templateUsage = contents[4];
+    "utf8"
+  );
+  const usage = readFileSync(
+    join(bootstrapRoot, "project-templates", "TEMPLATE-USAGE.md"),
+    "utf8"
+  );
 
-  assert.match(portableAgents, /Applies only to Codex sessions started at this non-Git workspace root/);
-  assert.match(portableAgents, /builds its instruction chain once per run/);
-  assert.match(portableAgents, /With no detected project root, Codex checks only the starting directory/);
-  assert.match(portableAgents, /does not rebuild its instruction chain/);
-  assert.doesNotMatch(portableClaude, /^\s*@AGENTS\.md\s*$/m);
-  assert.match(portableClaude, /Do not import the sibling `AGENTS\.md`/);
+  assert.match(rootAgents, /Applies only to this repository/);
+  assert.match(rootAgents, /workspace root never owns live `AGENTS\.md`, `CLAUDE\.md`, or `_templates\/`/);
+  assert.equal((rootClaude.match(/^@AGENTS\.md$/gm) ?? []).length, 1);
   assert.equal((projectClaude.match(/^@AGENTS\.md$/gm) ?? []).length, 1);
-  assert.match(projectClaude, /^# .*\r?\n\r?\n@AGENTS\.md$/m);
-  assert.match(templateUsage, /A parent workspace guide is not inherited/);
-  assert.match(templateUsage, /does not walk upward to an arbitrary workspace guide/);
-  assert.match(templateUsage, /not a project README/);
+  assert.match(projectAgents, /repository may be cloned outside its current workspace/);
+  assert.match(usage, /node scripts\/init-project\.mjs <target-project>/);
+  assert.match(usage, /not a project README/);
+  assert.equal(existsSync(join(bootstrapRoot, "project-templates", "README.md")), false);
+  const retiredGuides = join(bootstrapRoot, "guides");
   assert.equal(
-    existsSync(join(bootstrapRoot, "project-templates", "README.md")),
+    existsSync(retiredGuides) && readdirSync(retiredGuides).length > 0,
     false
   );
-  for (const content of contents) {
-    assert.doesNotMatch(content, /loads? (?:it|the same file) twice/i);
-    assert.doesNotMatch(content, /put(?:s)? it in context twice/i);
-    assert.doesNotMatch(content, /this file wins|has the last word|Claude Overrides/i);
-    assert.doesNotMatch(content, /\/memory/);
-  }
-  assert.match(portableClaude, /\/context/);
-  assert.match(projectClaude, /InstructionsLoaded/);
-
-  const runtimeClaims = [
-    readFileSync(join(bootstrapRoot, "README.md"), "utf8"),
-    readFileSync(join(bootstrapRoot, "CONTINUITY.md"), "utf8")
-  ].join("\n");
-  assert.doesNotMatch(runtimeClaims, /verified harness loading|runtime-verified/i);
-  assert.match(runtimeClaims, /static (?:loading )?models?|statically model/i);
 
   const visited = new Set();
   const visiting = new Set();
@@ -944,227 +821,125 @@ await test("guidance documents static provider boundaries without precedence cla
     visiting.delete(canonicalPath);
     visited.add(canonicalPath);
   }
-  visitImports(files[3]);
+  visitImports(join(bootstrapRoot, "CLAUDE.md"));
+  visitImports(join(bootstrapRoot, "project-templates", "CLAUDE.md"));
 });
 
-await test("modeled provider scenarios keep mutually exclusive scopes separate", () => {
+await test("test fixtures exclude generated and machine-local state", () => {
+  for (const name of [".agents", ".claude", ".codex", ".idea", ".vscode"]) {
+    assert.equal(includeInTestFixture(join(bootstrapRoot, name, "artifact")), false);
+  }
+  for (const name of [".git", ".cache", "coverage", "dist", "node_modules", "tmp"]) {
+    assert.equal(includeInTestFixture(join(bootstrapRoot, name, "artifact")), false);
+  }
+  for (const name of [
+    ".env",
+    ".env.local",
+    ".npmrc",
+    ".skill-lock.json",
+    ".DS_Store",
+    "CLAUDE.local.md",
+    "MACHINE.md",
+    "Thumbs.db",
+    "error.log",
+    "notes.swp",
+    "AGENTS.md.backup-2026-08-14"
+  ]) {
+    assert.equal(includeInTestFixture(join(bootstrapRoot, name)), false);
+  }
+  assert.equal(includeInTestFixture(join(bootstrapRoot, ".env.example")), true);
+  assert.equal(
+    includeInTestFixture(join(bootstrapRoot, "machine-templates", "MACHINE.example.md")),
+    true
+  );
+});
+
+await test("modeled provider scenarios isolate sibling repositories", () => {
   const testRoot = mkdtempSync(join(tmpdir(), "machine-bootstrap-guidance-model-"));
   try {
     const workspace = join(testRoot, "Workspace");
-    const child = join(workspace, "child");
-    const scoped = join(child, "scoped");
-    const nonGitLocal = join(workspace, "scratch", "local");
-    const nonGitEmpty = join(workspace, "scratch", "empty");
-    mkdirSync(join(child, ".git"), { recursive: true });
-    mkdirSync(scoped, { recursive: true });
-    mkdirSync(nonGitLocal, { recursive: true });
-    mkdirSync(nonGitEmpty, { recursive: true });
-
-    writeFileSync(join(workspace, "AGENTS.md"), "WORKSPACE_CODEX\n");
-    writeFileSync(join(workspace, "CLAUDE.md"), "WORKSPACE_CLAUDE\n");
-    writeFileSync(join(child, "AGENTS.md"), "CHILD_ROOT\n");
-    writeFileSync(join(child, "CLAUDE.md"), "CHILD_CLAUDE\n@AGENTS.md\n");
-    writeFileSync(join(scoped, "AGENTS.md"), "CHILD_SCOPED\n");
-    writeFileSync(join(scoped, "CLAUDE.md"), "@AGENTS.md\n");
-    writeFileSync(join(nonGitLocal, "AGENTS.md"), "NONGIT_LOCAL\n");
-
-    function directoryChain(root, cwd) {
-      const directories = [];
-      let current = resolve(cwd);
-      const boundary = resolve(root);
-      while (true) {
-        directories.unshift(current);
-        if (current === boundary) return directories;
-        const parent = dirname(current);
-        assert.notEqual(parent, current, `${cwd} is outside ${root}`);
-        current = parent;
-      }
+    const bootstrap = join(workspace, "machine-bootstrap");
+    const projectA = join(workspace, "project-a");
+    const projectB = join(workspace, "project-b");
+    const scratch = join(workspace, "scratch");
+    for (const root of [bootstrap, projectA, projectB]) {
+      mkdirSync(join(root, ".git"), { recursive: true });
     }
+    mkdirSync(scratch);
+    writeFileSync(join(workspace, "MACHINE.md"), "INERT_MACHINE_REGISTRY\n");
+    writeFileSync(join(bootstrap, "AGENTS.md"), "BOOTSTRAP_ROOT\n");
+    writeFileSync(join(bootstrap, "CLAUDE.md"), "@AGENTS.md\n");
+    writeFileSync(join(projectA, "AGENTS.md"), "PROJECT_A_ROOT\n");
+    writeFileSync(join(projectA, "CLAUDE.md"), "@AGENTS.md\n");
+    writeFileSync(join(projectB, "AGENTS.md"), "PROJECT_B_ROOT\n");
+    writeFileSync(join(projectB, "CLAUDE.md"), "@AGENTS.md\n");
 
     function modeledCodexFiles(projectRoot, cwd) {
-      const directories = projectRoot ? directoryChain(projectRoot, cwd) : [resolve(cwd)];
-      return directories
-        .map((directory) => join(directory, "AGENTS.md"))
-        .filter((path) => existsSync(path));
-    }
-
-    function modeledClaudeFiles(root, cwd) {
+      if (!projectRoot) {
+        const local = join(cwd, "AGENTS.md");
+        return existsSync(local) ? [local] : [];
+      }
       const files = [];
-      for (const directory of directoryChain(root, cwd)) {
-        const claudePath = join(directory, "CLAUDE.md");
-        if (!existsSync(claudePath)) continue;
-        files.push(claudePath);
-        const markdown = readFileSync(claudePath, "utf8");
-        for (const match of markdown.matchAll(/^@([^\s]+)\s*$/gm)) {
-          files.push(resolve(directory, match[1]));
-        }
+      let current = resolve(cwd);
+      const root = resolve(projectRoot);
+      while (true) {
+        const guide = join(current, "AGENTS.md");
+        if (existsSync(guide)) files.unshift(guide);
+        if (current === root) return files;
+        current = dirname(current);
+      }
+    }
+    function modeledClaudeFiles(root) {
+      const adapter = join(root, "CLAUDE.md");
+      if (!existsSync(adapter)) return [];
+      const files = [adapter];
+      for (const match of readFileSync(adapter, "utf8").matchAll(/^@([^\s]+)\s*$/gm)) {
+        files.push(resolve(root, match[1]));
       }
       return files;
     }
 
-    assert.deepEqual(modeledCodexFiles(workspace, workspace), [join(workspace, "AGENTS.md")]);
-    assert.deepEqual(modeledCodexFiles(child, child), [join(child, "AGENTS.md")]);
-    assert.deepEqual(modeledCodexFiles(child, scoped), [
-      join(child, "AGENTS.md"),
-      join(scoped, "AGENTS.md")
+    assert.deepEqual(modeledCodexFiles(bootstrap, bootstrap), [join(bootstrap, "AGENTS.md")]);
+    assert.deepEqual(modeledCodexFiles(projectA, projectA), [join(projectA, "AGENTS.md")]);
+    assert.deepEqual(modeledCodexFiles(projectB, projectB), [join(projectB, "AGENTS.md")]);
+    assert.deepEqual(modeledCodexFiles(null, workspace), []);
+    assert.deepEqual(modeledCodexFiles(null, scratch), []);
+    assert.deepEqual(modeledClaudeFiles(projectA), [
+      join(projectA, "CLAUDE.md"),
+      join(projectA, "AGENTS.md")
     ]);
-    assert.deepEqual(modeledCodexFiles(null, nonGitLocal), [join(nonGitLocal, "AGENTS.md")]);
-    assert.deepEqual(modeledCodexFiles(null, nonGitEmpty), []);
-
-    assert.deepEqual(modeledClaudeFiles(workspace, child), [
-      join(workspace, "CLAUDE.md"),
-      join(child, "CLAUDE.md"),
-      join(child, "AGENTS.md")
-    ]);
-    const scopedClaudeFiles = modeledClaudeFiles(workspace, scoped);
-    assert.deepEqual(scopedClaudeFiles, [
-      join(workspace, "CLAUDE.md"),
-      join(child, "CLAUDE.md"),
-      join(child, "AGENTS.md"),
-      join(scoped, "CLAUDE.md"),
-      join(scoped, "AGENTS.md")
-    ]);
-    assert.equal(
-      scopedClaudeFiles.filter((path) => path === join(child, "AGENTS.md")).length,
-      1
-    );
+    assert.equal(modeledClaudeFiles(projectA).includes(join(bootstrap, "AGENTS.md")), false);
+    assert.equal(modeledClaudeFiles(projectB).includes(join(projectA, "AGENTS.md")), false);
   } finally {
     rmSync(testRoot, { recursive: true, force: true });
   }
 });
 
-await test("always-loaded guidance stays within line and byte budgets", () => {
-  for (const [relativePath, lineLimit, byteLimit] of [
-    ["AGENTS.md", 80, 4 * 1024],
-    ["CLAUDE.md", 20, 1024],
-    ["guides/AGENTS.md", 70, 5 * 1024],
-    ["guides/CLAUDE.md", 15, 1536],
-    ["project-templates/AGENTS.md", 120, 8 * 1024],
-    ["project-templates/CLAUDE.md", 20, 1536]
+await test("automatically loaded guidance stays within byte budgets", () => {
+  for (const [relativePath, budget] of [
+    ["AGENTS.md", 8 * 1024],
+    ["CLAUDE.md", 2 * 1024],
+    ["project-templates/AGENTS.md", 8 * 1024],
+    ["project-templates/CLAUDE.md", 2 * 1024]
   ]) {
-    const contents = readFileSync(join(bootstrapRoot, relativePath), "utf8");
-    const lineCount = contents.trimEnd().split(/\r?\n/).length;
-    assert.ok(
-      lineCount <= lineLimit,
-      `${relativePath} has ${lineCount} lines; limit is ${lineLimit}`
-    );
-    const byteCount = Buffer.byteLength(contents, "utf8");
-    assert.ok(
-      byteCount <= byteLimit,
-      `${relativePath} has ${byteCount} bytes; limit is ${byteLimit}`
-    );
+    const bytes = readFileSync(join(bootstrapRoot, ...relativePath.split("/"))).byteLength;
+    assert.ok(bytes <= budget, `${relativePath} is ${bytes} bytes (budget ${budget})`);
   }
+  const projectChain =
+    readFileSync(join(bootstrapRoot, "project-templates", "AGENTS.md")).byteLength +
+    readFileSync(join(bootstrapRoot, "project-templates", "CLAUDE.md")).byteLength;
+  assert.ok(projectChain < 28 * 1024);
 });
 
-await test("project guidance reserves room for the nearest Codex guide", () => {
-  for (const relativePath of [
-    "project-templates/AGENTS.md",
-    "project-templates/TEMPLATE-USAGE.md"
-  ]) {
-    const contents = readFileSync(join(bootstrapRoot, relativePath), "utf8");
-    assert.match(contents, /32 KiB combined/);
-    assert.match(contents, /(?:below|less than) 28 KiB/);
-  }
-});
-
-await test("continuity stays bounded and preserves rotated history", () => {
+await test("continuity stays bounded and preserves archived history", () => {
   const continuity = readFileSync(join(bootstrapRoot, "CONTINUITY.md"), "utf8");
-  const archive = readFileSync(
-    join(bootstrapRoot, "docs", "continuity", "2026-07.md"),
-    "utf8"
-  );
-  const lineCount = continuity.trimEnd().split(/\r?\n/).length;
-
-  assert.ok(lineCount <= 160, `CONTINUITY.md has ${lineCount} lines; limit is 160`);
-  assert.match(continuity, /counting every section/);
-  assert.doesNotMatch(continuity, /decisions are uncapped/);
+  assert.ok(Buffer.byteLength(continuity, "utf8") <= 12 * 1024);
+  assert.ok(continuity.split(/\r?\n/).length <= 160);
   assert.match(continuity, /docs\/continuity\/2026-07\.md/);
-  assert.match(continuity, /complete discovery-to-delivery flow is active/);
-  assert.doesNotMatch(continuity, /Product Delivery workflow is active, track its five/);
-  assert.match(archive, /# Continuity Archive — 2026-07/);
-  assert.match(archive, /Entries are preserved verbatim/);
+  assert.equal(existsSync(join(bootstrapRoot, "docs", "continuity", "2026-07.md")), true);
 });
 
-await test("project template keeps product delivery explicitly conditional", () => {
-  const template = readFileSync(
-    join(bootstrapRoot, "project-templates", "AGENTS.md"),
-    "utf8"
-  );
-  assert.match(template, /## Product-delivery hook/);
-  assert.match(template, /~\/\.agents\/workflows\/product-delivery\//);
-  assert.match(template, /inactive for\s+ordinary work/);
-  assert.match(template, /selects Product\s+Partner or Delivery Lead/);
-  assert.match(template, /explicitly requests the complete workflow/);
-  assert.match(template, /continues an active Product Brief or\s+Delivery Plan/);
-  assert.match(template, /project guidance names required\s+work/);
-  assert.match(template, /Selecting the Verifier\s+activates independent verification only/);
-  assert.match(template, /never creates missing\s+upstream artifacts/);
-  assert.match(template, /Named work that activates the workflow/);
-  assert.doesNotMatch(
-    template,
-    /Foundational Invariants|two exact user approval gates|one fresh reviewer|Use Product Brief, Delivery Plan/
-  );
-});
-
-await test("portable GitHub workflow and PR templates are present", () => {
-  const portableGuide = readFileSync(
-    join(bootstrapRoot, "guides", "git-workflow.md"),
-    "utf8"
-  );
-  const projectGuide = readFileSync(
-    join(
-      bootstrapRoot,
-      "project-templates",
-      "docs",
-      "engineering",
-      "git-workflow.md"
-    ),
-    "utf8"
-  );
-  const projectTemplate = readFileSync(
-    join(
-      bootstrapRoot,
-      "project-templates",
-      ".github",
-      "pull_request_template.md"
-    ),
-    "utf8"
-  );
-  const bootstrapTemplate = readFileSync(
-    join(bootstrapRoot, ".github", "pull_request_template.md"),
-    "utf8"
-  );
-
-  for (const guide of [portableGuide, projectGuide]) {
-    assert.match(guide, /Conventional Commit/);
-    assert.match(guide, /exact reviewed head/);
-    assert.match(guide, /squash merge/);
-    assert.match(guide, /Publication receipt/);
-  }
-  assert.match(projectTemplate, /## Summary/);
-  assert.match(projectTemplate, /## Verification/);
-  assert.match(projectTemplate, /## Publication/);
-  assert.match(bootstrapTemplate, /guides\/git-workflow\.md/);
-});
-
-await test("portable guidance routes current dependency selection concisely", () => {
-  for (const relativePath of [
-    ["guides", "AGENTS.md"],
-    ["project-templates", "AGENTS.md"]
-  ]) {
-    const guide = readFileSync(join(bootstrapRoot, ...relativePath), "utf8");
-    assert.match(guide, /official sources/);
-    assert.match(guide, /preserve the\s+(?:project's )?package manager/i);
-    assert.match(guide, /lockfile/);
-  }
-  const projectGuide = readFileSync(
-    join(bootstrapRoot, "project-templates", "AGENTS.md"),
-    "utf8"
-  );
-  assert.match(projectGuide, /latest\s+compatible stable or maintainer-recommended release/);
-});
-
-await test("CI verifies bootstrap behavior and guidance checks on Linux and Windows", () => {
+await test("CI covers the full bootstrap suite on Linux and Windows", () => {
   const workflow = readFileSync(
     join(bootstrapRoot, ".github", "workflows", "bootstrap.yml"),
     "utf8"
@@ -1173,156 +948,283 @@ await test("CI verifies bootstrap behavior and guidance checks on Linux and Wind
   assert.match(workflow, /windows-latest/);
   assert.match(workflow, /actions\/checkout@v7/);
   assert.match(workflow, /actions\/setup-node@v7/);
+  assert.match(workflow, /node-version:\s*24/);
   assert.match(workflow, /node scripts\/test-bootstrap\.mjs/);
-  assert.match(
-    workflow,
-    /node scripts\/init-workspace\.mjs --check --skip-skills --skip-workflows/
-  );
 });
 
-await test("activated workflow owns gates, review, and distinct report evidence", () => {
-  const workflow = readFileSync(
-    join(bootstrapRoot, "workflows", "product-delivery", "WORKFLOW.md"),
-    "utf8"
-  );
-  const deliveryLead = readFileSync(
-    join(
-      bootstrapRoot,
-      "workflows",
-      "product-delivery",
-      "roles",
-      "delivery-lead.md"
-    ),
-    "utf8"
-  );
-  const verifier = readFileSync(
-    join(
-      bootstrapRoot,
-      "workflows",
-      "product-delivery",
-      "roles",
-      "verifier.md"
-    ),
-    "utf8"
-  );
-
-  assert.match(workflow, /version `1\.3\.0`/);
-  assert.match(workflow, /## Activation/);
-  assert.match(workflow, /Installation makes this workflow available; it does not make the workflow\s+active/);
-  assert.match(workflow, /launches or selects the Product Partner or Delivery Lead role/);
-  assert.match(workflow, /explicitly asks to use the complete `product-delivery` workflow/);
-  assert.match(workflow, /continues an active Product Brief or Delivery Plan/);
-  assert.match(workflow, /requires this workflow for a named class of work/);
-  assert.match(workflow, /Selecting the Verifier is the one role-specific exception/);
-  assert.match(workflow, /activates only\s+the independent verification portion/);
-  assert.match(workflow, /does not\s+retroactively create missing discovery, approval, execution, or implementation\s+artifacts/);
-  assert.match(verifier, /activates only the independent verification\s+portion/);
-  assert.match(verifier, /does not\s+retroactively create missing discovery, approval, execution, or implementation\s+artifacts/);
-  assert.match(workflow, /When the complete discovery-to-delivery flow is active/);
-  assert.match(workflow, /Ordinary work outside this workflow creates none/);
-  assert.match(workflow, /one\s+independent review by default/);
-  assert.match(workflow, /Only the user may waive that review/);
-  assert.match(workflow, /inspect(?:ing)? the complete diff/);
-  assert.match(deliveryLead, /give a firm\s+recommendation/);
-  assert.match(deliveryLead, /Honor\s+the request/);
-  assert.match(deliveryLead, /inspect the complete diff yourself/);
-
-  const verificationReport = readFileSync(
-    join(
-      bootstrapRoot,
-      "workflows",
-      "product-delivery",
-      "templates",
-      "verification-report.md"
-    ),
-    "utf8"
-  );
-  assert.match(verificationReport, /Additional review recommendation/);
-  assert.match(verificationReport, /after\s+reviewing the first Verifier's evidence/);
-  assert.match(verificationReport, /not applicable — independent review waived/);
-  assert.match(verificationReport, /sole owner of final independent passed, failed, unverified,\s+and skipped judgments/);
-
-  const implementationReport = readFileSync(
-    join(
-      bootstrapRoot,
-      "workflows",
-      "product-delivery",
-      "templates",
-      "implementation-report.md"
-    ),
-    "utf8"
-  );
-  assert.match(implementationReport, /implemented`, `not implemented`, `deferred`, or\s+`self-unverified`/);
-  assert.match(implementationReport, /Independent review is pending/);
-  assert.match(implementationReport, /must not claim that independent verification is\s+complete/);
-  assert.doesNotMatch(implementationReport, /met`, `not met`,\s+`unverified`/);
-
-  assert.match(workflow, /activated task that runs the full discovery-to-delivery sequence/);
-  assert.match(workflow, /Decision Log only for\s+material product decisions/);
-  assert.match(workflow, /Never create empty\s+placeholder artifacts/);
-  assert.match(workflow, /\[TASK <task-id>\]/);
-  assert.match(workflow, /removes that ignore rule and also tracks each completed/);
-
-  const productPartner = readFileSync(
-    join(
-      bootstrapRoot,
-      "workflows",
-      "product-delivery",
-      "roles",
-      "product-partner.md"
-    ),
-    "utf8"
-  );
-  assert.match(productPartner, /Decision Log only when a\s+material product decision/);
-  assert.match(productPartner, /do not create an empty one/);
-
-  for (const templatePath of readdirSync(
-    join(bootstrapRoot, "workflows", "product-delivery", "templates")
-  )) {
-    const template = readFileSync(
-      join(bootstrapRoot, "workflows", "product-delivery", "templates", templatePath),
-      "utf8"
+await test("clean workspace initialization creates only the machine registry", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const command = [
+      join(checkoutRoot, "scripts", "init-workspace.mjs"),
+      "--skip-skills",
+      "--skip-workflows"
+    ];
+    const result = spawnSync(process.execPath, command, {
+      encoding: "utf8",
+      env: isolatedEnvironment(testRoot),
+      shell: false
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(
+      readFileSync(join(workspaceRoot, "MACHINE.md"), "utf8"),
+      readFileSync(
+        join(checkoutRoot, "machine-templates", "MACHINE.example.md"),
+        "utf8"
+      )
     );
-    assert.match(template, /Workflow: `product-delivery` 1\.3\.0/, templatePath);
+    for (const name of ["AGENTS.md", "CLAUDE.md", "_templates"]) {
+      assert.equal(existsSync(join(workspaceRoot, name)), false, name);
+    }
+
+    writeFileSync(join(workspaceRoot, "MACHINE.md"), "verified local facts\n");
+    const second = spawnSync(process.execPath, command, {
+      encoding: "utf8",
+      env: isolatedEnvironment(testRoot),
+      shell: false
+    });
+    assert.equal(second.status, 0, second.stderr);
+    assert.equal(
+      readFileSync(join(workspaceRoot, "MACHINE.md"), "utf8"),
+      "verified local facts\n"
+    );
+
+    const check = spawnSync(process.execPath, [...command, "--check"], {
+      encoding: "utf8",
+      env: isolatedEnvironment(testRoot),
+      shell: false
+    });
+    assert.equal(check.status, 0, check.stderr);
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
   }
 });
 
-await test("clean workspace initializes the portable guidance layer", () => {
+await test("workspace check is read-only and allows an absent registry", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const args = [
+      join(checkoutRoot, "scripts", "init-workspace.mjs"),
+      "--check",
+      "--skip-skills",
+      "--skip-workflows"
+    ];
+    const absent = spawnSync(process.execPath, args, {
+      encoding: "utf8",
+      env: isolatedEnvironment(testRoot),
+      shell: false
+    });
+    assert.equal(absent.status, 0, absent.stderr);
+    assert.match(absent.stdout, /Optional machine registry is not present/);
+    assert.equal(readdirSync(workspaceRoot).sort().join(","), "machine-bootstrap");
+
+    copyFileSync(
+      join(checkoutRoot, "machine-templates", "MACHINE.example.md"),
+      join(workspaceRoot, "MACHINE.md")
+    );
+    const incomplete = spawnSync(process.execPath, args, {
+      encoding: "utf8",
+      env: isolatedEnvironment(testRoot),
+      shell: false
+    });
+    assert.notEqual(incomplete.status, 0);
+    assert.match(incomplete.stderr, /TODO placeholder/);
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
+await test("malformed MACHINE.md and Git-owned workspaces fail before writes", () => {
+  for (const kind of ["machine-directory", "git-workspace"]) {
+    const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+    try {
+      if (kind === "machine-directory") mkdirSync(join(workspaceRoot, "MACHINE.md"));
+      else {
+        const gitResult = spawnSync("git", ["init", "-q"], {
+          cwd: workspaceRoot,
+          encoding: "utf8",
+          shell: false
+        });
+        assert.equal(gitResult.status, 0, gitResult.stderr);
+      }
+      const result = spawnSync(
+        process.execPath,
+        [
+          join(checkoutRoot, "scripts", "init-workspace.mjs"),
+          "--skip-skills",
+          "--skip-workflows"
+        ],
+        {
+          encoding: "utf8",
+          env: isolatedEnvironment(testRoot),
+          shell: false
+        }
+      );
+      assert.notEqual(result.status, 0);
+      assert.match(
+        result.stderr,
+        kind === "machine-directory"
+          ? /MACHINE\.md must be a readable regular file/
+          : /Workspace root must stay outside Git/
+      );
+      for (const name of ["AGENTS.md", "CLAUDE.md", "_templates"]) {
+        assert.equal(existsSync(join(workspaceRoot, name)), false);
+      }
+    } finally {
+      rmSync(testRoot, { recursive: true, force: true });
+    }
+  }
+});
+
+await test("a missing Git prerequisite is reported plainly before writes", () => {
   const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
   try {
     const result = spawnSync(
       process.execPath,
-      [join(checkoutRoot, "scripts", "init-workspace.mjs"), "--skip-skills"],
+      [
+        join(checkoutRoot, "scripts", "init-workspace.mjs"),
+        "--skip-skills",
+        "--skip-workflows"
+      ],
+      {
+        encoding: "utf8",
+        env: isolatedEnvironment(testRoot, { PATH: join(testRoot, "no-tools") }),
+        shell: false
+      }
+    );
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /Git is required on PATH/);
+    assert.equal(existsSync(join(workspaceRoot, "MACHINE.md")), false);
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
+await test("a checkout directly under the user home is rejected before writes", () => {
+  const testHome = mkdtempSync(join(tmpdir(), "machine-bootstrap-home-root-test-"));
+  const checkoutRoot = join(testHome, "machine-bootstrap");
+  try {
+    mkdirSync(checkoutRoot);
+    cpSync(bootstrapRoot, checkoutRoot, {
+      recursive: true,
+      filter: includeInTestFixture
+    });
+    const result = spawnSync(
+      process.execPath,
+      [
+        join(checkoutRoot, "scripts", "init-workspace.mjs"),
+        "--skip-skills",
+        "--skip-workflows"
+      ],
+      {
+        encoding: "utf8",
+        env: isolatedEnvironment(testHome),
+        shell: false
+      }
+    );
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /Workspace root cannot be the user home/);
+    assert.equal(existsSync(join(testHome, "MACHINE.md")), false);
+  } finally {
+    rmSync(testHome, { recursive: true, force: true });
+  }
+});
+
+function loadLegacyFixture(root = bootstrapRoot) {
+  return JSON.parse(
+    readFileSync(
+      join(root, "scripts", "test-fixtures", "legacy-layout.json"),
+      "utf8"
+    )
+  );
+}
+
+function materializeLegacyFixture(checkoutRoot, workspaceRoot) {
+  const fixture = loadLegacyFixture(checkoutRoot);
+  assert.equal(fixture.schemaVersion, 1);
+  assert.equal(fixture.encoding, "gzip+base64");
+  for (const [relativePath, encoded] of Object.entries(fixture.files)) {
+    const destination = join(workspaceRoot, ...relativePath.split("/"));
+    mkdirSync(dirname(destination), { recursive: true });
+    writeFileSync(destination, gunzipSync(Buffer.from(encoded, "base64")));
+  }
+}
+
+await test("committed legacy fixtures match migration fingerprints", () => {
+  const fixture = loadLegacyFixture();
+  const manifest = JSON.parse(
+    readFileSync(
+      join(bootstrapRoot, "machine-templates", "legacy-layout-manifest.json"),
+      "utf8"
+    )
+  );
+  assert.deepEqual(Object.keys(fixture.files).sort(), Object.keys(manifest.files).sort());
+  for (const [relativePath, encoded] of Object.entries(fixture.files)) {
+    const normalized = gunzipSync(Buffer.from(encoded, "base64"))
+      .toString("utf8")
+      .replaceAll("\r\n", "\n");
+    const actual = createHash("sha256").update(normalized, "utf8").digest("hex");
+    assert.equal(actual, manifest.files[relativePath], relativePath);
+  }
+});
+
+await test("legacy workspace files require explicit recoverable migration", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const legacyTemplates = join(workspaceRoot, "_templates");
+    materializeLegacyFixture(checkoutRoot, workspaceRoot);
+    writeFileSync(join(workspaceRoot, "MACHINE.md"), "verified local facts\n");
+    const sibling = join(workspaceRoot, "project-b");
+    mkdirSync(sibling);
+    writeFileSync(join(sibling, "owned.txt"), "sibling bytes\n");
+    const siblingBefore = readFileSync(join(sibling, "owned.txt"));
+
+    const normal = spawnSync(
+      process.execPath,
+      [
+        join(checkoutRoot, "scripts", "init-workspace.mjs"),
+        "--skip-skills",
+        "--skip-workflows"
+      ],
       {
         encoding: "utf8",
         env: isolatedEnvironment(testRoot),
         shell: false
       }
     );
+    assert.notEqual(normal.status, 0);
+    assert.match(normal.stderr, /Legacy workspace layout detected/);
+    assert.equal(existsSync(legacyTemplates), true);
 
-    assert.equal(result.status, 0, result.stderr);
-    assert.equal(
-      readFileSync(join(workspaceRoot, "AGENTS.md"), "utf8"),
-      readFileSync(join(checkoutRoot, "guides", "AGENTS.md"), "utf8")
+    const migrated = spawnSync(
+      process.execPath,
+      [
+        join(checkoutRoot, "scripts", "init-workspace.mjs"),
+        "--migrate-legacy-layout",
+        "--skip-skills",
+        "--skip-workflows"
+      ],
+      {
+        encoding: "utf8",
+        env: isolatedEnvironment(testRoot),
+        shell: false
+      }
     );
+    assert.equal(migrated.status, 0, migrated.stderr);
+    assert.equal(existsSync(legacyTemplates), false);
     assert.equal(
-      readFileSync(join(workspaceRoot, "CLAUDE.md"), "utf8"),
-      readFileSync(join(checkoutRoot, "guides", "CLAUDE.md"), "utf8")
+      readFileSync(join(workspaceRoot, "MACHINE.md"), "utf8"),
+      "verified local facts\n"
     );
-    assert.equal(existsSync(join(workspaceRoot, "MACHINE.md")), true);
-    assert.equal(existsSync(join(workspaceRoot, "_templates", ".gitignore")), true);
+    assert.deepEqual(readFileSync(join(sibling, "owned.txt")), siblingBefore);
+    const backupParent = join(workspaceRoot, ".machine-bootstrap-backup");
+    const backupRoots = readdirSync(backupParent);
+    assert.equal(backupRoots.length, 1);
     assert.equal(
-      existsSync(join(workspaceRoot, "_templates", "TEMPLATE-USAGE.md")),
+      existsSync(join(backupParent, backupRoots[0], "_templates", "AGENTS.md")),
       true
     );
-    assert.equal(existsSync(join(workspaceRoot, "_templates", "README.md")), false);
-    assert.match(result.stdout, /Next required step: replace \d+ TODO/);
 
-    const machinePath = join(workspaceRoot, "MACHINE.md");
-    writeFileSync(
-      machinePath,
-      readFileSync(machinePath, "utf8").replace(/\bTODO\b/g, "test fact")
-    );
     const check = spawnSync(
       process.execPath,
       [
@@ -1338,457 +1240,222 @@ await test("clean workspace initializes the portable guidance layer", () => {
       }
     );
     assert.equal(check.status, 0, check.stderr);
-    assert.match(check.stdout, /Workspace bootstrap check passed/);
   } finally {
     rmSync(testRoot, { recursive: true, force: true });
   }
 });
 
-await test("workspace initialization preserves nested portable provider configuration", () => {
+await test("legacy migration rejects user-authored differences", () => {
   const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
-  const portableFiles = [
-    [join(".claude", "rules", "api.md"), "# API rule\n"],
-    [join(".agents", "skills", "review", "SKILL.md"), "# Review skill\n"],
-    [join(".codex", "agents", "reviewer.toml"), 'name = "reviewer"\n']
-  ];
   try {
-    for (const [relativePath, contents] of portableFiles) {
-      const source = join(checkoutRoot, "project-templates", relativePath);
-      mkdirSync(dirname(source), { recursive: true });
-      writeFileSync(source, contents);
-    }
-
+    writeFileSync(join(workspaceRoot, "AGENTS.md"), "user-authored policy\n");
     const result = spawnSync(
       process.execPath,
-      [join(checkoutRoot, "scripts", "init-workspace.mjs"), "--skip-skills"],
+      [
+        join(checkoutRoot, "scripts", "init-workspace.mjs"),
+        "--migrate-legacy-layout",
+        "--skip-skills",
+        "--skip-workflows"
+      ],
       {
         encoding: "utf8",
         env: isolatedEnvironment(testRoot),
         shell: false
       }
     );
-
-    assert.equal(result.status, 0, result.stderr);
-    for (const [relativePath, contents] of portableFiles) {
-      assert.equal(
-        readFileSync(join(workspaceRoot, "_templates", relativePath), "utf8"),
-        contents
-      );
-    }
-  } finally {
-    rmSync(testRoot, { recursive: true, force: true });
-  }
-});
-
-await test("portable drift fails before any partial workspace writes", () => {
-  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
-  try {
-    const templatesRoot = join(workspaceRoot, "_templates");
-    mkdirSync(templatesRoot);
-    copyFileSync(
-      join(checkoutRoot, "README.md"),
-      join(templatesRoot, "AGENTS.md")
-    );
-
-    const result = spawnSync(
-      process.execPath,
-      [join(checkoutRoot, "scripts", "init-workspace.mjs"), "--skip-skills"],
-      {
-        encoding: "utf8",
-        env: isolatedEnvironment(testRoot),
-        shell: false
-      }
-    );
-
     assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /requires review before making changes/);
-    assert.equal(existsSync(join(workspaceRoot, "AGENTS.md")), false);
-    assert.equal(existsSync(join(workspaceRoot, "CLAUDE.md")), false);
+    assert.match(result.stderr, /unrecognized or user-authored differences/);
+    assert.equal(
+      readFileSync(join(workspaceRoot, "AGENTS.md"), "utf8"),
+      "user-authored policy\n"
+    );
+    assert.equal(existsSync(join(workspaceRoot, ".machine-bootstrap-backup")), false);
     assert.equal(existsSync(join(workspaceRoot, "MACHINE.md")), false);
   } finally {
     rmSync(testRoot, { recursive: true, force: true });
   }
 });
 
-await test("a byte-identical symlinked guide verifies as current", () => {
-  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
-  try {
-    copyFileSync(
-      join(checkoutRoot, "guides", "AGENTS.md"),
-      join(workspaceRoot, "AGENTS.md")
-    );
-    symlinkSync(
-      join(checkoutRoot, "guides", "CLAUDE.md"),
-      join(workspaceRoot, "CLAUDE.md")
-    );
-    copyFileSync(
-      join(checkoutRoot, "guides", "MACHINE.example.md"),
-      join(workspaceRoot, "MACHINE.md")
-    );
-    cpSync(
-      join(checkoutRoot, "project-templates"),
-      join(workspaceRoot, "_templates"),
-      { recursive: true }
-    );
+function runProjectInitializer(checkoutRoot, target, testHome, extraArgs = []) {
+  return spawnSync(
+    process.execPath,
+    [join(checkoutRoot, "scripts", "init-project.mjs"), target, ...extraArgs],
+    {
+      cwd: checkoutRoot,
+      encoding: "utf8",
+      env: isolatedEnvironment(testHome),
+      shell: false
+    }
+  );
+}
 
-    const result = spawnSync(
-      process.execPath,
-      [
-        join(checkoutRoot, "scripts", "init-workspace.mjs"),
-        "--check",
-        "--skip-skills"
-      ],
-      {
-        encoding: "utf8",
-        env: isolatedEnvironment(testRoot),
-        shell: false
-      }
-    );
-
-    assert.match(result.stdout, /Current: .*CLAUDE\.md/);
-    assert.doesNotMatch(result.stderr, /CLAUDE\.md is not a regular file/);
-    assert.doesNotMatch(result.stderr, /CLAUDE\.md differs/);
-  } finally {
-    rmSync(testRoot, { recursive: true, force: true });
+function directoryByteHash(root) {
+  const hash = createHash("sha256");
+  function visit(directory, prefix = "") {
+    for (const entry of readdirSync(directory, { withFileTypes: true })
+      .sort((left, right) => left.name.localeCompare(right.name))) {
+      const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
+      hash.update(relativePath);
+      const absolutePath = join(directory, entry.name);
+      if (entry.isDirectory()) visit(absolutePath, relativePath);
+      else hash.update(readFileSync(absolutePath));
+    }
   }
-}, { needsSymlinks: true });
+  visit(root);
+  return hash.digest("hex");
+}
 
-await test("a broken symlink is named rather than called drift", () => {
+await test("project initialization changes only its explicit target", () => {
   const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
   try {
-    symlinkSync(join(testRoot, "absent.md"), join(workspaceRoot, "CLAUDE.md"));
+    const projectA = join(workspaceRoot, "project-a");
+    const projectB = join(workspaceRoot, "project-b");
+    mkdirSync(projectB);
+    writeFileSync(join(projectB, "owned.txt"), "project b\n");
+    const siblingBefore = directoryByteHash(projectB);
 
-    const result = spawnSync(
-      process.execPath,
-      [join(checkoutRoot, "scripts", "init-workspace.mjs"), "--skip-skills"],
-      {
-        encoding: "utf8",
-        env: isolatedEnvironment(testRoot),
-        shell: false
-      }
+    const result = runProjectInitializer(
+      checkoutRoot,
+      projectA,
+      testRoot,
+      ["--create"]
     );
-
-    assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /CLAUDE\.md is a broken symbolic link/);
-  } finally {
-    rmSync(testRoot, { recursive: true, force: true });
-  }
-}, { needsSymlinks: true });
-
-await test("reviewed replacement never writes through a symlinked guide", () => {
-  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
-  try {
-    const externalPath = join(testRoot, "external.md");
-    writeFileSync(externalPath, "external content\n");
-    symlinkSync(externalPath, join(workspaceRoot, "CLAUDE.md"));
-
-    const result = spawnSync(
-      process.execPath,
-      [
-        join(checkoutRoot, "scripts", "init-workspace.mjs"),
-        "--skip-skills",
-        "--replace"
-      ],
-      {
-        encoding: "utf8",
-        env: isolatedEnvironment(testRoot),
-        shell: false
-      }
-    );
-
     assert.equal(result.status, 0, result.stderr);
-    assert.equal(
-      readFileSync(externalPath, "utf8"),
-      "external content\n",
-      "the symlink target must not be overwritten"
-    );
-    assert.equal(
-      readFileSync(join(workspaceRoot, "CLAUDE.md"), "utf8"),
-      readFileSync(join(checkoutRoot, "guides", "CLAUDE.md"), "utf8")
-    );
-    const backupName = readdirSync(workspaceRoot).find((name) =>
-      name.startsWith("CLAUDE.md.backup-")
-    );
-    assert.ok(backupName, "the replaced symlink was preserved as a backup");
-  } finally {
-    rmSync(testRoot, { recursive: true, force: true });
-  }
-}, { needsSymlinks: true });
-
-await test("a wrong-typed workspace guide is named, not called drift", () => {
-  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
-  try {
-    mkdirSync(join(workspaceRoot, "AGENTS.md"));
-
-    const result = spawnSync(
-      process.execPath,
-      [join(checkoutRoot, "scripts", "init-workspace.mjs"), "--skip-skills"],
-      {
-        encoding: "utf8",
-        env: isolatedEnvironment(testRoot),
-        shell: false
-      }
-    );
-
-    assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /AGENTS\.md is a directory where a file belongs/);
-    assert.equal(existsSync(join(workspaceRoot, "CLAUDE.md")), false);
-    assert.equal(existsSync(join(workspaceRoot, "MACHINE.md")), false);
+    for (const path of [
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".gitignore",
+      "docs/engineering/git-workflow.md",
+      ".github/pull_request_template.md"
+    ]) {
+      assert.equal(existsSync(join(projectA, ...path.split("/"))), true, path);
+    }
+    assert.equal(existsSync(join(projectA, "README.md")), false);
+    assert.equal(existsSync(join(projectA, "TEMPLATE-USAGE.md")), false);
+    assert.equal(directoryByteHash(projectB), siblingBefore);
+    for (const name of ["AGENTS.md", "CLAUDE.md", "_templates", "MACHINE.md"]) {
+      assert.equal(existsSync(join(workspaceRoot, name)), false, name);
+    }
+    const claude = readFileSync(join(projectA, "CLAUDE.md"), "utf8");
+    assert.equal((claude.match(/^@AGENTS\.md$/gm) ?? []).length, 1);
+    assert.match(result.stdout, /Remaining template placeholders:/);
+    assert.match(result.stdout, /Start a new Codex or Claude session/);
   } finally {
     rmSync(testRoot, { recursive: true, force: true });
   }
 });
 
-await test("an unreadable destination is reported instead of crashing", () => {
-  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
-  const templatesPath = join(workspaceRoot, "_templates");
-  try {
-    mkdirSync(templatesPath);
-    chmodSync(templatesPath, 0o000);
-
-    const result = spawnSync(
-      process.execPath,
-      [join(checkoutRoot, "scripts", "init-workspace.mjs"), "--skip-skills"],
-      {
-        encoding: "utf8",
-        env: isolatedEnvironment(testRoot),
-        shell: false
-      }
-    );
-
-    assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /_templates is not readable/);
-    assert.doesNotMatch(result.stderr, /EACCES|node:internal/);
-    assert.equal(existsSync(join(workspaceRoot, "AGENTS.md")), false);
-  } finally {
-    chmodSync(templatesPath, 0o755);
-    rmSync(testRoot, { recursive: true, force: true });
-  }
-}, { needsPosixPermissions: true });
-
-await test("reviewed replacement recovers from a wrong-typed guide", () => {
+await test("existing project guidance is preserved and gitignore entries merge", () => {
   const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
   try {
-    mkdirSync(join(workspaceRoot, "AGENTS.md"));
-    writeFileSync(join(workspaceRoot, "AGENTS.md", "stray.txt"), "stray\n");
-
-    const result = spawnSync(
-      process.execPath,
-      [
-        join(checkoutRoot, "scripts", "init-workspace.mjs"),
-        "--skip-skills",
-        "--replace"
-      ],
-      {
-        encoding: "utf8",
-        env: isolatedEnvironment(testRoot),
-        shell: false
-      }
-    );
-
-    assert.equal(result.status, 0, result.stderr);
-    assert.equal(
-      readFileSync(join(workspaceRoot, "AGENTS.md"), "utf8"),
-      readFileSync(join(checkoutRoot, "guides", "AGENTS.md"), "utf8")
-    );
-    const backupName = readdirSync(workspaceRoot).find((name) =>
-      name.startsWith("AGENTS.md.backup-")
-    );
-    assert.ok(backupName, "the replaced directory was backed up");
-    assert.equal(
-      readFileSync(join(workspaceRoot, backupName, "stray.txt"), "utf8"),
-      "stray\n"
-    );
-  } finally {
-    rmSync(testRoot, { recursive: true, force: true });
-  }
-});
-
-await test("reviewed replacement backs up portable drift and preserves machine facts", () => {
-  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
-  try {
-    writeFileSync(join(workspaceRoot, "AGENTS.md"), "old agents\n");
-    writeFileSync(join(workspaceRoot, "CLAUDE.md"), "old claude\n");
-    writeFileSync(join(workspaceRoot, "MACHINE.md"), "verified local facts\n");
-    mkdirSync(join(workspaceRoot, "_templates"));
-    writeFileSync(join(workspaceRoot, "_templates", "old.txt"), "old template\n");
-
-    const result = spawnSync(
-      process.execPath,
-      [
-        join(checkoutRoot, "scripts", "init-workspace.mjs"),
-        "--skip-skills",
-        "--replace"
-      ],
-      {
-        encoding: "utf8",
-        env: isolatedEnvironment(testRoot),
-        shell: false
-      }
-    );
-
-    assert.equal(result.status, 0, result.stderr);
-    assert.equal(
-      readFileSync(join(workspaceRoot, "AGENTS.md"), "utf8"),
-      readFileSync(join(checkoutRoot, "guides", "AGENTS.md"), "utf8")
-    );
-    assert.equal(
-      readFileSync(join(workspaceRoot, "CLAUDE.md"), "utf8"),
-      readFileSync(join(checkoutRoot, "guides", "CLAUDE.md"), "utf8")
-    );
-    assert.equal(
-      readFileSync(join(workspaceRoot, "MACHINE.md"), "utf8"),
-      "verified local facts\n"
-    );
-    assert.equal(
-      readFileSync(join(workspaceRoot, "_templates", ".gitignore"), "utf8"),
-      readFileSync(join(checkoutRoot, "project-templates", ".gitignore"), "utf8")
-    );
-
-    const backupNames = readdirSync(workspaceRoot).filter((name) =>
-      name.includes(".backup-")
-    );
-    assert.equal(backupNames.length, 3);
-    const agentBackup = backupNames.find((name) =>
-      name.startsWith("AGENTS.md.backup-")
-    );
-    const claudeBackup = backupNames.find((name) =>
-      name.startsWith("CLAUDE.md.backup-")
-    );
-    const templateBackup = backupNames.find((name) =>
-      name.startsWith("_templates.backup-")
-    );
-    assert.ok(agentBackup);
-    assert.ok(claudeBackup);
-    assert.ok(templateBackup);
-    assert.equal(
-      readFileSync(join(workspaceRoot, agentBackup), "utf8"),
-      "old agents\n"
-    );
-    assert.equal(
-      readFileSync(join(workspaceRoot, claudeBackup), "utf8"),
-      "old claude\n"
-    );
-    assert.equal(
-      readFileSync(join(workspaceRoot, templateBackup, "old.txt"), "utf8"),
-      "old template\n"
-    );
-  } finally {
-    rmSync(testRoot, { recursive: true, force: true });
-  }
-});
-
-await test("malformed MACHINE.md fails before workspace writes", () => {
-  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
-  try {
-    mkdirSync(join(workspaceRoot, "MACHINE.md"));
-
-    const result = spawnSync(
-      process.execPath,
-      [join(checkoutRoot, "scripts", "init-workspace.mjs"), "--skip-skills"],
-      {
-        encoding: "utf8",
-        env: isolatedEnvironment(testRoot),
-        shell: false
-      }
-    );
-
-    assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /MACHINE\.md must be a readable regular file/);
-    assert.equal(existsSync(join(workspaceRoot, "AGENTS.md")), false);
-    assert.equal(existsSync(join(workspaceRoot, "CLAUDE.md")), false);
-    assert.equal(existsSync(join(workspaceRoot, "_templates")), false);
-    assert.doesNotMatch(result.stderr, /EISDIR|node:fs:/);
-  } finally {
-    rmSync(testRoot, { recursive: true, force: true });
-  }
-});
-
-await test("Git-owned workspace is rejected before writes", () => {
-  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
-  try {
+    const project = join(workspaceRoot, "project-a");
+    mkdirSync(project);
     const gitResult = spawnSync("git", ["init", "-q"], {
-      cwd: workspaceRoot,
+      cwd: project,
       encoding: "utf8",
       shell: false
     });
     assert.equal(gitResult.status, 0, gitResult.stderr);
+    writeFileSync(join(project, "AGENTS.md"), "custom project policy\n");
+    writeFileSync(join(project, "CLAUDE.md"), "@AGENTS.md\ncustom adapter\n");
+    writeFileSync(join(project, ".gitignore"), "dist/\n.env\n");
 
-    const result = spawnSync(
-      process.execPath,
-      [join(checkoutRoot, "scripts", "init-workspace.mjs"), "--skip-skills"],
-      {
-        encoding: "utf8",
-        env: isolatedEnvironment(testRoot),
-        shell: false
-      }
+    const result = runProjectInitializer(checkoutRoot, project, testRoot);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(
+      readFileSync(join(project, "AGENTS.md"), "utf8"),
+      "custom project policy\n"
     );
-
-    assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /Workspace root must stay outside Git/);
-    assert.equal(existsSync(join(workspaceRoot, "AGENTS.md")), false);
-    assert.equal(existsSync(join(workspaceRoot, "CLAUDE.md")), false);
-    assert.equal(existsSync(join(workspaceRoot, "MACHINE.md")), false);
-    assert.equal(existsSync(join(workspaceRoot, "_templates")), false);
+    assert.equal(
+      readFileSync(join(project, "CLAUDE.md"), "utf8"),
+      "@AGENTS.md\ncustom adapter\n"
+    );
+    const ignore = readFileSync(join(project, ".gitignore"), "utf8");
+    assert.match(ignore, /^dist\/$/m);
+    assert.equal((ignore.match(/^\.env$/gm) ?? []).length, 1);
+    for (const entry of [
+      "CLAUDE.local.md",
+      ".claude/settings.local.json",
+      ".agent-work/",
+      ".env.*",
+      ".DS_Store",
+      "Thumbs.db"
+    ]) {
+      const escaped = entry.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      assert.match(ignore, new RegExp(`^${escaped}$`, "m"));
+    }
+    assert.doesNotMatch(ignore, /^!\.env\.example$/m);
+    assert.match(result.stdout, /Preserved: AGENTS\.md, CLAUDE\.md/);
   } finally {
     rmSync(testRoot, { recursive: true, force: true });
   }
 });
 
-await test("a missing Git prerequisite is reported plainly before writes", () => {
+await test("project initialization rejects a Git-owned workspace", () => {
   const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
   try {
-    const result = spawnSync(
-      process.execPath,
-      [join(checkoutRoot, "scripts", "init-workspace.mjs"), "--skip-skills"],
-      {
+    const project = join(workspaceRoot, "project-a");
+    mkdirSync(project);
+    for (const root of [project, workspaceRoot]) {
+      const gitResult = spawnSync("git", ["init", "-q"], {
+        cwd: root,
         encoding: "utf8",
-        env: isolatedEnvironment(testRoot, {
-          PATH: join(testRoot, "no-tools")
-        }),
         shell: false
-      }
-    );
+      });
+      assert.equal(gitResult.status, 0, gitResult.stderr);
+    }
 
+    const result = runProjectInitializer(checkoutRoot, project, testRoot);
     assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /Git is required on PATH/);
-    assert.equal(existsSync(join(workspaceRoot, "AGENTS.md")), false);
-    assert.equal(existsSync(join(workspaceRoot, "MACHINE.md")), false);
+    assert.match(result.stderr, /Workspace root must stay outside Git/);
+    assert.equal(existsSync(join(project, "AGENTS.md")), false);
   } finally {
     rmSync(testRoot, { recursive: true, force: true });
   }
 });
 
-await test("a checkout directly under the user home is rejected before writes", () => {
-  const testHome = mkdtempSync(join(tmpdir(), "machine-bootstrap-home-root-test-"));
-  const checkoutRoot = join(testHome, "machine-bootstrap");
+await test("project target boundaries reject unsafe or ambiguous roots", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
   try {
-    mkdirSync(checkoutRoot);
-    const gitRoot = join(bootstrapRoot, ".git");
-    cpSync(bootstrapRoot, checkoutRoot, {
-      recursive: true,
-      filter: (source) =>
-        source !== gitRoot && !source.startsWith(`${gitRoot}${sep}`)
+    const outside = join(testRoot, "outside");
+    mkdirSync(outside);
+    const outsideResult = runProjectInitializer(checkoutRoot, outside, testRoot);
+    assert.notEqual(outsideResult.status, 0);
+    assert.match(outsideResult.stderr, /inside the workspace/);
+
+    const bootstrapResult = runProjectInitializer(checkoutRoot, checkoutRoot, testRoot);
+    assert.notEqual(bootstrapResult.status, 0);
+    assert.match(bootstrapResult.stderr, /cannot be machine-bootstrap/);
+
+    const project = join(workspaceRoot, "project-a");
+    const nested = join(project, "nested");
+    mkdirSync(nested, { recursive: true });
+    const gitResult = spawnSync("git", ["init", "-q"], {
+      cwd: project,
+      encoding: "utf8",
+      shell: false
     });
+    assert.equal(gitResult.status, 0, gitResult.stderr);
+    const nestedResult = runProjectInitializer(checkoutRoot, nested, testRoot);
+    assert.notEqual(nestedResult.status, 0);
+    assert.match(nestedResult.stderr, /must be its Git root/);
+    assert.equal(existsSync(join(nested, "AGENTS.md")), false);
 
-    const result = spawnSync(
-      process.execPath,
-      [join(checkoutRoot, "scripts", "init-workspace.mjs"), "--skip-skills"],
-      {
-        encoding: "utf8",
-        env: isolatedEnvironment(testHome),
-        shell: false
-      }
+    const missingNested = join(project, "new-nested");
+    const missingNestedResult = runProjectInitializer(
+      checkoutRoot,
+      missingNested,
+      testRoot,
+      ["--create"]
     );
-
-    assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /Workspace root cannot be the user home/);
-    assert.equal(existsSync(join(testHome, "AGENTS.md")), false);
-    assert.equal(existsSync(join(testHome, "CLAUDE.md")), false);
-    assert.equal(existsSync(join(testHome, "MACHINE.md")), false);
-    assert.equal(existsSync(join(testHome, "_templates")), false);
+    assert.notEqual(missingNestedResult.status, 0);
+    assert.match(
+      missingNestedResult.stderr,
+      /cannot be created inside existing Git repository/
+    );
+    assert.equal(existsSync(missingNested), false);
   } finally {
-    rmSync(testHome, { recursive: true, force: true });
+    rmSync(testRoot, { recursive: true, force: true });
   }
 });
 
@@ -2597,7 +2264,10 @@ await test("workspace initialization installs and verifies workflows", () => {
     );
 
     assert.equal(result.status, 0, result.stderr);
-    assert.equal(existsSync(join(workspaceRoot, "AGENTS.md")), true);
+    assert.equal(existsSync(join(workspaceRoot, "MACHINE.md")), true);
+    assert.equal(existsSync(join(workspaceRoot, "AGENTS.md")), false);
+    assert.equal(existsSync(join(workspaceRoot, "CLAUDE.md")), false);
+    assert.equal(existsSync(join(workspaceRoot, "_templates")), false);
     assert.equal(
       existsSync(
         join(testRoot, ".agents", "workflows", "product-delivery", "WORKFLOW.md")
@@ -2673,7 +2343,10 @@ await test("--skip-workflows performs no workflow writes or verification", () =>
     assert.equal(result.status, 0, result.stderr);
     assert.match(result.stdout, /Workflow foundation: skipped by request/);
     assert.doesNotMatch(result.stdout, /Verified 1 workflow\(s\)/);
-    assert.equal(existsSync(join(workspaceRoot, "AGENTS.md")), true);
+    assert.equal(existsSync(join(workspaceRoot, "MACHINE.md")), true);
+    assert.equal(existsSync(join(workspaceRoot, "AGENTS.md")), false);
+    assert.equal(existsSync(join(workspaceRoot, "CLAUDE.md")), false);
+    assert.equal(existsSync(join(workspaceRoot, "_templates")), false);
     assert.equal(existsSync(join(testRoot, ".agents")), false);
     assert.equal(existsSync(join(testRoot, ".claude")), false);
     assert.equal(existsSync(join(testRoot, ".codex")), false);

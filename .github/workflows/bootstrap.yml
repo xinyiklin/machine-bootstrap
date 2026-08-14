@@ -29,14 +29,5 @@ jobs:
           node-version: 24
           package-manager-cache: false
 
-      - name: Run bootstrap tests
+      - name: Run disposable workspace and project bootstrap tests
         run: node scripts/test-bootstrap.mjs
-
-      - name: Initialize disposable guidance layer
-        run: node scripts/init-workspace.mjs --skip-skills --skip-workflows
-
-      - name: Populate disposable machine facts
-        run: node -e "const fs=require('node:fs'); const path=require('node:path'); const target=path.resolve('..','MACHINE.md'); fs.writeFileSync(target,fs.readFileSync(target,'utf8').replace(/\bTODO\b/g,'CI verified'));"
-
-      - name: Check guidance layer without writes
-        run: node scripts/init-workspace.mjs --check --skip-skills --skip-workflows

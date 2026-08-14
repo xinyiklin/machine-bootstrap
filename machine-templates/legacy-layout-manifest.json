@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "description": "Normalized LF SHA-256 fingerprints for the retired workspace-router files generated before the sibling-only layout.",
+  "files": {
+    "AGENTS.md": "4d843a7bcae87f1820f5e7c0ae70e24659d562150c24a96c80a890b0615e6d59",
+    "CLAUDE.md": "a1c2ba840eaf0f84db250c121272723301cc71cf022e6f85b84e8efdeca8c2e4",
+    "_templates/.github/pull_request_template.md": "2a4b3b911f6332a847bbfdc1bbb709d6336b365848d8147390c8083ba4ddf692",
+    "_templates/.gitignore": "0d6a2a13d293a7176ccd17df45337fc6812e35906f7b5c5066953bcdfef1b3ca",
+    "_templates/AGENTS.md": "addde39f27bbd91f9d13b4950c23e9b7586bd60b390a348285f4bc21d666c836",
+    "_templates/CLAUDE.md": "74177dea89c3ea07924d5f8fe2d470562f6b070dd360a1f7552c6c3165f08751",
+    "_templates/docs/engineering/git-workflow.md": "ea95442cf4fb6ed4f1c6b3aaa4599797df95eb601dbde13e267c65caec6a34a1",
+    "_templates/TEMPLATE-USAGE.md": "9377398e112ee3ab23b638e5833335d3c40a89ed1d760ccd2a2d5671c3f2c007"
+  }
+}

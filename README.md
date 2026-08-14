@@ -1,138 +1,132 @@
 # Machine Bootstrap
 
-Portable AI-agent setup and guidance for a development workspace.
+Portable machine-level AI-agent setup and one-time project guidance seeding for
+a workspace of independent sibling repositories.
 
-This repository is intentionally separate from the projects it configures. It
-can be cloned into the root folder that contains your projects without making
-those child folders part of one parent Git repository.
+This repository is a direct child of the workspace it administers. It does not
+turn that workspace into a parent repository or an instruction scope.
 
 ## Ownership hierarchy
 
-The control flow is:
-
-1. **`machine-bootstrap/`** owns initialization: the shared-skill roster, the
-   portable workflow foundation, setup scripts, portable workspace guides, and
-   project-guide templates.
-2. **The workspace root** owns launch-specific routing: `AGENTS.md` for Codex
-   sessions started exactly there, a tiny ancestor `CLAUDE.md`, machine-local
-   `MACHINE.md`, and inert `_templates/` used to initialize projects.
-3. **Each project** owns its self-contained product and engineering guidance.
-   Its nearest current `AGENTS.md` and owning documentation govern work inside
-   that project.
-
-`machine-bootstrap/` may physically live inside the workspace root, but it is
-the portable source of truth for initializing the layer above the individual
-projects. The workspace root can remain outside Git, and child projects remain
-independent repositories.
-
-The resulting filesystem stays flat at the repository boundary:
+The layout is intentionally sibling-only:
 
 ```text
 Workspace/
-├── AGENTS.md
-├── CLAUDE.md
-├── MACHINE.md
-├── _templates/
-├── machine-bootstrap/   # its own Git repository
-├── project-a/           # its own Git repository
-└── project-b/           # its own Git repository
+|-- MACHINE.md                  # optional, machine-local, inert
+|-- machine-bootstrap/          # its own Git repository
+|   |-- AGENTS.md
+|   |-- CLAUDE.md
+|   |-- machine-templates/
+|   |-- project-templates/
+|   `-- scripts/
+|-- project-a/                  # its own Git repository and guidance
+|-- project-b/                  # its own Git repository and guidance
+`-- scratch/                    # optional, non-project experiments
 ```
 
-The ownership hierarchy does not require moving projects inside the bootstrap
-repository.
+The workspace root has no live `AGENTS.md`, `CLAUDE.md`, or `_templates/`.
+Codex and Claude sessions for normal project work start in the target project
+root or relevant scoped directory. A bootstrap session may initialize, audit,
+repair, install, inspect the registry, or route a sibling project, but it must
+not become that project's long-lived coding session.
+
+Filesystem access to the parent registry or a sibling target may require sandbox
+authorization. Access does not load that sibling repository's instructions into
+the current session.
 
 ## What belongs here
 
-- `AGENTS.md` and `CLAUDE.md` — self-contained instructions for working on this
-  repository; the Claude overlay imports the canonical repository guide.
-- `guides/AGENTS.md` — portable Codex workspace-root router and fallback.
-- `guides/git-workflow.md` — portable Git/GitHub branch, commit, PR, review,
-  merge, and publication baseline.
-- `.github/pull_request_template.md` — this repository's concise PR receipt;
-  the project-template copy is seeded for new child repositories.
-- `.github/workflows/bootstrap.yml`: Linux and Windows bootstrap verification.
-- `guides/CLAUDE.md` — portable Claude Code overlay.
-- `guides/MACHINE.example.md` — structure for facts that differ by machine.
-- `project-templates/` — starter guidance plus non-copyable
-  `TEMPLATE-USAGE.md` for a new repository.
-- `skills.json` — the desired shared Claude Code/Codex skill roster.
-- `workflows/` — versioned, provider-neutral workflow packages, listed by
-  `workflows/registry.json`.
-- `INIT.md` — concise instructions an AI agent can follow on a fresh machine.
-- `scripts/init-workspace.mjs` — safe, one-command workspace initialization.
-- `scripts/install-skills.mjs` — installs missing skills and verifies their
-  canonical content and harness-facing paths.
-- `scripts/install-workflows.mjs` — installs the canonical workflow packages and
-  generates the Claude and Codex adapters.
-- `scripts/setup-guides.mjs` — installs workspace guides and seeds `_templates/`
-  beside this repository.
-- `scripts/test-bootstrap.mjs` — isolated regression checks for bootstrap safety.
-- `docs/continuity/` — rotated historical ledger entries, read only when a task
-  needs them; current state remains in `CONTINUITY.md`.
+- `AGENTS.md` and `CLAUDE.md` — instructions for this repository only.
+- `machine-templates/MACHINE.example.md` — starter for the optional inert parent
+  registry.
+- `machine-templates/legacy-layout-manifest.json` — fingerprints used only to
+  recognize safely migratable files from the retired workspace-router layout.
+- `project-templates/` — the single canonical starter source for project-owned
+  guidance, Git workflow, PR template, and ignore entries.
+- `docs/engineering/git-workflow.md` — this repository's Git/publication
+  contract; the project starter has its own project-owned contract.
+- `.github/workflows/bootstrap.yml` — Linux and Windows verification.
+- `skills.json` and `scripts/install-skills.mjs` — reviewed shared skill roster
+  and missing-only installer.
+- `workflows/` and `scripts/install-workflows.mjs` — provider-neutral workflow
+  packages and deterministic adapters.
+- `scripts/init-workspace.mjs` — parent registry plus shared capabilities.
+- `scripts/init-project.mjs` — explicit, target-scoped, one-time project seeding.
+- `scripts/test-bootstrap.mjs` — disposable regression suite.
+- `CONTINUITY.md` — bounded current state; `docs/continuity/` is on-demand,
+  append-only history.
+
+`project-templates/TEMPLATE-USAGE.md` documents the starter set but is never
+copied into a project or renamed as its README. Once starter files are copied,
+they are project-owned and are not synchronized against machine-bootstrap.
 
 ## What stays machine-local
 
-The workspace root's `MACHINE.md` records absolute paths, project inventory,
-port reservations, local lifecycle notes, browser preferences, and other facts
-that should not be copied blindly to another computer.
+The optional parent `MACHINE.md` records project inventory, relative or local
+paths, port reservations, cross-project relationships, machine capabilities,
+and lifecycle notes. It is not automatically loaded by Codex or Claude.
+Machine-bootstrap reads it deliberately only for administration, discovery,
+port allocation, or sibling routing. Project sessions normally do not need it.
 
-Do not put credentials, private keys, tokens, resume contents, patient-style
-data, or provider responses in either this repository or `MACHINE.md`.
+Do not put credentials, private keys, tokens, private documents, sensitive data,
+secret filenames, or provider responses in this repository or `MACHINE.md`.
+
+The optional `scratch/` folder is for disposable experiments, downloaded
+samples, fixtures, or non-project work. It carries no inherited repository
+policy. Promote durable work into its own sibling project with its own guidance.
 
 ## Set up another machine
 
 Prerequisites: Git, Node.js 18 or newer, Claude Code and/or Codex.
 
-1. Clone this repository as a direct child of the dedicated folder that will
-   contain your projects. Its parent directory becomes the workspace root; the
-   filesystem root and user home are rejected as unsafe targets.
-2. Initialize and verify the workspace:
+1. Clone this repository as a direct child of the dedicated non-Git folder that
+   will contain sibling projects. The filesystem root and user home are rejected
+   as unsafe workspace targets.
+2. Initialize the optional registry and shared capabilities:
 
    ```bash
    node scripts/init-workspace.mjs
    ```
 
-   This command verifies that the workspace root is outside Git, installs the
-   portable guidance layer and project templates, installs missing shared
-   skills directly from exact reviewed Git revisions, verifies their content
-   hashes before installation, installs the workflow foundation with its
-   generated provider adapters, and runs a final read-only verification. It
-   does not execute upstream package installers or lifecycle scripts.
-
-3. Customize the generated `MACHINE.md` with facts verified on that computer.
-4. Confirm the complete setup after replacing all `TODO` placeholders:
+   The command creates `../MACHINE.md` only when missing, installs or verifies
+   shared skills and workflows, and generates provider adapters. It never
+   creates parent guidance or a parent template copy.
+3. Replace `MACHINE.md` TODOs with verified local facts, then run:
 
    ```bash
    node scripts/init-workspace.mjs --check
    ```
 
-   Check mode is read-only and fails when portable files drift, skills are
-   missing, or `MACHINE.md` still contains placeholders.
+   Check mode is read-only. It allows the optional registry to be absent, but
+   fails on unresolved placeholders when the file exists, shared-capability
+   drift, or retired parent guidance/template entries.
+   Use `--skip-skills` or `--skip-workflows` to omit that layer from both setup
+   and verification.
+4. If an older bootstrap generated parent `AGENTS.md`, `CLAUDE.md`, or
+   `_templates/`, review and migrate recognized unchanged entries recoverably:
 
-   Add `--skip-skills` to leave the shared skill roster untouched, and
-   `--skip-workflows` to leave the workflow foundation and provider adapters
-   untouched. Each flag skips both the installation and the verification for
-   that layer.
+   ```bash
+   node scripts/init-workspace.mjs --migrate-legacy-layout
+   ```
 
-5. Follow `_templates/TEMPLATE-USAGE.md`. Copy only its named starter paths,
-   including the project-owned Git workflow guide and PR template; do not copy
-   the usage file as the project's README.
-6. Start or restart Codex at the target project root or relevant scoped
-   directory; its instruction chain is built once per run. Start a new Claude
-   Code session so it rediscovers installed definitions and project guidance.
+   Unknown or user-authored differences stop for manual review. Recognized
+   entries move under `../.machine-bootstrap-backup/<timestamp>/`; `MACHINE.md`
+   and sibling project guidance are never moved.
+5. Seed one existing project root:
+
+   ```bash
+   node scripts/init-project.mjs ../project-a
+   ```
+
+   For a missing directory, add `--create`. The initializer does not initialize
+   Git. It creates only missing project-owned files, preserves existing files,
+   merges missing positive `.gitignore` safety entries without adding negation
+   rules to an existing file, never copies
+   `TEMPLATE-USAGE.md`, and never creates or replaces a README.
+6. Replace project placeholders with verified project facts. Start a new Codex
+   or Claude session in that project root or relevant scoped directory.
 
 To delegate setup, tell an AI agent: **“Follow `machine-bootstrap/INIT.md`.”**
-
-Existing workspace files are never silently overwritten. Differing portable
-guides or templates make setup fail with a review-required message. After
-review, `node scripts/init-workspace.mjs --replace` creates timestamped backups
-and installs the portable versions. `MACHINE.md` is always preserved once it
-exists.
-
-A workspace guide may be a symlink; it is compared through the link, so one
-pointing at its portable source verifies as current. Replacement renames the
-existing entry to a backup before writing, so a link target is never written
-through.
 
 ## Product delivery workflow
 
@@ -308,36 +302,14 @@ node scripts/test-bootstrap.mjs
 node scripts/init-workspace.mjs --check
 ```
 
-The regression suite uses disposable workspaces and disposable home directories.
-Fixture copies exclude root-local agent state, ignored generated roots, and
-machine-local files such as `MACHINE.md`, `.env*`, `.npmrc`, local Claude
-overrides, logs, and backups. Portable nested `.claude/` and `.agents/` content
-and `.env.example` remain copyable. Coverage includes clean
-initialization, reviewed replacement recovery, portable drift,
-malformed machine state, deterministic skill integrity, reviewed Git-tree
-materialization, safe target boundaries, invalid manifests and portable
-sources, missing prerequisites, rejected arguments, and concise acquisition
-failures. Workflow coverage adds manifest and source validation, clean
-installation, provider-root overrides, deterministic adapter generation,
-adversarial TOML encoding, provenance and canonical contract content, absence
-of pinned models, untouched unrelated provider configuration, missing-only
-default behavior, cross-layer preflight, drift rejection before partial writes,
-transactional replacement rollback, reviewed replacement backups, read-only
-`--check`, and `--skip-workflows`. Workflow tests make no model or API calls and
-need no Claude Code or Codex authentication. The suite does not execute upstream
-code.
+The regression suite uses disposable workspaces, projects, Git repositories, and
+home directories. It covers parent boundary checks, registry initialization,
+legacy detection and recoverable migration, explicit project target safety,
+missing-only seeding, existing guidance preservation, `.gitignore` merging,
+sibling byte isolation, import topology, byte budgets, skill integrity,
+workflow validation, deterministic adapter generation, rollback, check-only
+behavior, and Linux/Windows CI contracts. It makes no model or API calls and
+never points setup scripts at the live parent workspace or provider roots.
 
-Guidance tests statically model documented provider loading topology, imports,
-activation, report ownership, and context budgets. They do not launch Codex or
-Claude and are not runtime-loading evidence. Use
-`docs/guidance-loading-smoke.md` for manual provider smoke checks.
-
-GitHub Actions runs the suite plus a read-only initialized-guidance check on
-Linux and Windows. The CI workspace and machine facts are disposable; CI does
-not install shared skills or provider adapters into a persistent user home.
-
-The suite runs before the first install. Checks that read this machine's
-installed roster are reported as skipped, by name, until the skills are
-installed; rerun after initialization to cover them. Checks that need a
-capability this host lacks — creating symbolic links, or POSIX permission
-enforcement — are also skipped by name rather than reported as failures.
+Manual provider loading checks live in
+`docs/guidance-loading-smoke.md`. Static tests are not runtime loading evidence.

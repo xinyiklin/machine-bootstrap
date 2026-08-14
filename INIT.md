@@ -1,64 +1,63 @@
 # Initialize This Workspace
 
-This is the agent-facing entry point for a fresh checkout.
-
-Prerequisites: Git and Node.js 18 or newer.
+Agent-facing entry point for a fresh checkout. Prerequisites: Git and Node.js 18
+or newer.
 
 ## Instruction for an AI agent
 
-Read this file and `README.md`, then run from this repository:
+Read this file, `README.md`, and `CONTINUITY.md`. Confirm this repository is a
+direct child of the intended dedicated, non-Git workspace folder, then run:
 
 ```bash
 node scripts/init-workspace.mjs
 ```
 
-Before running it, confirm this checkout is a direct child of the intended
-dedicated workspace folder. The script treats its parent as the workspace root
-and refuses to use the filesystem root or user home.
+The workspace initializer may create the optional parent `MACHINE.md` and
+install shared skills, workflows, and provider adapters. It never creates a
+parent `AGENTS.md`, `CLAUDE.md`, or `_templates/`. Replace `MACHINE.md` TODOs
+only with verified local facts and never add credentials, private documents, or
+secret filenames. Then run:
 
-After the command succeeds:
+```bash
+node scripts/init-workspace.mjs --check
+```
 
-1. Inspect the generated workspace-root `MACHINE.md`.
-2. Replace its `TODO` placeholders only with facts verified on this machine.
-   Never add credentials, tokens, private documents, or secret filenames.
-3. Run the read-only verification:
+If the parent contains a legacy `AGENTS.md`, `CLAUDE.md`, or `_templates/`, stop
+and report it. After confirming the entries are unchanged bootstrap-generated
+files, migrate them recoverably with:
 
-   ```bash
-   node scripts/init-workspace.mjs --check
-   ```
+```bash
+node scripts/init-workspace.mjs --migrate-legacy-layout
+```
 
-4. Report installed guidance, skill verification, installed workflow paths,
-   remaining `MACHINE.md` placeholders, and anything that requires review. Do
-   not initialize Git at the workspace root and do not stage, commit, publish,
-   or overwrite differing files unless the user explicitly asks.
+The migration rejects unknown differences and moves recognized entries under
+`../.machine-bootstrap-backup/<timestamp>/`; it never touches sibling projects
+or `MACHINE.md`.
 
-Follow the seeded `_templates/TEMPLATE-USAGE.md`; copy only the named starter
-paths, not the usage file itself. Fill in project-specific checks, CI, release,
-and deployment details before using them. Start or restart Codex in the target
-project or scoped directory because its instruction chain is fixed for that
-run.
+Initialize one project explicitly:
 
-If initialization reports differing workspace guides, templates, workflow
-files, or provider adapters, stop and show the differences. Use `--replace`
-only after the user reviews them; the replacement is recoverable because the
-existing files are renamed to timestamped backups.
+```bash
+node scripts/init-project.mjs ../project-a
+```
 
-Initialization also installs the portable `product-delivery` workflow to
-`~/.agents/workflows/product-delivery/` and generates its Claude and Codex
-adapters under `$CLAUDE_CONFIG_DIR/agents/` when that variable is set (otherwise
-`~/.claude/agents/`) and under `$CODEX_HOME/agents/` plus two
-`$CODEX_HOME/mb-*.config.toml` profiles when that variable is set (otherwise
-the equivalent paths under `~/.codex/`). It does not read or modify
-`settings.json` in the Claude configuration root or `config.toml` in the Codex
-home. Tell the user to start a new session so the provider rediscovers the
-definitions, and point them at `README.md` for the launch commands.
+Add `--create` only when the target directory does not yet exist. The command
+seeds missing project-owned guidance directly from `project-templates/`,
+preserves existing files, and merges missing positive `.gitignore` safety
+entries without adding negation rules to an existing file. It
+does not initialize Git, copy `TEMPLATE-USAGE.md`, replace a README, or edit any
+sibling project.
 
-Installing `product-delivery` makes its roles available but does not activate
-the workflow for ordinary work. Selecting Product Partner or Delivery Lead, an
-explicit request for the complete workflow, an active Product Brief or Delivery
-Plan, or a named project rule activates the full contract. Selecting the
-Verifier activates only independent verification for the supplied change.
+Report the initialized paths, shared capability state, remaining placeholders,
+and review-required conditions. Do not initialize Git at the workspace root or
+stage, commit, publish, overwrite, or migrate anything without the user's
+authority for that action.
 
-Use `--skip-skills` only when the user explicitly wants workspace files without
-installing or verifying shared skills, and `--skip-workflows` only when they
-explicitly want no workflow writes or verification.
+After project initialization, start a new Codex or Claude session in that
+project root or relevant scoped directory. A bootstrap session may administer
+or route a sibling, but it must not become the long-lived coding session for
+that project. Parent or sibling access may require sandbox authorization;
+access does not load sibling instructions.
+
+Use `--skip-skills` or `--skip-workflows` only when the user explicitly wants
+that shared layer left untouched. Installing `product-delivery` makes its roles
+available but does not activate the workflow for ordinary work.
