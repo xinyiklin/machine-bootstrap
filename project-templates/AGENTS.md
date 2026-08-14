@@ -54,6 +54,8 @@ ground. -->
 - `PRODUCT.md` — TODO (product purpose, users, tone, boundaries) — or delete.
 - `DESIGN.md` — TODO (tokens, typography, components) — or delete.
 - `docs/` — TODO (architecture, engineering contracts, testing) — or delete.
+- `docs/engineering/git-workflow.md` — branch, commit, PR, review, merge, and
+  publication rules; keep project-specific commands here.
 - Nested `AGENTS.md` — TODO (which directories own their own scoped guide).
 - `README.md` — human-facing setup and usage.
 - `CONTINUITY.md` — durable handoff state — or state that there is none.
@@ -310,6 +312,10 @@ default below to what this project wants. -->
 
 ## Git And Existing Work
 
+- Read `docs/engineering/git-workflow.md` before branch naming, committing,
+  pushing, drafting PR copy, reviewing, merging, or cleaning branches. It is a
+  self-contained copy of the portable bootstrap baseline and may add project
+  rules, but must not weaken its safety or verification requirements.
 - The working tree may contain user edits or generated output.
 - Run git commands from the relevant repository root; use non-interactive flags.
 - Do not stage, commit, push, amend, reset, rebase, or switch branches unless the

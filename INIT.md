@@ -32,6 +32,10 @@ After the command succeeds:
    not initialize Git at the workspace root and do not stage, commit, publish,
    or overwrite differing files unless the user explicitly asks.
 
+The seeded `_templates/` directory includes a project-owned Git/GitHub workflow
+guide and `.github/pull_request_template.md`. Fill in project-specific checks,
+CI, release, and deployment details before using them.
+
 If initialization reports differing workspace guides, templates, workflow
 files, or provider adapters, stop and show the differences. Use `--replace`
 only after the user reviews them; the replacement is recoverable because the

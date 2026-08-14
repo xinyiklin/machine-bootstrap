@@ -5,6 +5,10 @@ Generic starter guides to copy into a **new** project.
 - `AGENTS.md` — provider-agnostic project guide (the source of truth).
 - `CLAUDE.md` — thin Claude-specific overrides that `@AGENTS.md`-import the
   source of truth, so it hard-loads into context every session.
+- `docs/engineering/git-workflow.md` — self-contained Git/GitHub branch, commit,
+  PR, review, merge, and publication baseline.
+- `.github/pull_request_template.md` — concise PR receipt for scope, checks,
+  risks, and publication state.
 - `.gitignore` — baseline exclusions for personal AI-agent state, local
   environment configuration, and operating-system metadata.
 
@@ -17,7 +21,7 @@ referenced by that ledger. Nothing creates or commits those files for you.
 
 ## Usage
 
-1. Copy the three starter files into the new project root.
+1. Copy the starter files and directories into the new project root.
 2. Replace the `TODO` placeholders (project shape, commands), the `<Project>`
    title, and the `>` template note at the top of each file with the project's
    real details.
@@ -26,6 +30,10 @@ referenced by that ledger. Nothing creates or commits those files for you.
 4. Trim anything that does not apply; add project-specific conventions.
 5. If the workspace uses reserved ports, claim a range in its machine-local
    registry before pinning ports in the project's config.
+
+The Git workflow guide and PR template are intentionally project-owned copies:
+keep the portable baseline, then add only the commands and CI/release details
+that are true for this project.
 
 These are **inert templates** — nothing loads them, so editing them never
 changes agent behavior until you copy them into a project.

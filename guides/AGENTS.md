@@ -46,6 +46,9 @@ change.
 - `CLAUDE.md` is a thin Claude Code overlay.
 - `MACHINE.md` contains local facts and must never contain secrets.
 - `CONTINUITY.md` is read fresh and records durable handoff state.
+- The bootstrap checkout's `guides/git-workflow.md` is the portable Git/GitHub
+  baseline; a child project's `docs/engineering/git-workflow.md` is its
+  self-contained project copy and may add stricter rules.
 - `CLAUDE.local.md`, when supported, holds uncommitted personal overrides.
 - `_templates/` contains inert starter files for new projects.
 
@@ -217,6 +220,10 @@ handoff state.
 ## Git
 
 - Run Git from the actual repository root with non-interactive commands.
+- Read the project's `docs/engineering/git-workflow.md` before branch naming,
+  commits, PR copy, push, review, merge, release, or branch cleanup. If it is
+  absent, use the bootstrap checkout's `guides/git-workflow.md` or copy the
+  project template.
 - Do not stage, commit, push, switch branches, rewrite history, open or merge
   pull requests, or deploy unless the user asks.
 - Stage exact paths, preserve unrelated changes, and never bypass hooks.

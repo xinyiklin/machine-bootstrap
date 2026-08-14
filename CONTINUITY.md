@@ -6,6 +6,13 @@ workspace state belongs in its parent `MACHINE.md` and local continuity ledger.
 
 ## Snapshot
 
+- 2026-08-14 [USER+CODE] Added a portable Git/GitHub delivery baseline from
+  CareFlow and RoleFit conventions: typed branches, Conventional Commits and
+  squash-compatible PR titles, a reviewable PR template, exact-head merge and
+  post-merge gates, release/deploy receipts, and explicit publication state.
+  New projects receive a self-contained copy under
+  `docs/engineering/git-workflow.md` and `.github/pull_request_template.md`;
+  project commands and CI remain project-owned.
 - 2026-08-13 [USER] Implementation guidance now requires the smallest
   maintainable solution, discourages narrative comments and speculative
   abstractions, and requires user approval before implementing useful ideas

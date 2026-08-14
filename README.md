@@ -44,6 +44,10 @@ repository.
 ## What belongs here
 
 - `guides/AGENTS.md` — portable, provider-agnostic working agreements.
+- `guides/git-workflow.md` — portable Git/GitHub branch, commit, PR, review,
+  merge, and publication baseline.
+- `.github/pull_request_template.md` — this repository's concise PR receipt;
+  the project-template copy is seeded for new child repositories.
 - `guides/CLAUDE.md` — portable Claude Code overlay.
 - `guides/MACHINE.example.md` — structure for facts that differ by machine.
 - `project-templates/` — starter guidance for a new repository.
@@ -104,8 +108,9 @@ Prerequisites: Git, Node.js 18 or newer, Claude Code and/or Codex.
    untouched. Each flag skips both the installation and the verification for
    that layer.
 
-5. Initialize each project from the workspace `_templates/`, then replace
-   placeholders with facts verified from that project.
+5. Initialize each project from the workspace `_templates/`, including the
+   project-owned Git workflow guide and PR template, then replace placeholders
+   with facts verified from that project.
 6. Start a new Claude Code or Codex session so it rediscovers the skills and
    workspace guidance.
 
@@ -249,8 +254,10 @@ A project strengthens the workflow in its own `AGENTS.md` — additional
 high-risk triggers, mandatory Delivery Plan sections, required project
 verification, project-specific specialist roles — without copying the workflow
 into the repository. The starter project template has a short section for
-exactly that. A project may not weaken exact user approval, scope-change
-escalation, or honest verification reporting.
+exactly that. It also seeds a self-contained Git/GitHub workflow guide and PR
+template; keep project commands, CI, release, and deployment details there. A
+project may not weaken exact user approval, scope-change escalation, or honest
+verification reporting.
 
 ## Updating
 
