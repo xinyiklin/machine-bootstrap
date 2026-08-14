@@ -77,10 +77,16 @@ const capabilities = detectCapabilities();
 // Test workspaces need the repository's source and fixtures, not ignored local
 // caches or generated output. Copying those directories can turn a small test
 // fixture into gigabytes and make every integration test repeat that cost.
-const fixtureExcludedDirectoryNames = new Set([
-  ".git",
+const fixtureRootLocalDirectoryNames = new Set([
   ".agents",
   ".claude",
+  ".codex",
+  ".idea",
+  ".vscode"
+]);
+
+const fixtureExcludedDirectoryNames = new Set([
+  ".git",
   ".cache",
   "coverage",
   "dist",
@@ -92,14 +98,19 @@ const fixtureExcludedFileNames = new Set([
   ".env",
   ".npmrc",
   ".skill-lock.json",
+  ".DS_Store",
   "CLAUDE.local.md",
-  "MACHINE.md"
+  "MACHINE.md",
+  "Thumbs.db"
 ]);
 
 function includeInTestFixture(source) {
   if (source === bootstrapRoot) return true;
 
   const pathParts = source.slice(bootstrapRoot.length + 1).split(sep);
+  if (fixtureRootLocalDirectoryNames.has(pathParts[0])) {
+    return false;
+  }
   if (pathParts.some((part) => fixtureExcludedDirectoryNames.has(part))) {
     return false;
   }
@@ -107,7 +118,11 @@ function includeInTestFixture(source) {
   const name = pathParts.at(-1);
   if (fixtureExcludedFileNames.has(name)) return false;
   if (name.startsWith(".env.") && name !== ".env.example") return false;
-  if (name.endsWith(".log") || name.includes(".backup-")) return false;
+  if (
+    name.endsWith(".log") ||
+    name.endsWith(".swp") ||
+    name.includes(".backup-")
+  ) return false;
   return true;
 }
 
@@ -828,55 +843,193 @@ await test("repository guidance is self-contained for Codex and Claude", () => {
 });
 
 await test("test fixtures exclude generated and machine-local state", () => {
-  for (const name of [
-    ".git",
-    ".agents",
-    ".claude",
-    ".cache",
-    "coverage",
-    "dist",
-    "node_modules",
-    "tmp"
-  ]) {
+  for (const name of [".agents", ".claude", ".codex", ".idea", ".vscode"]) {
     assert.equal(includeInTestFixture(join(bootstrapRoot, name, "artifact")), false);
+  }
+  for (const name of [".git", ".cache", "coverage", "dist", "node_modules", "tmp"]) {
+    assert.equal(includeInTestFixture(join(bootstrapRoot, name, "artifact")), false);
+    assert.equal(
+      includeInTestFixture(join(bootstrapRoot, "project-templates", name, "artifact")),
+      false
+    );
   }
   for (const name of [
     ".env",
     ".env.local",
     ".npmrc",
     ".skill-lock.json",
+    ".DS_Store",
     "CLAUDE.local.md",
     "MACHINE.md",
+    "Thumbs.db",
     "error.log",
+    "notes.swp",
     "AGENTS.md.backup-2026-08-14"
   ]) {
     assert.equal(includeInTestFixture(join(bootstrapRoot, name)), false);
   }
   assert.equal(includeInTestFixture(join(bootstrapRoot, ".env.example")), true);
   assert.equal(includeInTestFixture(join(bootstrapRoot, "guides", "AGENTS.md")), true);
+  for (const portablePath of [
+    ["project-templates", ".claude", "rules", "api.md"],
+    ["project-templates", ".agents", "skills", "review", "SKILL.md"],
+    ["project-templates", ".codex", "agents", "reviewer.toml"]
+  ]) {
+    assert.equal(includeInTestFixture(join(bootstrapRoot, ...portablePath)), true);
+  }
+  assert.equal(
+    includeInTestFixture(join(bootstrapRoot, "project-templates", ".git", "objects", "x")),
+    false
+  );
 });
 
-await test("guidance documents the verified instruction boundaries", () => {
+await test("guidance documents static provider boundaries without precedence claims", () => {
   const files = [
     join(bootstrapRoot, "guides", "AGENTS.md"),
     join(bootstrapRoot, "guides", "CLAUDE.md"),
     join(bootstrapRoot, "project-templates", "AGENTS.md"),
     join(bootstrapRoot, "project-templates", "CLAUDE.md"),
-    join(bootstrapRoot, "project-templates", "README.md")
+    join(bootstrapRoot, "project-templates", "TEMPLATE-USAGE.md")
   ];
   const contents = files.map((path) => readFileSync(path, "utf8"));
   const portableAgents = contents[0];
   const portableClaude = contents[1];
-  const templateReadme = contents[4];
+  const projectClaude = contents[3];
+  const templateUsage = contents[4];
 
-  assert.match(portableAgents, /project root \(normally the Git root\)/);
-  assert.match(portableAgents, /workspace `AGENTS\.md` above a child Git root is not/);
+  assert.match(portableAgents, /Applies only to Codex sessions started at this non-Git workspace root/);
+  assert.match(portableAgents, /builds its instruction chain once per run/);
+  assert.match(portableAgents, /With no detected project root, Codex checks only the starting directory/);
+  assert.match(portableAgents, /does not rebuild its instruction chain/);
   assert.doesNotMatch(portableClaude, /^\s*@AGENTS\.md\s*$/m);
   assert.match(portableClaude, /Do not import the sibling `AGENTS\.md`/);
-  assert.match(templateReadme, /workspace guide\s+above a child Git root is not inherited/);
+  assert.equal((projectClaude.match(/^@AGENTS\.md$/gm) ?? []).length, 1);
+  assert.match(projectClaude, /^# .*\r?\n\r?\n@AGENTS\.md$/m);
+  assert.match(templateUsage, /A parent workspace guide is not inherited/);
+  assert.match(templateUsage, /does not walk upward to an arbitrary workspace guide/);
+  assert.match(templateUsage, /not a project README/);
+  assert.equal(
+    existsSync(join(bootstrapRoot, "project-templates", "README.md")),
+    false
+  );
   for (const content of contents) {
     assert.doesNotMatch(content, /loads? (?:it|the same file) twice/i);
     assert.doesNotMatch(content, /put(?:s)? it in context twice/i);
+    assert.doesNotMatch(content, /this file wins|has the last word|Claude Overrides/i);
+    assert.doesNotMatch(content, /\/memory/);
+  }
+  assert.match(portableClaude, /\/context/);
+  assert.match(projectClaude, /InstructionsLoaded/);
+
+  const runtimeClaims = [
+    readFileSync(join(bootstrapRoot, "README.md"), "utf8"),
+    readFileSync(join(bootstrapRoot, "CONTINUITY.md"), "utf8")
+  ].join("\n");
+  assert.doesNotMatch(runtimeClaims, /verified harness loading|runtime-verified/i);
+  assert.match(runtimeClaims, /static (?:loading )?models?|statically model/i);
+
+  const visited = new Set();
+  const visiting = new Set();
+  function visitImports(path) {
+    const canonicalPath = resolve(path);
+    assert.equal(visiting.has(canonicalPath), false, `import cycle at ${canonicalPath}`);
+    if (visited.has(canonicalPath)) return;
+    visiting.add(canonicalPath);
+    const markdown = readFileSync(canonicalPath, "utf8");
+    for (const match of markdown.matchAll(/^@([^\s]+)\s*$/gm)) {
+      const importedPath = resolve(dirname(canonicalPath), match[1]);
+      assert.equal(existsSync(importedPath), true, `missing import ${importedPath}`);
+      visitImports(importedPath);
+    }
+    visiting.delete(canonicalPath);
+    visited.add(canonicalPath);
+  }
+  visitImports(files[3]);
+});
+
+await test("modeled provider scenarios keep mutually exclusive scopes separate", () => {
+  const testRoot = mkdtempSync(join(tmpdir(), "machine-bootstrap-guidance-model-"));
+  try {
+    const workspace = join(testRoot, "Workspace");
+    const child = join(workspace, "child");
+    const scoped = join(child, "scoped");
+    const nonGitLocal = join(workspace, "scratch", "local");
+    const nonGitEmpty = join(workspace, "scratch", "empty");
+    mkdirSync(join(child, ".git"), { recursive: true });
+    mkdirSync(scoped, { recursive: true });
+    mkdirSync(nonGitLocal, { recursive: true });
+    mkdirSync(nonGitEmpty, { recursive: true });
+
+    writeFileSync(join(workspace, "AGENTS.md"), "WORKSPACE_CODEX\n");
+    writeFileSync(join(workspace, "CLAUDE.md"), "WORKSPACE_CLAUDE\n");
+    writeFileSync(join(child, "AGENTS.md"), "CHILD_ROOT\n");
+    writeFileSync(join(child, "CLAUDE.md"), "CHILD_CLAUDE\n@AGENTS.md\n");
+    writeFileSync(join(scoped, "AGENTS.md"), "CHILD_SCOPED\n");
+    writeFileSync(join(scoped, "CLAUDE.md"), "@AGENTS.md\n");
+    writeFileSync(join(nonGitLocal, "AGENTS.md"), "NONGIT_LOCAL\n");
+
+    function directoryChain(root, cwd) {
+      const directories = [];
+      let current = resolve(cwd);
+      const boundary = resolve(root);
+      while (true) {
+        directories.unshift(current);
+        if (current === boundary) return directories;
+        const parent = dirname(current);
+        assert.notEqual(parent, current, `${cwd} is outside ${root}`);
+        current = parent;
+      }
+    }
+
+    function modeledCodexFiles(projectRoot, cwd) {
+      const directories = projectRoot ? directoryChain(projectRoot, cwd) : [resolve(cwd)];
+      return directories
+        .map((directory) => join(directory, "AGENTS.md"))
+        .filter((path) => existsSync(path));
+    }
+
+    function modeledClaudeFiles(root, cwd) {
+      const files = [];
+      for (const directory of directoryChain(root, cwd)) {
+        const claudePath = join(directory, "CLAUDE.md");
+        if (!existsSync(claudePath)) continue;
+        files.push(claudePath);
+        const markdown = readFileSync(claudePath, "utf8");
+        for (const match of markdown.matchAll(/^@([^\s]+)\s*$/gm)) {
+          files.push(resolve(directory, match[1]));
+        }
+      }
+      return files;
+    }
+
+    assert.deepEqual(modeledCodexFiles(workspace, workspace), [join(workspace, "AGENTS.md")]);
+    assert.deepEqual(modeledCodexFiles(child, child), [join(child, "AGENTS.md")]);
+    assert.deepEqual(modeledCodexFiles(child, scoped), [
+      join(child, "AGENTS.md"),
+      join(scoped, "AGENTS.md")
+    ]);
+    assert.deepEqual(modeledCodexFiles(null, nonGitLocal), [join(nonGitLocal, "AGENTS.md")]);
+    assert.deepEqual(modeledCodexFiles(null, nonGitEmpty), []);
+
+    assert.deepEqual(modeledClaudeFiles(workspace, child), [
+      join(workspace, "CLAUDE.md"),
+      join(child, "CLAUDE.md"),
+      join(child, "AGENTS.md")
+    ]);
+    const scopedClaudeFiles = modeledClaudeFiles(workspace, scoped);
+    assert.deepEqual(scopedClaudeFiles, [
+      join(workspace, "CLAUDE.md"),
+      join(child, "CLAUDE.md"),
+      join(child, "AGENTS.md"),
+      join(scoped, "CLAUDE.md"),
+      join(scoped, "AGENTS.md")
+    ]);
+    assert.equal(
+      scopedClaudeFiles.filter((path) => path === join(child, "AGENTS.md")).length,
+      1
+    );
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
   }
 });
 
@@ -884,10 +1037,10 @@ await test("always-loaded guidance stays within line and byte budgets", () => {
   for (const [relativePath, lineLimit, byteLimit] of [
     ["AGENTS.md", 80, 4 * 1024],
     ["CLAUDE.md", 20, 1024],
-    ["guides/AGENTS.md", 140, 8 * 1024],
-    ["guides/CLAUDE.md", 30, 2 * 1024],
-    ["project-templates/AGENTS.md", 200, 12 * 1024],
-    ["project-templates/CLAUDE.md", 50, 4 * 1024]
+    ["guides/AGENTS.md", 70, 5 * 1024],
+    ["guides/CLAUDE.md", 15, 1536],
+    ["project-templates/AGENTS.md", 120, 8 * 1024],
+    ["project-templates/CLAUDE.md", 20, 1536]
   ]) {
     const contents = readFileSync(join(bootstrapRoot, relativePath), "utf8");
     const lineCount = contents.trimEnd().split(/\r?\n/).length;
@@ -905,9 +1058,8 @@ await test("always-loaded guidance stays within line and byte budgets", () => {
 
 await test("project guidance reserves room for the nearest Codex guide", () => {
   for (const relativePath of [
-    "guides/AGENTS.md",
     "project-templates/AGENTS.md",
-    "project-templates/README.md"
+    "project-templates/TEMPLATE-USAGE.md"
   ]) {
     const contents = readFileSync(join(bootstrapRoot, relativePath), "utf8");
     assert.match(contents, /32 KiB combined/);
@@ -927,22 +1079,31 @@ await test("continuity stays bounded and preserves rotated history", () => {
   assert.match(continuity, /counting every section/);
   assert.doesNotMatch(continuity, /decisions are uncapped/);
   assert.match(continuity, /docs\/continuity\/2026-07\.md/);
+  assert.match(continuity, /complete discovery-to-delivery flow is active/);
+  assert.doesNotMatch(continuity, /Product Delivery workflow is active, track its five/);
   assert.match(archive, /# Continuity Archive — 2026-07/);
   assert.match(archive, /Entries are preserved verbatim/);
 });
 
-await test("project template documents the workflow adaptation points", () => {
+await test("project template keeps product delivery explicitly conditional", () => {
   const template = readFileSync(
     join(bootstrapRoot, "project-templates", "AGENTS.md"),
     "utf8"
   );
-  assert.match(template, /## Workflow Adaptations/);
+  assert.match(template, /## Product-delivery hook/);
   assert.match(template, /~\/\.agents\/workflows\/product-delivery\//);
-  assert.match(template, /may not weaken exact user\s+approval/);
-  assert.match(template, /one fresh reviewer after the\s+implementer's own verification/);
-  assert.match(template, /Only the user may waive it for a specific\s+change/);
-  // The portable contract must be referenced, not copied into every project.
-  assert.doesNotMatch(template, /Foundational Invariants/);
+  assert.match(template, /inactive for\s+ordinary work/);
+  assert.match(template, /selects Product\s+Partner or Delivery Lead/);
+  assert.match(template, /explicitly requests the complete workflow/);
+  assert.match(template, /continues an active Product Brief or\s+Delivery Plan/);
+  assert.match(template, /project guidance names required\s+work/);
+  assert.match(template, /Selecting the Verifier\s+activates independent verification only/);
+  assert.match(template, /never creates missing\s+upstream artifacts/);
+  assert.match(template, /Named work that activates the workflow/);
+  assert.doesNotMatch(
+    template,
+    /Foundational Invariants|two exact user approval gates|one fresh reviewer|Use Product Brief, Delivery Plan/
+  );
 });
 
 await test("portable GitHub workflow and PR templates are present", () => {
@@ -986,32 +1147,40 @@ await test("portable GitHub workflow and PR templates are present", () => {
   assert.match(bootstrapTemplate, /guides\/git-workflow\.md/);
 });
 
-await test("portable guidance requires current dependency selection", () => {
+await test("portable guidance routes current dependency selection concisely", () => {
   for (const relativePath of [
     ["guides", "AGENTS.md"],
     ["project-templates", "AGENTS.md"]
   ]) {
     const guide = readFileSync(join(bootstrapRoot, ...relativePath), "utf8");
-    assert.match(guide, /current stable or maintainer-recommended release/);
-    assert.match(guide, /official registry, documentation, or release notes/);
-    assert.match(
-      guide,
-      /never select a dependency\s+version from model memory alone/
-    );
-    assert.match(guide, /latest compatible stable release/);
-    assert.match(
-      guide,
-      /Preserve the project's package\s+manager and version-range policy/
-    );
-    assert.match(guide, /update its lockfile when the project tracks\s+one/);
-    assert.match(
-      guide,
-      /explain any\s+deliberate use of an older or prerelease version/
-    );
+    assert.match(guide, /official sources/);
+    assert.match(guide, /preserve the\s+(?:project's )?package manager/i);
+    assert.match(guide, /lockfile/);
   }
+  const projectGuide = readFileSync(
+    join(bootstrapRoot, "project-templates", "AGENTS.md"),
+    "utf8"
+  );
+  assert.match(projectGuide, /latest\s+compatible stable or maintainer-recommended release/);
 });
 
-await test("workflow defaults to one independent review", () => {
+await test("CI verifies bootstrap behavior and guidance checks on Linux and Windows", () => {
+  const workflow = readFileSync(
+    join(bootstrapRoot, ".github", "workflows", "bootstrap.yml"),
+    "utf8"
+  );
+  assert.match(workflow, /ubuntu-latest/);
+  assert.match(workflow, /windows-latest/);
+  assert.match(workflow, /actions\/checkout@v7/);
+  assert.match(workflow, /actions\/setup-node@v7/);
+  assert.match(workflow, /node scripts\/test-bootstrap\.mjs/);
+  assert.match(
+    workflow,
+    /node scripts\/init-workspace\.mjs --check --skip-skills --skip-workflows/
+  );
+});
+
+await test("activated workflow owns gates, review, and distinct report evidence", () => {
   const workflow = readFileSync(
     join(bootstrapRoot, "workflows", "product-delivery", "WORKFLOW.md"),
     "utf8"
@@ -1026,8 +1195,31 @@ await test("workflow defaults to one independent review", () => {
     ),
     "utf8"
   );
+  const verifier = readFileSync(
+    join(
+      bootstrapRoot,
+      "workflows",
+      "product-delivery",
+      "roles",
+      "verifier.md"
+    ),
+    "utf8"
+  );
 
-  assert.match(workflow, /version `1\.2\.0`/);
+  assert.match(workflow, /version `1\.3\.0`/);
+  assert.match(workflow, /## Activation/);
+  assert.match(workflow, /Installation makes this workflow available; it does not make the workflow\s+active/);
+  assert.match(workflow, /launches or selects the Product Partner or Delivery Lead role/);
+  assert.match(workflow, /explicitly asks to use the complete `product-delivery` workflow/);
+  assert.match(workflow, /continues an active Product Brief or Delivery Plan/);
+  assert.match(workflow, /requires this workflow for a named class of work/);
+  assert.match(workflow, /Selecting the Verifier is the one role-specific exception/);
+  assert.match(workflow, /activates only\s+the independent verification portion/);
+  assert.match(workflow, /does not\s+retroactively create missing discovery, approval, execution, or implementation\s+artifacts/);
+  assert.match(verifier, /activates only the independent verification\s+portion/);
+  assert.match(verifier, /does not\s+retroactively create missing discovery, approval, execution, or implementation\s+artifacts/);
+  assert.match(workflow, /When the complete discovery-to-delivery flow is active/);
+  assert.match(workflow, /Ordinary work outside this workflow creates none/);
   assert.match(workflow, /one\s+independent review by default/);
   assert.match(workflow, /Only the user may waive that review/);
   assert.match(workflow, /inspect(?:ing)? the complete diff/);
@@ -1048,10 +1240,26 @@ await test("workflow defaults to one independent review", () => {
   assert.match(verificationReport, /Additional review recommendation/);
   assert.match(verificationReport, /after\s+reviewing the first Verifier's evidence/);
   assert.match(verificationReport, /not applicable — independent review waived/);
+  assert.match(verificationReport, /sole owner of final independent passed, failed, unverified,\s+and skipped judgments/);
 
-  assert.match(workflow, /normal completed task uses Product Brief, Delivery Plan/);
+  const implementationReport = readFileSync(
+    join(
+      bootstrapRoot,
+      "workflows",
+      "product-delivery",
+      "templates",
+      "implementation-report.md"
+    ),
+    "utf8"
+  );
+  assert.match(implementationReport, /implemented`, `not implemented`, `deferred`, or\s+`self-unverified`/);
+  assert.match(implementationReport, /Independent review is pending/);
+  assert.match(implementationReport, /must not claim that independent verification is\s+complete/);
+  assert.doesNotMatch(implementationReport, /met`, `not met`,\s+`unverified`/);
+
+  assert.match(workflow, /activated task that runs the full discovery-to-delivery sequence/);
   assert.match(workflow, /Decision Log only for\s+material product decisions/);
-  assert.match(workflow, /Never create empty placeholder artifacts/);
+  assert.match(workflow, /Never create empty\s+placeholder artifacts/);
   assert.match(workflow, /\[TASK <task-id>\]/);
   assert.match(workflow, /removes that ignore rule and also tracks each completed/);
 
@@ -1067,6 +1275,16 @@ await test("workflow defaults to one independent review", () => {
   );
   assert.match(productPartner, /Decision Log only when a\s+material product decision/);
   assert.match(productPartner, /do not create an empty one/);
+
+  for (const templatePath of readdirSync(
+    join(bootstrapRoot, "workflows", "product-delivery", "templates")
+  )) {
+    const template = readFileSync(
+      join(bootstrapRoot, "workflows", "product-delivery", "templates", templatePath),
+      "utf8"
+    );
+    assert.match(template, /Workflow: `product-delivery` 1\.3\.0/, templatePath);
+  }
 });
 
 await test("clean workspace initializes the portable guidance layer", () => {
@@ -1093,7 +1311,70 @@ await test("clean workspace initializes the portable guidance layer", () => {
     );
     assert.equal(existsSync(join(workspaceRoot, "MACHINE.md")), true);
     assert.equal(existsSync(join(workspaceRoot, "_templates", ".gitignore")), true);
+    assert.equal(
+      existsSync(join(workspaceRoot, "_templates", "TEMPLATE-USAGE.md")),
+      true
+    );
+    assert.equal(existsSync(join(workspaceRoot, "_templates", "README.md")), false);
     assert.match(result.stdout, /Next required step: replace \d+ TODO/);
+
+    const machinePath = join(workspaceRoot, "MACHINE.md");
+    writeFileSync(
+      machinePath,
+      readFileSync(machinePath, "utf8").replace(/\bTODO\b/g, "test fact")
+    );
+    const check = spawnSync(
+      process.execPath,
+      [
+        join(checkoutRoot, "scripts", "init-workspace.mjs"),
+        "--check",
+        "--skip-skills",
+        "--skip-workflows"
+      ],
+      {
+        encoding: "utf8",
+        env: isolatedEnvironment(testRoot),
+        shell: false
+      }
+    );
+    assert.equal(check.status, 0, check.stderr);
+    assert.match(check.stdout, /Workspace bootstrap check passed/);
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
+await test("workspace initialization preserves nested portable provider configuration", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  const portableFiles = [
+    [join(".claude", "rules", "api.md"), "# API rule\n"],
+    [join(".agents", "skills", "review", "SKILL.md"), "# Review skill\n"],
+    [join(".codex", "agents", "reviewer.toml"), 'name = "reviewer"\n']
+  ];
+  try {
+    for (const [relativePath, contents] of portableFiles) {
+      const source = join(checkoutRoot, "project-templates", relativePath);
+      mkdirSync(dirname(source), { recursive: true });
+      writeFileSync(source, contents);
+    }
+
+    const result = spawnSync(
+      process.execPath,
+      [join(checkoutRoot, "scripts", "init-workspace.mjs"), "--skip-skills"],
+      {
+        encoding: "utf8",
+        env: isolatedEnvironment(testRoot),
+        shell: false
+      }
+    );
+
+    assert.equal(result.status, 0, result.stderr);
+    for (const [relativePath, contents] of portableFiles) {
+      assert.equal(
+        readFileSync(join(workspaceRoot, "_templates", relativePath), "utf8"),
+        contents
+      );
+    }
   } finally {
     rmSync(testRoot, { recursive: true, force: true });
   }

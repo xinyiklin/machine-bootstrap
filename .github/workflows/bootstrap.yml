@@ -1,0 +1,42 @@
+name: Bootstrap verification
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Run bootstrap tests
+        run: node scripts/test-bootstrap.mjs
+
+      - name: Initialize disposable guidance layer
+        run: node scripts/init-workspace.mjs --skip-skills --skip-workflows
+
+      - name: Populate disposable machine facts
+        run: node -e "const fs=require('node:fs'); const path=require('node:path'); const target=path.resolve('..','MACHINE.md'); fs.writeFileSync(target,fs.readFileSync(target,'utf8').replace(/\bTODO\b/g,'CI verified'));"
+
+      - name: Check guidance layer without writes
+        run: node scripts/init-workspace.mjs --check --skip-skills --skip-workflows

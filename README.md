@@ -13,9 +13,9 @@ The control flow is:
 1. **`machine-bootstrap/`** owns initialization: the shared-skill roster, the
    portable workflow foundation, setup scripts, portable workspace guides, and
    project-guide templates.
-2. **The workspace root** owns guidance shared across the project collection:
-   installed `AGENTS.md` and `CLAUDE.md`, machine-local `MACHINE.md`, and inert
-   `_templates/` used to initialize projects.
+2. **The workspace root** owns launch-specific routing: `AGENTS.md` for Codex
+   sessions started exactly there, a tiny ancestor `CLAUDE.md`, machine-local
+   `MACHINE.md`, and inert `_templates/` used to initialize projects.
 3. **Each project** owns its self-contained product and engineering guidance.
    Its nearest current `AGENTS.md` and owning documentation govern work inside
    that project.
@@ -45,14 +45,16 @@ repository.
 
 - `AGENTS.md` and `CLAUDE.md` — self-contained instructions for working on this
   repository; the Claude overlay imports the canonical repository guide.
-- `guides/AGENTS.md` — portable, provider-agnostic working agreements.
+- `guides/AGENTS.md` — portable Codex workspace-root router and fallback.
 - `guides/git-workflow.md` — portable Git/GitHub branch, commit, PR, review,
   merge, and publication baseline.
 - `.github/pull_request_template.md` — this repository's concise PR receipt;
   the project-template copy is seeded for new child repositories.
+- `.github/workflows/bootstrap.yml`: Linux and Windows bootstrap verification.
 - `guides/CLAUDE.md` — portable Claude Code overlay.
 - `guides/MACHINE.example.md` — structure for facts that differ by machine.
-- `project-templates/` — starter guidance for a new repository.
+- `project-templates/` — starter guidance plus non-copyable
+  `TEMPLATE-USAGE.md` for a new repository.
 - `skills.json` — the desired shared Claude Code/Codex skill roster.
 - `workflows/` — versioned, provider-neutral workflow packages, listed by
   `workflows/registry.json`.
@@ -112,11 +114,12 @@ Prerequisites: Git, Node.js 18 or newer, Claude Code and/or Codex.
    untouched. Each flag skips both the installation and the verification for
    that layer.
 
-5. Initialize each project from the workspace `_templates/`, including the
-   project-owned Git workflow guide and PR template, then replace placeholders
-   with facts verified from that project.
-6. Start a new Claude Code or Codex session so it rediscovers the skills and
-   workspace guidance.
+5. Follow `_templates/TEMPLATE-USAGE.md`. Copy only its named starter paths,
+   including the project-owned Git workflow guide and PR template; do not copy
+   the usage file as the project's README.
+6. Start or restart Codex at the target project root or relevant scoped
+   directory; its instruction chain is built once per run. Start a new Claude
+   Code session so it rediscovers installed definitions and project guidance.
 
 To delegate setup, tell an AI agent: **“Follow `machine-bootstrap/INIT.md`.”**
 
@@ -136,6 +139,16 @@ through.
 Alongside guidance and skills, this repository owns a portable, provider-neutral
 workflow foundation. It owns the **process**; each project keeps owning its
 product behavior, architecture, engineering rules, and required verification.
+
+### Activation
+
+Installation makes the workflow available, not universally active. The complete
+flow activates only when the user selects Product Partner or Delivery Lead,
+explicitly requests the complete workflow, continues an active Product Brief or
+Delivery Plan, or a project requires it for a named class of work. Selecting the
+Verifier activates only independent verification for the supplied change; it
+does not retroactively create missing upstream gates or artifacts. Ordinary
+work creates neither by default.
 
 ### The three roles
 
@@ -186,14 +199,19 @@ Markdown role contracts are the source of truth; every provider file is
 generated from them, carries a provenance comment naming its source contract,
 and pins no model, so each provider keeps its own default.
 
-The seven templates are available building blocks, not seven mandatory files.
-A normal completed task uses five: Product Brief, Delivery Plan, Alignment
-Review, Implementation Report, and Verification Report. Decision Logs and
-Change Requests are created only when needed; empty placeholder artifacts are
-not created. Active task artifacts stay local by default. If a project tracks
-agent guidance/configuration and `CONTINUITY.md`, it removes the starter
+The seven templates are available building blocks, not universally required
+files. An activated task using the full discovery-to-delivery sequence normally
+uses five: Product Brief, Delivery Plan, Alignment Review, Implementation
+Report, and Verification Report. Decision Logs and Change Requests are created
+only when needed; empty placeholder artifacts are not created. Active task
+artifacts stay local by default. If a project tracks agent
+guidance/configuration and `CONTINUITY.md`, it removes the starter
 `.agent-work/` ignore rule and also tracks completed task folders referenced
 with `[TASK <task-id>]` so continuity never points to missing local files.
+
+Implementation Reports contain the implementer's scope, coverage, and
+self-verification. Verification Reports alone own final independent passed,
+failed, unverified, and skipped judgments or an explicit user waiver.
 
 The installer owns exactly those namespaced paths. It never treats the whole
 `~/.agents`, Claude configuration root, or Codex home as bootstrap-owned, and
@@ -201,6 +219,10 @@ it does not read or write `settings.json` in the Claude configuration root or
 `config.toml` in the Codex home.
 
 ### Launching a role
+
+Launching Product Partner or Delivery Lead activates the complete workflow.
+Launching the Verifier activates only its independent verification portion for
+the supplied change.
 
 Claude Code runs an agent as the whole session with `--agent`:
 
@@ -254,14 +276,11 @@ never written through.
 
 ### Adding project-specific requirements
 
-A project strengthens the workflow in its own `AGENTS.md` — additional
-high-risk triggers, mandatory Delivery Plan sections, required project
-verification, project-specific specialist roles — without copying the workflow
-into the repository. The starter project template has a short section for
-exactly that. It also seeds a self-contained Git/GitHub workflow guide and PR
-template; keep project commands, CI, release, and deployment details there. A
-project may not weaken exact user approval, scope-change escalation, or honest
-verification reporting.
+A project may name work that activates the workflow and add Change Request
+triggers, required checks, specialist review, or artifact-retention policy
+without copying the workflow into the repository. The starter project template
+contains only this conditional hook. Once active, a project may strengthen but
+not weaken exact user approval, scope-change escalation, or honest verification.
 
 ## Updating
 
@@ -290,9 +309,10 @@ node scripts/init-workspace.mjs --check
 ```
 
 The regression suite uses disposable workspaces and disposable home directories.
-Fixture copies exclude ignored generated roots plus machine-local files such as
-`MACHINE.md`, `.env*`, `.npmrc`, local Claude overrides, logs, and backups;
-`.env.example` remains portable. Coverage includes clean
+Fixture copies exclude root-local agent state, ignored generated roots, and
+machine-local files such as `MACHINE.md`, `.env*`, `.npmrc`, local Claude
+overrides, logs, and backups. Portable nested `.claude/` and `.agents/` content
+and `.env.example` remain copyable. Coverage includes clean
 initialization, reviewed replacement recovery, portable drift,
 malformed machine state, deterministic skill integrity, reviewed Git-tree
 materialization, safe target boundaries, invalid manifests and portable
@@ -306,6 +326,15 @@ transactional replacement rollback, reviewed replacement backups, read-only
 `--check`, and `--skip-workflows`. Workflow tests make no model or API calls and
 need no Claude Code or Codex authentication. The suite does not execute upstream
 code.
+
+Guidance tests statically model documented provider loading topology, imports,
+activation, report ownership, and context budgets. They do not launch Codex or
+Claude and are not runtime-loading evidence. Use
+`docs/guidance-loading-smoke.md` for manual provider smoke checks.
+
+GitHub Actions runs the suite plus a read-only initialized-guidance check on
+Linux and Windows. The CI workspace and machine facts are disposable; CI does
+not install shared skills or provider adapters into a persistent user home.
 
 The suite runs before the first install. Checks that read this machine's
 installed roster are reported as skipped, by name, until the skills are

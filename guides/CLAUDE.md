@@ -1,23 +1,15 @@
-# Parent Workspace - Claude Code Overlay
+# Parent Workspace - Claude Code Adapter
 
-This file loads in every Claude Code session beneath this workspace. Keep it
-limited to universal routing that child projects do not own. The nearest
-project guidance and owning documentation govern project work.
+This ancestor file loads in Claude Code sessions beneath the workspace. Keep it
+to routing that child projects do not own, and never contradict tracked project
+instructions.
 
-Do not import the sibling `AGENTS.md` here. It is the Codex workspace-root
-router and unguided-folder fallback; child repositories carry self-contained
-guidance. A child project's `CLAUDE.md` should import that project's own
-`AGENTS.md` exactly once.
+Do not import the sibling `AGENTS.md`; it applies only to Codex started at the
+workspace root. A child project's `CLAUDE.md` imports that project's own
+`AGENTS.md` once.
 
-- Read `MACHINE.md` only when local paths, sibling projects, ports, or machine
-  capabilities matter.
-- Read the current project's `CONTINUITY.md` fresh before acting; read its
-  archive only when history is relevant.
-- Inspect `/memory` or use an `InstructionsLoaded` hook when exact Claude
-  instruction loading matters.
-- Product-delivery role contracts live in
-  `~/.agents/workflows/product-delivery/`; load them only for that workflow.
-- In an unguided folder, read before editing, preserve unrelated work, protect
-  secrets and personal data, inspect destructive targets, and require explicit
-  authority for remote writes, Git publication, or deployment.
-- Report verification, skipped checks, blockers, and residual risk honestly.
+- Read `MACHINE.md` only when local routing or machine capabilities matter.
+- Use `/context` for live context composition and an `InstructionsLoaded` hook
+  when exact file-level loading evidence is required.
+- In an unguided folder, protect secrets and unrelated work and require explicit
+  authority for destructive or remote actions.

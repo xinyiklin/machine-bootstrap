@@ -12,11 +12,11 @@ task needs it.
 
 ## Snapshot
 
-- 2026-08-14 [USER+CODE] Guidance de-duplicated by verified harness loading
-  (D017). Claude inherits workspace `CLAUDE.md`; Codex starts project guidance
-  at the child project root, so every Git repository remains self-contained.
-  The workspace `CLAUDE.md` does not import its sibling `AGENTS.md`; that file
-  is routing/fallback guidance for tasks launched at the non-Git root.
+- 2026-08-14 [USER+CODE] Guidance de-duplicated from documented provider
+  contracts and static loading models (D017). Claude inherits workspace
+  `CLAUDE.md`; Codex builds its once-per-run chain from the detected project
+  root to its launch directory. The workspace guides are therefore only
+  routing/fallback guidance when a task launches at that non-Git root.
 - 2026-08-14 [CODE] Test fixtures exclude ignored generated roots and
   machine-local/private files while preserving `.env.example` (D019).
 - 2026-08-14 [CODE] Active Codex guide chains target below 28 KiB (D020).
@@ -40,10 +40,10 @@ task needs it.
 - 2026-08-13 [CODE] Product Delivery workflow 1.1.0 makes implementer diff
   review and one independent review the default, and records the Delivery
   Lead's post-review recommendation on whether additional reviewers are needed.
-- 2026-08-13 [USER] Product Delivery workflow 1.2.0 keeps five standard task
-  artifacts and makes Decision Log and Change Request conditional. Active work
-  stays local by default; tracked continuity references require the matching
-  completed task folder to be tracked too.
+- 2026-08-14 [USER+CODE] Product Delivery workflow 1.3.0 activates its complete
+  flow only for a primary role, explicit request, active artifacts, or named
+  project work. Standalone Verifier selection activates only independent review;
+  its Verification Report owns the final outcome.
 - 2026-08-13 [USER] Dependency versions must be established from current
   official sources rather than model memory. Prefer the latest compatible
   stable release, preserve each project's package-manager/version-range policy,
@@ -110,26 +110,27 @@ Milestones — detail in `docs/continuity/2026-07.md`:
   after implementer verification. The user may explicitly waive it per change
   or request more reviewers; additional-review recommendations are firm and
   based on risk and coverage.
-- 2026-08-13 [USER] D015 ACTIVE: do not create empty task artifacts. Track the
-  five standard reports for completed referenced work; create Decision Logs and
-  Change Requests only when needed. A tracked `[TASK <task-id>]` continuity
-  reference must not point to an untracked local task folder.
+- 2026-08-13 [USER] D015 ACTIVE: do not create empty task artifacts. When the
+  complete discovery-to-delivery flow is active, track its five standard reports
+  for completed referenced work; create Decision Logs and Change Requests only
+  when needed. Tracked task references require the matching folder to be tracked.
 - 2026-08-13 [USER] D016 ACTIVE: dependency additions and upgrades require a
   current official-source check for the stable or maintainer-recommended
   release. Use the latest compatible stable version by default, preserve the
   project's package-manager and version-range policy, update any tracked
   lockfile, and explain any intentional older or prerelease choice.
-- 2026-08-14 [USER+CODE] D017 ACTIVE: guidance is de-duplicated by verified
-  loading behavior, not shared wording. Claude inherits ancestor `CLAUDE.md`
-  files; Codex builds project guidance from the project root down. The workspace
-  files own routing/fallback behavior, every Git repository remains
-  self-contained, and safety-critical or test-enforced overlap is deliberate.
+- 2026-08-14 [USER+CODE] D017 ACTIVE: guidance follows official provider
+  loading contracts, modeled by static tests and checked separately with the
+  runtime smoke procedure. Claude inherits ancestor `CLAUDE.md` files; Codex
+  builds a once-per-run chain from project root to launch directory. Workspace
+  guides own only workspace-root routing and fallback behavior.
 - 2026-08-14 [USER] D018 ACTIVE: every continuity ledger is bounded and paired
   with an append-only `docs/continuity/YYYY-MM.md` archive. Rotation leaves a
   milestone bullet linking to the archive; the archive is never read at task
   start.
-- 2026-08-14 [CODE] D019 ACTIVE: disposable test workspaces copy portable source
-  but exclude generated, backup, and machine-local/private state.
+- 2026-08-14 [CODE] D019 ACTIVE: disposable test workspaces exclude generated,
+  backup, and root-local private state while preserving nested portable
+  `.claude`, `.agents`, and `.codex` project configuration.
 - 2026-08-14 [CODE] D020 ACTIVE: keep cumulative `AGENTS.md` chains below 28 KiB;
   move detailed inventories and matrices to owning docs read on demand.
 
@@ -137,9 +138,10 @@ Milestones — detail in `docs/continuity/2026-07.md`:
 
 - `README.md`
 - `INIT.md`
+- `.github/{pull_request_template.md,workflows/bootstrap.yml}`
 - `guides/{AGENTS,CLAUDE,MACHINE.example}.md`
 - `project-templates/`
-- `docs/continuity/`
+- `docs/{continuity/,guidance-loading-smoke.md}`
 - `skills.json`
 - `workflows/registry.json`
 - `workflows/product-delivery/{manifest.json,WORKFLOW.md,roles/,templates/}`

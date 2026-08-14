@@ -1,6 +1,6 @@
 # Delivery Plan — <task title>
 
-Owner: Delivery Lead · Workflow: `product-delivery` 1.2.0
+Owner: Delivery Lead · Workflow: `product-delivery` 1.3.0
 
 | Field | Value |
 | :--- | :--- |

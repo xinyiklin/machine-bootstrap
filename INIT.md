@@ -32,9 +32,11 @@ After the command succeeds:
    not initialize Git at the workspace root and do not stage, commit, publish,
    or overwrite differing files unless the user explicitly asks.
 
-The seeded `_templates/` directory includes a project-owned Git/GitHub workflow
-guide and `.github/pull_request_template.md`. Fill in project-specific checks,
-CI, release, and deployment details before using them.
+Follow the seeded `_templates/TEMPLATE-USAGE.md`; copy only the named starter
+paths, not the usage file itself. Fill in project-specific checks, CI, release,
+and deployment details before using them. Start or restart Codex in the target
+project or scoped directory because its instruction chain is fixed for that
+run.
 
 If initialization reports differing workspace guides, templates, workflow
 files, or provider adapters, stop and show the differences. Use `--replace`
@@ -50,6 +52,12 @@ the equivalent paths under `~/.codex/`). It does not read or modify
 `settings.json` in the Claude configuration root or `config.toml` in the Codex
 home. Tell the user to start a new session so the provider rediscovers the
 definitions, and point them at `README.md` for the launch commands.
+
+Installing `product-delivery` makes its roles available but does not activate
+the workflow for ordinary work. Selecting Product Partner or Delivery Lead, an
+explicit request for the complete workflow, an active Product Brief or Delivery
+Plan, or a named project rule activates the full contract. Selecting the
+Verifier activates only independent verification for the supplied change.
 
 Use `--skip-skills` only when the user explicitly wants workspace files without
 installing or verifying shared skills, and `--skip-workflows` only when they

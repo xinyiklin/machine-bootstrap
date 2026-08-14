@@ -79,7 +79,7 @@ const requiredFiles = [
   "project-templates/AGENTS.md",
   "project-templates/CLAUDE.md",
   "project-templates/.gitignore",
-  "project-templates/README.md",
+  "project-templates/TEMPLATE-USAGE.md",
   "project-templates/docs/engineering/git-workflow.md",
   "project-templates/.github/pull_request_template.md",
   "skills.json",

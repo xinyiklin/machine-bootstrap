@@ -1,6 +1,6 @@
 # Verification Report — <task title>
 
-Drafted by: Verifier · Recorded by: Delivery Lead · Workflow: `product-delivery` 1.2.0
+Drafted by: Verifier · Recorded by: Delivery Lead · Workflow: `product-delivery` 1.3.0
 
 | Field | Value |
 | :--- | :--- |
@@ -15,6 +15,10 @@ When independent review is completed, the Delivery Lead records this
 recommendation after reviewing the first Verifier's evidence, then honors any
 user request for more reviewers. If the user waived independent review, record
 the recommendation as not applicable.
+
+This report is the sole owner of final independent passed, failed, unverified,
+and skipped judgments. The Implementation Report supplies implementer evidence
+but cannot establish this report's outcome.
 
 ## Artifacts Reviewed
 

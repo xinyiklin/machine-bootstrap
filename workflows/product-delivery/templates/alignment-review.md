@@ -1,6 +1,6 @@
 # Alignment Review — <task title>
 
-Owner: Product Partner · Workflow: `product-delivery` 1.2.0
+Owner: Product Partner · Workflow: `product-delivery` 1.3.0
 
 | Field | Value |
 | :--- | :--- |
