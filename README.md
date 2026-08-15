@@ -133,10 +133,12 @@ Choose either setup style:
    environment files and expose `.env.example`; ineffective, incomplete, or
    ambiguous rules stop for manual review before any project writes. The
    initializer never copies `TEMPLATE-USAGE.md` and never creates or replaces a
-   README. On failure, rollback removes only verified run-owned files and leaves
-   identity-changed concurrent entries at their original paths. It never deletes
-   directories by pathname; any leftover directory cleanup is reported for
-   manual review.
+   README. Managed reads, writes, and rollback recovery are anchored to verified
+   real parent directories and reject symbolic-link or entry-identity changes
+   instead of following them. On failure, rollback removes only verified
+   run-owned files and leaves identity-changed concurrent entries at their
+   original paths. It never deletes directories by pathname; any leftover
+   directory cleanup is reported for manual review.
 6. Replace project placeholders with verified project facts. Start a new Codex
    or Claude session in that project root or relevant scoped directory.
 

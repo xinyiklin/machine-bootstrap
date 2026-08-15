@@ -1295,6 +1295,101 @@ await test("project initialization changes only its explicit target", () => {
   }
 });
 
+await test("project initialization reports a dangling target link cleanly", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const target = join(workspaceRoot, "project-a");
+    symlinkSync(join(workspaceRoot, "missing-project"), target, "dir");
+
+    const result = runProjectInitializer(checkoutRoot, target, testRoot);
+    assert.notEqual(result.status, 0);
+    assert.match(
+      result.stderr,
+      /Project initialization failed: Target must resolve to an existing directory/
+    );
+    assert.doesNotMatch(result.stderr, /\n\s+at canonicalCandidate/);
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+}, { needsSymlinks: true });
+
+await test(
+  "project initialization rejects a starter symlink that appears mid-run",
+  () => {
+    const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+    try {
+      const project = join(workspaceRoot, "project-a");
+      const externalTarget = join(testRoot, "external-private.txt");
+      mkdirSync(project);
+      writeFileSync(externalTarget, "external private bytes\n");
+
+      const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
+      const initializer = readFileSync(initializerPath, "utf8");
+      const needle = "    if (entryExists(destination)) {";
+      assert.ok(initializer.includes(needle), "starter injection point must exist");
+      writeFileSync(
+        initializerPath,
+        initializer.replace(
+          needle,
+          `    if (relativePath === "AGENTS.md") {\n` +
+            `      symlinkSync(${JSON.stringify(externalTarget)}, destination);\n` +
+            `    }\n` +
+            needle
+        )
+      );
+
+      const result = runProjectInitializer(checkoutRoot, project, testRoot);
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, /Managed project path must be a real file/);
+      assert.equal(
+        readFileSync(externalTarget, "utf8"),
+        "external private bytes\n"
+      );
+      assert.equal(lstatSync(join(project, "AGENTS.md")).isSymbolicLink(), true);
+    } finally {
+      rmSync(testRoot, { recursive: true, force: true });
+    }
+  },
+  { needsSymlinks: true }
+);
+
+await test("project initialization does not follow a replaced managed parent", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const project = join(workspaceRoot, "project-a");
+    const externalParent = join(testRoot, "external-parent");
+    mkdirSync(project);
+    mkdirSync(externalParent);
+
+    const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
+    const initializer = readFileSync(initializerPath, "utf8");
+    const needle = "    copyTrackedFile(join(templateRoot, ...parts), destination);";
+    assert.ok(initializer.includes(needle), "parent injection point must exist");
+    writeFileSync(
+      initializerPath,
+      initializer.replace(
+        needle,
+        `    if (relativePath === "docs/engineering/git-workflow.md") {\n` +
+          `      const managedParent = join(canonicalTarget, "docs", "engineering");\n` +
+          `      renameSync(managedParent, managedParent + ".original");\n` +
+          `      symlinkSync(${JSON.stringify(externalParent)}, managedParent, "dir");\n` +
+          `    }\n` +
+          needle
+      )
+    );
+
+    const result = runProjectInitializer(checkoutRoot, project, testRoot);
+    assert.notEqual(result.status, 0);
+    assert.match(
+      result.stderr,
+      /Managed parent (?:changed during initialization|must be a real directory)/
+    );
+    assert.equal(existsSync(join(externalParent, "git-workflow.md")), false);
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+}, { needsSymlinks: true });
+
 await test("existing project guidance is preserved and gitignore entries merge", () => {
   const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
   try {
@@ -1411,14 +1506,16 @@ await test("project rollback preserves a concurrent gitignore and its original b
 
     const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
     const initializer = readFileSync(initializerPath, "utf8");
-    const needle = "      writeFileSync(gitignorePath, updatedContents, {";
+    const needle =
+      "          descriptor = openSync(\n" +
+      "            basename(gitignorePath),";
     assert.ok(initializer.includes(needle), "rollback injection point must exist");
     writeFileSync(
       initializerPath,
       initializer.replace(
         needle,
-        "      writeFileSync(gitignorePath, \"concurrent ignore\\n\", { flag: \"wx\" });\n" +
-          "      writeFileSync(gitignorePath, updatedContents, {"
+        "          writeFileSync(basename(gitignorePath), \"concurrent ignore\\n\", { flag: \"wx\" });\n" +
+          needle
       )
     );
 

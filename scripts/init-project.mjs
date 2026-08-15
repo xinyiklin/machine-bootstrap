@@ -2,11 +2,13 @@
 
 import {
   accessSync,
+  closeSync,
   constants,
-  copyFileSync,
+  fstatSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
+  openSync,
   readFileSync,
   readlinkSync,
   realpathSync,
@@ -136,7 +138,13 @@ function isInside(parent, child) {
 }
 
 function canonicalCandidate(path) {
-  if (entryExists(path)) return realpathSync.native(path);
+  if (entryExists(path)) {
+    try {
+      return realpathSync.native(path);
+    } catch {
+      fail(`Target must resolve to an existing directory: ${path}`);
+    }
+  }
   const parent = dirname(path);
   if (!entryExists(parent)) {
     fail("Only the final target directory may be missing; create its parent first");
@@ -314,14 +322,10 @@ if (targetExisted) {
   for (const relativePath of [...seedFiles, ".gitignore"]) {
     const destination = join(canonicalTarget, ...relativePath.split("/"));
     if (!entryExists(destination)) continue;
-    const stat = lstatSync(destination);
-    if (stat.isSymbolicLink() || !stat.isFile()) {
-      fail(`Managed project path must be a real file: ${destination}`);
-    }
     try {
-      accessSync(destination, constants.R_OK);
-    } catch {
-      fail(`Managed project path must be readable: ${destination}`);
+      readManagedFile(destination);
+    } catch (error) {
+      fail(error instanceof Error ? error.message : String(error));
     }
   }
 }
@@ -331,7 +335,11 @@ let plannedGitignoreOriginal = null;
 let plannedGitignoreAdditions = [...safetyEntries];
 let plannedGitignoreContents = readFileSync(join(templateRoot, ".gitignore"));
 if (targetExisted && entryExists(gitignorePath)) {
-  plannedGitignoreOriginal = readFileSync(gitignorePath);
+  try {
+    plannedGitignoreOriginal = readManagedFile(gitignorePath);
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error));
+  }
   const presentEntries = plannedGitignoreOriginal
     .toString("utf8")
     .split(/\r?\n/)
@@ -385,6 +393,10 @@ let gitignoreAdded = [];
 
 function fileIdentity(path) {
   const stat = lstatSync(path, { bigint: true });
+  return identityFromStat(stat);
+}
+
+function identityFromStat(stat) {
   return { dev: stat.dev, ino: stat.ino, birthtimeNs: stat.birthtimeNs };
 }
 
@@ -396,28 +408,106 @@ function sameFileIdentity(left, right) {
   );
 }
 
+// Changing into a verified directory gives each leaf operation a stable
+// directory handle. A concurrent pathname replacement can no longer redirect
+// that operation through a new symlink. Recheck after chdir so a replacement
+// that won the race before anchoring fails before any leaf is opened.
+function withAnchoredDirectory(path, operation) {
+  const expectedStat = lstatSync(path, { bigint: true });
+  if (expectedStat.isSymbolicLink() || !expectedStat.isDirectory()) {
+    throw new Error(`Managed parent must be a real directory: ${path}`);
+  }
+  const expectedIdentity = identityFromStat(expectedStat);
+  const expectedCanonical = realpathSync.native(path);
+  const previousDirectory = process.cwd();
+  process.chdir(path);
+  try {
+    const anchoredStat = lstatSync(".", { bigint: true });
+    const anchoredCanonical = realpathSync.native(".");
+    if (
+      !sameFileIdentity(identityFromStat(anchoredStat), expectedIdentity) ||
+      anchoredCanonical !== expectedCanonical
+    ) {
+      throw new Error(`Managed parent changed during initialization: ${path}`);
+    }
+    return operation();
+  } finally {
+    process.chdir(previousDirectory);
+  }
+}
+
+function regularLeafSnapshot(leaf, displayPath) {
+  const before = lstatSync(leaf, { bigint: true });
+  if (before.isSymbolicLink() || !before.isFile()) {
+    throw new Error(`Managed project path must be a real file: ${displayPath}`);
+  }
+
+  let descriptor;
+  try {
+    descriptor = openSync(
+      leaf,
+      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0)
+    );
+    const opened = fstatSync(descriptor, { bigint: true });
+    if (
+      !opened.isFile() ||
+      !sameFileIdentity(identityFromStat(opened), identityFromStat(before))
+    ) {
+      throw new Error(
+        `Managed project path changed during initialization: ${displayPath}`
+      );
+    }
+    return {
+      contents: readFileSync(descriptor),
+      identity: identityFromStat(opened)
+    };
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.startsWith("Managed project path")
+    ) {
+      throw error;
+    }
+    throw new Error(`Managed project path must be readable: ${displayPath}`);
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+  }
+}
+
+function readRegularLeaf(leaf, displayPath) {
+  return regularLeafSnapshot(leaf, displayPath).contents;
+}
+
+function readManagedFile(path) {
+  return withAnchoredDirectory(dirname(path), () =>
+    readRegularLeaf(basename(path), path)
+  );
+}
+
 function isOwnedFile(transaction, path) {
   if (!transaction.identity || !entryExists(path)) return false;
   try {
-    const identity = fileIdentity(path);
+    const snapshot = regularLeafSnapshot(path, transaction.destination);
     return (
-      sameFileIdentity(identity, transaction.identity) &&
-      readFileSync(path).equals(transaction.expectedContents)
+      sameFileIdentity(snapshot.identity, transaction.identity) &&
+      snapshot.contents.equals(transaction.expectedContents)
     );
   } catch {
     return false;
   }
 }
 
-function restoreNoClobber(source, destination, warnings, label) {
-  if (entryExists(destination)) {
+function restoreNoClobberHere(source, destination, warnings, label) {
+  const sourceLeaf = basename(source);
+  const destinationLeaf = basename(destination);
+  if (entryExists(destinationLeaf)) {
     warnings.push(`${label} preserved at ${source}; ${destination} is occupied`);
     return false;
   }
 
   let stat;
   try {
-    stat = lstatSync(source);
+    stat = lstatSync(sourceLeaf, { bigint: true });
   } catch (error) {
     if (error?.code === "ENOENT" || error?.code === "ENOTDIR") {
       warnings.push(`${label} missing from ${source}; recovery is not available`);
@@ -429,18 +519,44 @@ function restoreNoClobber(source, destination, warnings, label) {
 
   try {
     if (stat.isFile()) {
-      copyFileSync(source, destination, constants.COPYFILE_EXCL);
+      const snapshot = regularLeafSnapshot(sourceLeaf, source);
+      if (!sameFileIdentity(snapshot.identity, identityFromStat(stat))) {
+        throw new Error("source changed during recovery");
+      }
+      let descriptor;
+      try {
+        descriptor = openSync(
+          destinationLeaf,
+          constants.O_CREAT |
+            constants.O_EXCL |
+            constants.O_WRONLY |
+            (constants.O_NOFOLLOW ?? 0),
+          0o666
+        );
+        writeFileSync(descriptor, snapshot.contents);
+      } finally {
+        if (descriptor !== undefined) closeSync(descriptor);
+      }
     } else if (stat.isSymbolicLink()) {
-      symlinkSync(readlinkSync(source), destination);
+      symlinkSync(readlinkSync(sourceLeaf), destinationLeaf);
     } else {
-      const entryType = stat.isDirectory() ? "directory" : "unsupported entry type";
+      const entryType = stat.isDirectory()
+        ? "directory"
+        : "unsupported entry type";
       warnings.push(
         `${label} preserved at ${source}; ${entryType} requires manual recovery`
       );
       return false;
     }
     try {
-      unlinkSync(source);
+      if (
+        entryExists(sourceLeaf) &&
+        sameFileIdentity(fileIdentity(sourceLeaf), identityFromStat(stat))
+      ) {
+        unlinkSync(sourceLeaf);
+      } else {
+        warnings.push(`${label} also remains at ${source}: source changed`);
+      }
     } catch (error) {
       warnings.push(`${label} also remains at ${source}: ${error.message}`);
     }
@@ -451,52 +567,62 @@ function restoreNoClobber(source, destination, warnings, label) {
   }
 }
 
+function restoreNoClobber(source, destination, warnings, label) {
+  if (dirname(source) !== dirname(destination)) {
+    warnings.push(`${label} preserved at ${source}; recovery parent differs`);
+    return false;
+  }
+  try {
+    return withAnchoredDirectory(dirname(destination), () =>
+      restoreNoClobberHere(source, destination, warnings, label)
+    );
+  } catch (error) {
+    warnings.push(`${label} preserved at ${source}: ${error.message}`);
+    return false;
+  }
+}
+
 function rollback() {
   const warnings = [];
   for (const transaction of [...transactions].reverse()) {
-    if (transaction.identity && entryExists(transaction.destination)) {
-      let currentIdentity;
-      try {
-        currentIdentity = fileIdentity(transaction.destination);
-      } catch (error) {
-        warnings.push(
-          `could not inspect ${transaction.destination}: ${error.message}`
-        );
-        continue;
-      }
-      if (!sameFileIdentity(currentIdentity, transaction.identity)) {
-        warnings.push(
-          `${transaction.destination} changed concurrently and was preserved in place`
-        );
-        continue;
-      }
-      const quarantine =
-        `${transaction.destination}.rollback-${process.pid}-${randomUUID()}`;
-      try {
-        // Rename first so identity/content cannot change between verification
-        // and removal. Unknown content is copied back without clobbering.
-        renameSync(transaction.destination, quarantine);
-        if (isOwnedFile(transaction, quarantine)) {
-          unlinkSync(quarantine);
-        } else {
-          warnings.push(`${transaction.destination} changed concurrently`);
-          restoreNoClobber(
-            quarantine,
-            transaction.destination,
-            warnings,
-            "concurrent entry"
-          );
-        }
-      } catch (error) {
-        if (error?.code !== "ENOENT") {
+    try {
+      withAnchoredDirectory(dirname(transaction.destination), () => {
+        const destinationLeaf = basename(transaction.destination);
+        if (transaction.identity && entryExists(destinationLeaf)) {
+          const currentIdentity = fileIdentity(destinationLeaf);
+          if (!sameFileIdentity(currentIdentity, transaction.identity)) {
+            warnings.push(
+              `${transaction.destination} changed concurrently and was preserved in place`
+            );
+            return;
+          }
+          const quarantine =
+            `${transaction.destination}.rollback-${process.pid}-${randomUUID()}`;
+          const quarantineLeaf = basename(quarantine);
+          // Rename inside the anchored parent so identity/content cannot change
+          // between verification and removal. Unknown content is copied back
+          // without clobbering.
+          renameSync(destinationLeaf, quarantineLeaf);
+          if (isOwnedFile(transaction, quarantineLeaf)) {
+            unlinkSync(quarantineLeaf);
+          } else {
+            warnings.push(`${transaction.destination} changed concurrently`);
+            restoreNoClobberHere(
+              quarantine,
+              transaction.destination,
+              warnings,
+              "concurrent entry"
+            );
+          }
+        } else if (transaction.writeCompleted && entryExists(destinationLeaf)) {
           warnings.push(
-            `could not quarantine ${transaction.destination}: ${error.message}`
+            `${transaction.destination} was written but ownership could not be verified`
           );
         }
-      }
-    } else if (transaction.writeCompleted && entryExists(transaction.destination)) {
+      });
+    } catch (error) {
       warnings.push(
-        `${transaction.destination} was written but ownership could not be verified`
+        `could not inspect ${transaction.destination}: ${error.message}`
       );
     }
 
@@ -544,27 +670,50 @@ function copyTrackedFile(source, destination) {
     writeCompleted: false
   };
   transactions.push(transaction);
-  copyFileSync(source, destination, constants.COPYFILE_EXCL);
-  transaction.writeCompleted = true;
-  transaction.identity = fileIdentity(destination);
+  withAnchoredDirectory(dirname(destination), () => {
+    const leaf = basename(destination);
+    let descriptor;
+    try {
+      descriptor = openSync(
+        leaf,
+        constants.O_CREAT |
+          constants.O_EXCL |
+          constants.O_WRONLY |
+          (constants.O_NOFOLLOW ?? 0),
+        0o666
+      );
+      transaction.identity = identityFromStat(
+        fstatSync(descriptor, { bigint: true })
+      );
+      transaction.writeCompleted = true;
+      writeFileSync(descriptor, transaction.expectedContents);
+    } finally {
+      if (descriptor !== undefined) closeSync(descriptor);
+    }
+  });
   createdFiles.push(destination);
 }
 
 function ensureDirectory(path) {
-  if (entryExists(path)) {
-    const stat = lstatSync(path);
-    if (stat.isSymbolicLink() || !stat.isDirectory()) {
-      throw new Error(`Managed parent must be a real directory: ${path}`);
+  withAnchoredDirectory(dirname(path), () => {
+    const leaf = basename(path);
+    if (entryExists(leaf)) {
+      const stat = lstatSync(leaf);
+      if (stat.isSymbolicLink() || !stat.isDirectory()) {
+        throw new Error(`Managed parent must be a real directory: ${path}`);
+      }
+      return;
     }
-    return;
-  }
-  mkdirSync(path);
-  createdDirectories.push(path);
+    mkdirSync(leaf);
+    createdDirectories.push(path);
+  });
 }
 
 try {
   if (!targetExisted) {
-    mkdirSync(canonicalTarget);
+    withAnchoredDirectory(dirname(canonicalTarget), () =>
+      mkdirSync(basename(canonicalTarget))
+    );
     createdTarget = canonicalTarget;
   }
 
@@ -577,6 +726,7 @@ try {
     }
     const destination = join(canonicalTarget, ...parts);
     if (entryExists(destination)) {
+      readManagedFile(destination);
       preservedFiles.push(relativePath);
       continue;
     }
@@ -594,13 +744,9 @@ try {
       throw new Error(`${gitignorePath} appeared during initialization; rerun`);
     }
     preservedFiles.push(".gitignore");
-    const currentStat = lstatSync(gitignorePath);
-    if (currentStat.isSymbolicLink() || !currentStat.isFile()) {
-      throw new Error(`Managed project path must be a real file: ${gitignorePath}`);
-    }
     gitignoreAdded = [...plannedGitignoreAdditions];
     if (gitignoreAdded.length) {
-      const current = readFileSync(gitignorePath);
+      const current = readManagedFile(gitignorePath);
       if (!current.equals(plannedGitignoreOriginal)) {
         throw new Error(`${gitignorePath} changed during initialization`);
       }
@@ -617,13 +763,27 @@ try {
         writeCompleted: false
       };
       transactions.push(gitignoreTransaction);
-      renameSync(gitignorePath, gitignoreBackup);
-      writeFileSync(gitignorePath, updatedContents, {
-        encoding: "utf8",
-        flag: "wx"
+      withAnchoredDirectory(canonicalTarget, () => {
+        renameSync(basename(gitignorePath), basename(gitignoreBackup));
+        let descriptor;
+        try {
+          descriptor = openSync(
+            basename(gitignorePath),
+            constants.O_CREAT |
+              constants.O_EXCL |
+              constants.O_WRONLY |
+              (constants.O_NOFOLLOW ?? 0),
+            0o666
+          );
+          gitignoreTransaction.identity = identityFromStat(
+            fstatSync(descriptor, { bigint: true })
+          );
+          gitignoreTransaction.writeCompleted = true;
+          writeFileSync(descriptor, updatedContents);
+        } finally {
+          if (descriptor !== undefined) closeSync(descriptor);
+        }
       });
-      gitignoreTransaction.writeCompleted = true;
-      gitignoreTransaction.identity = fileIdentity(gitignorePath);
     }
   }
 
@@ -632,13 +792,15 @@ try {
   for (const relativePath of placeholderFiles) {
     const path = join(canonicalTarget, ...relativePath.split("/"));
     if (!entryExists(path)) continue;
-    const contents = readFileSync(path, "utf8");
+    const contents = readManagedFile(path).toString("utf8");
     placeholderCount += contents.match(/\bTODO\b|<Project>/g)?.length ?? 0;
   }
 
   if (gitignoreBackup) {
     try {
-      unlinkSync(gitignoreBackup);
+      withAnchoredDirectory(canonicalTarget, () =>
+        unlinkSync(basename(gitignoreBackup))
+      );
     } catch (error) {
       console.error(
         `Project initialization warning: .gitignore backup remains at ` +

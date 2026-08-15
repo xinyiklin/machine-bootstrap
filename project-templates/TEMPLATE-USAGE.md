@@ -32,7 +32,9 @@ the template paths by hand.
    missing independent safety rules. Git verifies that the resulting policy
    ignores local environment files while exposing `.env.example`; an
    ineffective, incomplete, or ambiguous existing policy requires manual review
-   before any write.
+   before any write. Starter paths and their parents must remain real files and
+   directories during initialization; symbolic-link or concurrent identity
+   changes stop safely for review.
 2. Replace every placeholder with facts verified from the real project and
    delete irrelevant sections and template notes.
 3. Keep the single `@AGENTS.md` import immediately below the project
