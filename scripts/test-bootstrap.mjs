@@ -1313,6 +1313,38 @@ await test("project initialization reports a dangling target link cleanly", () =
   }
 }, { needsSymlinks: true });
 
+await test("project initialization rejects a symlinked template source", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const project = join(workspaceRoot, "project-a");
+    const externalSource = join(testRoot, "external-agent-policy.md");
+    const templateSource = join(
+      checkoutRoot,
+      "project-templates",
+      "AGENTS.md"
+    );
+    writeFileSync(externalSource, "external private policy bytes\n");
+    rmSync(templateSource);
+    symlinkSync(externalSource, templateSource);
+
+    const result = runProjectInitializer(
+      checkoutRoot,
+      project,
+      testRoot,
+      ["--create"]
+    );
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /Template must be a regular file: AGENTS\.md/);
+    assert.equal(existsSync(project), false);
+    assert.equal(
+      readFileSync(externalSource, "utf8"),
+      "external private policy bytes\n"
+    );
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+}, { needsSymlinks: true });
+
 await test(
   "project initialization rejects a starter symlink that appears mid-run",
   () => {
@@ -1372,7 +1404,8 @@ await test("project initialization does not follow a replaced managed parent", (
 
     const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
     const initializer = readFileSync(initializerPath, "utf8");
-    const needle = "    copyTrackedFile(join(templateRoot, ...parts), destination);";
+    const needle =
+      "    copyTrackedFile(templateContents.get(relativePath), destination);";
     assert.ok(initializer.includes(needle), "parent injection point must exist");
     writeFileSync(
       initializerPath,
@@ -1486,7 +1519,7 @@ await test("project initialization preflights parents before starter writes", ()
 
     const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
     const initializer = readFileSync(initializerPath, "utf8");
-    const needle = "function copyTrackedFile(source, destination) {";
+    const needle = "function copyTrackedFile(expectedContents, destination) {";
     assert.ok(initializer.includes(needle), "copy marker injection point must exist");
     writeFileSync(
       initializerPath,
@@ -2195,14 +2228,27 @@ const workflowManifest = JSON.parse(
   readFileSync(join(workflowSourceRoot, "manifest.json"), "utf8")
 );
 
-await test("implementation reports can record a review waiver accurately", () => {
+await test("implementation reporting preserves waiver and status ownership", () => {
   const template = readFileSync(
     join(workflowSourceRoot, "templates", "implementation-report.md"),
+    "utf8"
+  );
+  const deliveryLead = readFileSync(
+    join(workflowSourceRoot, "roles", "delivery-lead.md"),
     "utf8"
   );
   assert.match(template, /Independent review status.*pending.*waived/i);
   assert.match(template, /Waiver reason/i);
   assert.match(template, /pending unless.*waived/i);
+  assert.match(
+    deliveryLead,
+    /implemented`, `not implemented`, `deferred`, or\s+`self-unverified`/
+  );
+  assert.match(
+    deliveryLead,
+    /Verifier and\s+Verification Report alone use final `passed`, `failed`, `unverified`/
+  );
+  assert.doesNotMatch(deliveryLead, /check you did not\s+run is `unverified`/);
 });
 
 function workflowRelativePaths(manifest) {

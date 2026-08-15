@@ -133,8 +133,10 @@ Choose either setup style:
    environment files and expose `.env.example`; ineffective, incomplete, or
    ambiguous rules stop for manual review before any project writes. The
    initializer never copies `TEMPLATE-USAGE.md` and never creates or replaces a
-   README. Newly created parents are staged under private names so their
-   identities are captured before publication. Managed reads, writes, and
+   README. Canonical template sources must remain real files inside this
+   checkout and are snapshotted with no-follow reads before project writes.
+   Newly created parents are staged under private names so their identities are
+   captured before publication. Managed reads, writes, and
    rollback recovery are anchored to real parent-directory identities pinned
    for the full run; symbolic-link, parent, leaf, or backup replacement stops
    safely instead of being followed or deleted. Every seeded file is

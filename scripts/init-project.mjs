@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import {
-  accessSync,
   closeSync,
   constants,
   fstatSync,
@@ -300,26 +299,69 @@ if (probe.status === 0) {
 }
 
 const templateRoot = join(bootstrapRoot, "project-templates");
+let templateRootStat;
+let canonicalTemplateRoot;
+try {
+  templateRootStat = lstatSync(templateRoot, { bigint: true });
+  canonicalTemplateRoot = realpathSync.native(templateRoot);
+} catch {
+  fail("Project template root must be a readable directory");
+}
+if (
+  templateRootStat.isSymbolicLink() ||
+  !templateRootStat.isDirectory() ||
+  !sameCanonicalPath(canonicalTemplateRoot, templateRoot) ||
+  !isInside(canonicalBootstrapRoot, canonicalTemplateRoot)
+) {
+  fail("Project template root must be a real directory inside machine-bootstrap");
+}
 const seedFiles = [
   "AGENTS.md",
   "CLAUDE.md",
   "docs/engineering/git-workflow.md",
   ".github/pull_request_template.md"
 ];
+const templateContents = new Map();
 for (const relativePath of [...seedFiles, ".gitignore"]) {
   const source = join(templateRoot, ...relativePath.split("/"));
   try {
-    if (!statSync(source).isFile()) {
+    const sourceStat = lstatSync(source, { bigint: true });
+    const canonicalSource = realpathSync.native(source);
+    if (
+      sourceStat.isSymbolicLink() ||
+      !sourceStat.isFile() ||
+      !sameCanonicalPath(canonicalSource, source) ||
+      !isInside(canonicalTemplateRoot, canonicalSource)
+    ) {
       fail(`Template must be a regular file: ${relativePath}`);
     }
-    accessSync(source, constants.R_OK);
+    let descriptor;
+    try {
+      descriptor = openSync(
+        source,
+        constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0)
+      );
+      const opened = fstatSync(descriptor, { bigint: true });
+      if (
+        !opened.isFile() ||
+        !sameFileIdentity(
+          identityFromStat(opened),
+          identityFromStat(sourceStat)
+        )
+      ) {
+        fail(`Template changed during validation: ${relativePath}`);
+      }
+      templateContents.set(relativePath, readFileSync(descriptor));
+    } finally {
+      if (descriptor !== undefined) closeSync(descriptor);
+    }
   } catch (error) {
     if (error?.message?.startsWith("Project initialization failed:")) throw error;
     fail(`Template must be readable: ${relativePath}`);
   }
 }
 
-const safetyEntries = readFileSync(join(templateRoot, ".gitignore"), "utf8")
+const safetyEntries = templateContents.get(".gitignore").toString("utf8")
   .split(/\r?\n/)
   .map((line) => line.trim())
   .filter((line) => line && !line.startsWith("#"));
@@ -350,7 +392,7 @@ if (targetExisted) {
 const gitignorePath = join(canonicalTarget, ".gitignore");
 let plannedGitignoreOriginal = null;
 let plannedGitignoreAdditions = [...safetyEntries];
-let plannedGitignoreContents = readFileSync(join(templateRoot, ".gitignore"));
+let plannedGitignoreContents = templateContents.get(".gitignore");
 if (targetExisted && entryExists(gitignorePath)) {
   try {
     plannedGitignoreOriginal = managedFileAnchors.get(gitignorePath)?.contents;
@@ -826,10 +868,10 @@ function rollback() {
   }
 }
 
-function copyTrackedFile(source, destination) {
+function copyTrackedFile(expectedContents, destination) {
   const transaction = {
     destination,
-    expectedContents: readFileSync(source),
+    expectedContents,
     backupPath: null,
     identity: null,
     writeCompleted: false
@@ -927,14 +969,14 @@ try {
       preservedFiles.push(relativePath);
       continue;
     }
-    copyTrackedFile(join(templateRoot, ...parts), destination);
+    copyTrackedFile(templateContents.get(relativePath), destination);
   }
 
   if (!entryExists(gitignorePath)) {
     if (plannedGitignoreOriginal !== null) {
       throw new Error(`${gitignorePath} disappeared during initialization`);
     }
-    copyTrackedFile(join(templateRoot, ".gitignore"), gitignorePath);
+    copyTrackedFile(templateContents.get(".gitignore"), gitignorePath);
     gitignoreAdded = [...safetyEntries];
   } else {
     if (plannedGitignoreOriginal === null) {
