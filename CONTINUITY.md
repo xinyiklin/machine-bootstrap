@@ -22,8 +22,10 @@ is read only when a task needs it.
   ambiguous or overridden policy stops before writes. Rollback quarantines
   run-owned files for review instead of deleting them. Managed reads, writes,
   and recovery use verified
-  real-directory identities pinned for the full run plus no-follow leaf access,
-  reject concurrent parent, entry, or backup replacement, leave
+  real-directory identities pinned for the full run plus no-follow leaf access;
+  new directories are identity-captured under private staging names before
+  publication, and all seeded files are revalidated before success. They reject
+  concurrent parent, entry, or backup replacement, leave
   identity-changed entries at their original paths, never delete entries after
   a separate content check, and report exact recovery paths.
 - 2026-08-14 [USER] Legacy parent guidance stops initialization for manual

@@ -1325,22 +1325,28 @@ await test(
 
       const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
       const initializer = readFileSync(initializerPath, "utf8");
-      const needle = "    if (entryExists(destination)) {";
+      const needle =
+        "    const destination = join(canonicalTarget, ...parts);\n" +
+        "    if (entryExists(destination)) {";
       assert.ok(initializer.includes(needle), "starter injection point must exist");
       writeFileSync(
         initializerPath,
         initializer.replace(
           needle,
-          `    if (relativePath === "AGENTS.md") {\n` +
+            `    const destination = join(canonicalTarget, ...parts);\n` +
+            `    if (relativePath === "AGENTS.md") {\n` +
             `      symlinkSync(${JSON.stringify(externalTarget)}, destination);\n` +
             `    }\n` +
-            needle
+            `    if (entryExists(destination)) {`
         )
       );
 
       const result = runProjectInitializer(checkoutRoot, project, testRoot);
       assert.notEqual(result.status, 0);
-      assert.match(result.stderr, /Managed project path must be a real file/);
+      assert.match(
+        result.stderr,
+        /(?:appeared during initialization|Managed project path must be a real file)/
+      );
       assert.equal(
         readFileSync(externalTarget, "utf8"),
         "external private bytes\n"
@@ -1399,17 +1405,20 @@ await test("project initialization pins the original target directory", () => {
 
     const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
     const initializer = readFileSync(initializerPath, "utf8");
-    const needle = "    if (entryExists(destination)) {";
+    const needle =
+      "    const destination = join(canonicalTarget, ...parts);\n" +
+      "    if (entryExists(destination)) {";
     assert.ok(initializer.includes(needle), "target injection point must exist");
     writeFileSync(
       initializerPath,
       initializer.replace(
         needle,
+        `    const destination = join(canonicalTarget, ...parts);\n` +
         `    if (relativePath === "CLAUDE.md") {\n` +
           `      renameSync(canonicalTarget, ${JSON.stringify(originalProject)});\n` +
           `      mkdirSync(canonicalTarget);\n` +
           `    }\n` +
-          needle
+          `    if (entryExists(destination)) {`
       )
     );
 
@@ -1418,6 +1427,43 @@ await test("project initialization pins the original target directory", () => {
     assert.match(result.stderr, /Managed parent changed during initialization/);
     assert.equal(existsSync(join(project, "CLAUDE.md")), false);
     assert.equal(existsSync(join(originalProject, "AGENTS.md")), true);
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
+await test("project initialization pins a newly created directory before publication", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const project = join(workspaceRoot, "project-a");
+
+    const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
+    const initializer = readFileSync(initializerPath, "utf8");
+    const needle =
+      "    if (entryExists(leaf)) {\n" +
+      "      throw new Error(`Managed parent appeared during initialization: ${path}`);\n" +
+      "    }\n" +
+      "    renameSync(stagingLeaf, leaf);";
+    assert.ok(initializer.includes(needle), "new directory injection point must exist");
+    writeFileSync(
+      initializerPath,
+      initializer.replace(
+        needle,
+        "    renameSync(stagingLeaf, stagingLeaf + \".original\");\n" +
+          "    mkdirSync(stagingLeaf);\n" +
+          needle
+      )
+    );
+
+    const result = runProjectInitializer(
+      checkoutRoot,
+      project,
+      testRoot,
+      ["--create"]
+    );
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /Managed parent changed during initialization/);
+    assert.equal(existsSync(join(project, "AGENTS.md")), false);
   } finally {
     rmSync(testRoot, { recursive: true, force: true });
   }
@@ -1554,6 +1600,26 @@ await test("ineffective env example exception is preserved for review", () => {
     assert.equal(existsSync(join(project, "AGENTS.md")), false);
   } finally {
     rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
+await test("environment variant exceptions are preserved for review", () => {
+  for (const exception of ["!*.production", "!*.development"]) {
+    const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+    try {
+      const project = join(workspaceRoot, "project-a");
+      mkdirSync(project);
+      const original = `.env\n.env.*\n!.env.example\n${exception}\n`;
+      writeFileSync(join(project, ".gitignore"), original);
+
+      const result = runProjectInitializer(checkoutRoot, project, testRoot);
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, /environment rules.*manual review/i);
+      assert.equal(readFileSync(join(project, ".gitignore"), "utf8"), original);
+      assert.equal(existsSync(join(project, "AGENTS.md")), false);
+    } finally {
+      rmSync(testRoot, { recursive: true, force: true });
+    }
   }
 });
 
@@ -1718,6 +1784,71 @@ await test("project initialization revalidates a preserved gitignore", () => {
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /.gitignore changed during initialization/);
     assert.equal(readFileSync(join(project, ".gitignore"), "utf8"), "dist/\n");
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
+await test("project initialization revalidates every seeded file", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const project = join(workspaceRoot, "project-a");
+    mkdirSync(project);
+
+    const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
+    const initializer = readFileSync(initializerPath, "utf8");
+    const needle = "  const placeholderFiles = [...seedFiles, \".gitignore\"];";
+    assert.ok(initializer.includes(needle), "seed verification injection point must exist");
+    writeFileSync(
+      initializerPath,
+      initializer.replace(
+        needle,
+        "  renameSync(join(canonicalTarget, \"AGENTS.md\"), join(canonicalTarget, \"AGENTS.md.original\"));\n" +
+          "  writeFileSync(join(canonicalTarget, \"AGENTS.md\"), \"concurrent replacement policy\\n\");\n\n" +
+          needle
+      )
+    );
+
+    const result = runProjectInitializer(checkoutRoot, project, testRoot);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /AGENTS\.md changed during initialization/);
+    assert.equal(
+      readFileSync(join(project, "AGENTS.md"), "utf8"),
+      "concurrent replacement policy\n"
+    );
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
+await test("project initialization revalidates every preserved starter file", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const project = join(workspaceRoot, "project-a");
+    mkdirSync(project);
+    writeFileSync(join(project, "AGENTS.md"), "original project policy\n");
+
+    const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
+    const initializer = readFileSync(initializerPath, "utf8");
+    const needle = "  const placeholderFiles = [...seedFiles, \".gitignore\"];";
+    assert.ok(initializer.includes(needle), "preserved verification injection point must exist");
+    writeFileSync(
+      initializerPath,
+      initializer.replace(
+        needle,
+        "  renameSync(join(canonicalTarget, \"AGENTS.md\"), join(canonicalTarget, \"AGENTS.md.original\"));\n" +
+          "  writeFileSync(join(canonicalTarget, \"AGENTS.md\"), \"concurrent preserved policy\\n\");\n\n" +
+          needle
+      )
+    );
+
+    const result = runProjectInitializer(checkoutRoot, project, testRoot);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /AGENTS\.md changed during initialization/);
+    assert.equal(
+      readFileSync(join(project, "AGENTS.md"), "utf8"),
+      "concurrent preserved policy\n"
+    );
   } finally {
     rmSync(testRoot, { recursive: true, force: true });
   }

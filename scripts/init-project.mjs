@@ -185,6 +185,7 @@ if (targetExisted) {
 }
 
 const managedDirectoryAnchors = new Map();
+const managedFileAnchors = new Map();
 try {
   pinManagedDirectory(
     targetExisted ? canonicalTarget : dirname(canonicalTarget)
@@ -244,6 +245,12 @@ function environmentPolicyProblem(contents) {
     for (const [path, shouldBeIgnored] of [
       [".env", true],
       [".env.local", true],
+      [".env.production", true],
+      [".env.development", true],
+      [".env.test", true],
+      [".env.staging", true],
+      [".env.preview", true],
+      [".env.ci", true],
       [".env.example", false]
     ]) {
       const checked = spawnSync(
@@ -331,7 +338,9 @@ if (targetExisted) {
     const destination = join(canonicalTarget, ...relativePath.split("/"));
     try {
       preflightManagedParentChain(destination);
-      if (entryExists(destination)) readManagedFile(destination);
+      if (entryExists(destination)) {
+        managedFileAnchors.set(destination, readManagedFileSnapshot(destination));
+      }
     } catch (error) {
       fail(error instanceof Error ? error.message : String(error));
     }
@@ -344,7 +353,10 @@ let plannedGitignoreAdditions = [...safetyEntries];
 let plannedGitignoreContents = readFileSync(join(templateRoot, ".gitignore"));
 if (targetExisted && entryExists(gitignorePath)) {
   try {
-    plannedGitignoreOriginal = readManagedFile(gitignorePath);
+    plannedGitignoreOriginal = managedFileAnchors.get(gitignorePath)?.contents;
+    if (!plannedGitignoreOriginal) {
+      throw new Error(`${gitignorePath} appeared during initialization; rerun`);
+    }
   } catch (error) {
     fail(error instanceof Error ? error.message : String(error));
   }
@@ -423,7 +435,12 @@ function sameCanonicalPath(left, right) {
     : left === right;
 }
 
-function pinManagedDirectorySnapshot(path, stat, canonical) {
+function pinManagedDirectorySnapshot(
+  path,
+  stat,
+  canonical,
+  expectedIdentity = null
+) {
   if (stat.isSymbolicLink() || !stat.isDirectory()) {
     throw new Error(`Managed parent must be a real directory: ${path}`);
   }
@@ -434,6 +451,8 @@ function pinManagedDirectorySnapshot(path, stat, canonical) {
   const existing = managedDirectoryAnchors.get(path);
   if (
     !sameCanonicalPath(canonical, path) ||
+    (expectedIdentity &&
+      !sameFileIdentity(expectedIdentity, candidate.identity)) ||
     (existing &&
       (existing.canonical !== candidate.canonical ||
         !sameFileIdentity(existing.identity, candidate.identity)))
@@ -562,9 +581,24 @@ function readRegularLeaf(leaf, displayPath) {
 }
 
 function readManagedFile(path) {
+  return readManagedFileSnapshot(path).contents;
+}
+
+function readManagedFileSnapshot(path) {
   return withAnchoredDirectory(dirname(path), () =>
-    readRegularLeaf(basename(path), path)
+    regularLeafSnapshot(basename(path), path)
   );
+}
+
+function assertManagedFileSnapshot(path, expected) {
+  const current = readManagedFileSnapshot(path);
+  if (
+    !sameFileIdentity(current.identity, expected.identity) ||
+    !current.contents.equals(expected.contents)
+  ) {
+    throw new Error(`${path} changed during initialization`);
+  }
+  return current.contents;
 }
 
 function isOwnedFile(transaction, path) {
@@ -578,6 +612,25 @@ function isOwnedFile(transaction, path) {
   } catch {
     return false;
   }
+}
+
+function assertOwnedFile(transaction) {
+  return withAnchoredDirectory(dirname(transaction.destination), () => {
+    const snapshot = regularLeafSnapshot(
+      basename(transaction.destination),
+      transaction.destination
+    );
+    if (
+      !transaction.identity ||
+      !sameFileIdentity(snapshot.identity, transaction.identity) ||
+      !snapshot.contents.equals(transaction.expectedContents)
+    ) {
+      throw new Error(
+        `${transaction.destination} changed during initialization`
+      );
+    }
+    return snapshot.contents;
+  });
 }
 
 function restoreNoClobberHere(source, destination, warnings, label) {
@@ -806,38 +859,54 @@ function copyTrackedFile(source, destination) {
   createdFiles.push(destination);
 }
 
-function ensureDirectory(path) {
+function createAndPinManagedDirectory(path) {
   withAnchoredDirectory(dirname(path), () => {
     const leaf = basename(path);
     if (entryExists(leaf)) {
-      pinManagedDirectorySnapshot(
-        path,
-        lstatSync(leaf, { bigint: true }),
-        realpathSync.native(leaf)
-      );
-      return;
+      throw new Error(`Managed parent appeared during initialization: ${path}`);
     }
-    mkdirSync(leaf);
+
+    // Create under an unpredictable private name so this run can capture the
+    // directory identity before publishing it at the managed path. The rename
+    // and post-rename identity check keep a replaced staging entry from being
+    // learned as a trusted parent.
+    const stagingLeaf =
+      `.${leaf}.machine-bootstrap-${process.pid}-${randomUUID()}.directory`;
+    const stagingPath = join(dirname(path), stagingLeaf);
+    mkdirSync(stagingLeaf);
+    createdDirectories.push(stagingPath);
+    const stagingStat = lstatSync(stagingLeaf, { bigint: true });
+    if (stagingStat.isSymbolicLink() || !stagingStat.isDirectory()) {
+      throw new Error(`Managed parent must be a real directory: ${path}`);
+    }
+    const stagingIdentity = identityFromStat(stagingStat);
+    if (entryExists(leaf)) {
+      throw new Error(`Managed parent appeared during initialization: ${path}`);
+    }
+    renameSync(stagingLeaf, leaf);
+    createdDirectories[createdDirectories.length - 1] = path;
     pinManagedDirectorySnapshot(
       path,
       lstatSync(leaf, { bigint: true }),
-      realpathSync.native(leaf)
+      realpathSync.native(leaf),
+      stagingIdentity
     );
-    createdDirectories.push(path);
   });
+}
+
+function ensureDirectory(path) {
+  if (managedDirectoryAnchors.has(path)) {
+    withAnchoredDirectory(path, () => {});
+    return;
+  }
+  // Existing parents were pinned during the no-write preflight. An unpinned
+  // entry here appeared after that snapshot and must never be learned as ours.
+  createAndPinManagedDirectory(path);
 }
 
 try {
   if (!targetExisted) {
-    withAnchoredDirectory(dirname(canonicalTarget), () => {
-      const leaf = basename(canonicalTarget);
-      mkdirSync(leaf);
-      pinManagedDirectorySnapshot(
-        canonicalTarget,
-        lstatSync(leaf, { bigint: true }),
-        realpathSync.native(leaf)
-      );
-    });
+    createAndPinManagedDirectory(canonicalTarget);
     createdTarget = canonicalTarget;
   }
 
@@ -850,7 +919,11 @@ try {
     }
     const destination = join(canonicalTarget, ...parts);
     if (entryExists(destination)) {
-      readManagedFile(destination);
+      const expected = managedFileAnchors.get(destination);
+      if (!expected) {
+        throw new Error(`${destination} appeared during initialization; rerun`);
+      }
+      assertManagedFileSnapshot(destination, expected);
       preservedFiles.push(relativePath);
       continue;
     }
@@ -892,6 +965,13 @@ try {
         if (!current.contents.equals(plannedGitignoreOriginal)) {
           throw new Error(`${gitignorePath} changed during initialization`);
         }
+        const plannedGitignoreSnapshot = managedFileAnchors.get(gitignorePath);
+        if (
+          !plannedGitignoreSnapshot ||
+          !sameFileIdentity(current.identity, plannedGitignoreSnapshot.identity)
+        ) {
+          throw new Error(`${gitignorePath} changed during initialization`);
+        }
         transactions.push(gitignoreTransaction);
         renameSync(basename(gitignorePath), basename(gitignoreBackup));
         if (
@@ -904,6 +984,7 @@ try {
         }
         gitignoreBackupIdentity = current.identity;
         gitignoreTransaction.backupIdentity = current.identity;
+        managedFileAnchors.delete(gitignorePath);
         let descriptor;
         try {
           descriptor = openSync(
@@ -955,13 +1036,13 @@ try {
     try {
       withAnchoredDirectory(canonicalTarget, () => {
         const backupLeaf = basename(gitignoreBackup);
+        if (!gitignoreBackupIdentity || !entryExists(backupLeaf)) {
+          throw new Error("backup changed concurrently");
+        }
+        const backup = regularLeafSnapshot(backupLeaf, gitignoreBackup);
         if (
-          !gitignoreBackupIdentity ||
-          !entryExists(backupLeaf) ||
-          !sameFileIdentity(
-            fileIdentity(backupLeaf),
-            gitignoreBackupIdentity
-          )
+          !sameFileIdentity(backup.identity, gitignoreBackupIdentity) ||
+          !backup.contents.equals(plannedGitignoreOriginal)
         ) {
           throw new Error("backup changed concurrently");
         }
@@ -974,6 +1055,10 @@ try {
       );
     }
   }
+  for (const [path, expected] of managedFileAnchors) {
+    assertManagedFileSnapshot(path, expected);
+  }
+  for (const transaction of transactions) assertOwnedFile(transaction);
   transactions.length = 0;
 
   console.log(`\nProject initialized: ${canonicalTarget}`);

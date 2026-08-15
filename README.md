@@ -133,10 +133,13 @@ Choose either setup style:
    environment files and expose `.env.example`; ineffective, incomplete, or
    ambiguous rules stop for manual review before any project writes. The
    initializer never copies `TEMPLATE-USAGE.md` and never creates or replaces a
-   README. Managed reads, writes, and rollback recovery are anchored to real
-   parent-directory identities pinned for the full run; symbolic-link, parent,
-   leaf, or backup replacement stops safely instead of being followed or
-   deleted. On failure, rollback moves run-owned files to named recovery paths
+   README. Newly created parents are staged under private names so their
+   identities are captured before publication. Managed reads, writes, and
+   rollback recovery are anchored to real parent-directory identities pinned
+   for the full run; symbolic-link, parent, leaf, or backup replacement stops
+   safely instead of being followed or deleted. Every seeded file is
+   identity-and-byte checked again before success. On failure, rollback moves
+   run-owned files to named recovery paths
    instead of deleting them, and leaves identity-changed concurrent entries at
    their original paths. It never deletes directories by pathname; file and
    directory cleanup is reported for manual review.
