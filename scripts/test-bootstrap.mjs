@@ -985,13 +985,14 @@ await test("continuity stays bounded and preserves archived history", () => {
   assert.equal(existsSync(join(bootstrapRoot, "docs", "continuity", "2026-07.md")), true);
 });
 
-await test("CI covers the full bootstrap suite on Linux and Windows", () => {
+await test("CI covers the full bootstrap suite on Linux, Windows, and macOS", () => {
   const workflow = readFileSync(
     join(bootstrapRoot, ".github", "workflows", "bootstrap.yml"),
     "utf8"
   );
   assert.match(workflow, /ubuntu-latest/);
   assert.match(workflow, /windows-latest/);
+  assert.match(workflow, /macos-latest/);
   assert.match(workflow, /actions\/checkout@v7/);
   assert.match(workflow, /actions\/setup-node@v7/);
   assert.match(workflow, /node-version:\s*24/);

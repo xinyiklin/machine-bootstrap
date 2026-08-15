@@ -45,6 +45,8 @@ is read only when a task needs it.
 - 2026-08-14 [USER+CODE] Machine-bootstrap and project starters each own a
   Git/GitHub contract: typed branches, Conventional Commits, exact-head review,
   verification receipts, and explicit publication state.
+- 2026-08-15 [USER+CODE] Bootstrap CI runs the full disposable regression suite
+  on Linux, Windows, and macOS; local macOS evidence is not a CI substitute.
 - 2026-08-14 [USER+CODE] Product Delivery workflow 1.3.0 activates its complete
   flow only for a primary role, explicit request, active artifacts, or named
   project work. Standalone Verifier selection activates only independent review.
