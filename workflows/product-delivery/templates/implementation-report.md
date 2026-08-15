@@ -61,7 +61,12 @@ Write `none` when execution followed the plan.
 
 ## Verification Handoff
 
-Independent review is pending. The Verification Report alone records the final
-independent passed, failed, unverified, and skipped judgments or an explicit
-user waiver. This report must not claim that independent verification is
-complete.
+| Field | Value |
+| :--- | :--- |
+| Independent review status | pending / waived |
+| Waiver reason | `none, or the user's explicit waiver and reason` |
+
+Independent review is pending unless the user explicitly waived it for this
+change. The Verification Report alone records the final independent passed,
+failed, unverified, and skipped judgments or the explicit waiver. This report
+must not describe pending or waived verification as complete.

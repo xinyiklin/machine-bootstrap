@@ -185,6 +185,15 @@ if (targetExisted) {
   fail("Target does not exist; rerun with --create to create the directory");
 }
 
+const managedDirectoryAnchors = new Map();
+try {
+  pinManagedDirectory(
+    targetExisted ? canonicalTarget : dirname(canonicalTarget)
+  );
+} catch (error) {
+  fail(error instanceof Error ? error.message : String(error));
+}
+
 function gitProbe(path) {
   return spawnSync("git", ["-C", path, "rev-parse", "--show-toplevel"], {
     encoding: "utf8",
@@ -323,6 +332,7 @@ if (targetExisted) {
     const destination = join(canonicalTarget, ...relativePath.split("/"));
     if (!entryExists(destination)) continue;
     try {
+      pinManagedParentChain(destination);
       readManagedFile(destination);
     } catch (error) {
       fail(error instanceof Error ? error.message : String(error));
@@ -388,6 +398,7 @@ const preservedFiles = [];
 const transactions = [];
 let createdTarget = null;
 let gitignoreBackup = null;
+let gitignoreBackupIdentity = null;
 let gitignoreTransaction = null;
 let gitignoreAdded = [];
 
@@ -408,25 +419,93 @@ function sameFileIdentity(left, right) {
   );
 }
 
-// Changing into a verified directory gives each leaf operation a stable
-// directory handle. A concurrent pathname replacement can no longer redirect
-// that operation through a new symlink. Recheck after chdir so a replacement
-// that won the race before anchoring fails before any leaf is opened.
-function withAnchoredDirectory(path, operation) {
-  const expectedStat = lstatSync(path, { bigint: true });
-  if (expectedStat.isSymbolicLink() || !expectedStat.isDirectory()) {
+function sameCanonicalPath(left, right) {
+  return process.platform === "win32"
+    ? left.toLowerCase() === right.toLowerCase()
+    : left === right;
+}
+
+function pinManagedDirectorySnapshot(path, stat, canonical) {
+  if (stat.isSymbolicLink() || !stat.isDirectory()) {
     throw new Error(`Managed parent must be a real directory: ${path}`);
   }
-  const expectedIdentity = identityFromStat(expectedStat);
-  const expectedCanonical = realpathSync.native(path);
+  const candidate = {
+    canonical,
+    identity: identityFromStat(stat)
+  };
+  const existing = managedDirectoryAnchors.get(path);
+  if (
+    !sameCanonicalPath(canonical, path) ||
+    (existing &&
+      (existing.canonical !== candidate.canonical ||
+        !sameFileIdentity(existing.identity, candidate.identity)))
+  ) {
+    throw new Error(`Managed parent changed during initialization: ${path}`);
+  }
+  if (!existing) managedDirectoryAnchors.set(path, candidate);
+  return existing ?? candidate;
+}
+
+function pinManagedDirectory(path) {
+  return pinManagedDirectorySnapshot(
+    path,
+    lstatSync(path, { bigint: true }),
+    realpathSync.native(path)
+  );
+}
+
+function pinManagedParentChain(filePath) {
+  const parentPath = dirname(filePath);
+  if (parentPath === canonicalTarget) return;
+  if (!isInside(canonicalTarget, parentPath)) {
+    throw new Error(`Managed parent must stay inside target: ${parentPath}`);
+  }
+
+  let current = canonicalTarget;
+  for (const part of relative(canonicalTarget, parentPath).split(sep)) {
+    const next = join(current, part);
+    if (!managedDirectoryAnchors.has(next)) {
+      withAnchoredDirectory(current, () =>
+        pinManagedDirectorySnapshot(
+          next,
+          lstatSync(part, { bigint: true }),
+          realpathSync.native(part)
+        )
+      );
+    }
+    current = next;
+  }
+}
+
+// Changing into a verified directory gives each leaf operation a stable
+// directory handle. A concurrent pathname replacement can no longer redirect
+// that operation through a new symlink. The expected identity is pinned for the
+// entire run rather than relearned on each call. Recheck after chdir so a
+// replacement that won the race before anchoring fails before any leaf opens.
+function withAnchoredDirectory(path, operation) {
+  const expected = managedDirectoryAnchors.get(path);
+  if (!expected) {
+    throw new Error(`Managed parent was not pinned before use: ${path}`);
+  }
+  const currentStat = lstatSync(path, { bigint: true });
+  if (currentStat.isSymbolicLink() || !currentStat.isDirectory()) {
+    throw new Error(`Managed parent must be a real directory: ${path}`);
+  }
+  const currentCanonical = realpathSync.native(path);
+  if (
+    !sameCanonicalPath(currentCanonical, expected.canonical) ||
+    !sameFileIdentity(identityFromStat(currentStat), expected.identity)
+  ) {
+    throw new Error(`Managed parent changed during initialization: ${path}`);
+  }
   const previousDirectory = process.cwd();
   process.chdir(path);
   try {
     const anchoredStat = lstatSync(".", { bigint: true });
     const anchoredCanonical = realpathSync.native(".");
     if (
-      !sameFileIdentity(identityFromStat(anchoredStat), expectedIdentity) ||
-      anchoredCanonical !== expectedCanonical
+      !sameFileIdentity(identityFromStat(anchoredStat), expected.identity) ||
+      !sameCanonicalPath(anchoredCanonical, expected.canonical)
     ) {
       throw new Error(`Managed parent changed during initialization: ${path}`);
     }
@@ -698,22 +777,34 @@ function ensureDirectory(path) {
   withAnchoredDirectory(dirname(path), () => {
     const leaf = basename(path);
     if (entryExists(leaf)) {
-      const stat = lstatSync(leaf);
-      if (stat.isSymbolicLink() || !stat.isDirectory()) {
-        throw new Error(`Managed parent must be a real directory: ${path}`);
-      }
+      pinManagedDirectorySnapshot(
+        path,
+        lstatSync(leaf, { bigint: true }),
+        realpathSync.native(leaf)
+      );
       return;
     }
     mkdirSync(leaf);
+    pinManagedDirectorySnapshot(
+      path,
+      lstatSync(leaf, { bigint: true }),
+      realpathSync.native(leaf)
+    );
     createdDirectories.push(path);
   });
 }
 
 try {
   if (!targetExisted) {
-    withAnchoredDirectory(dirname(canonicalTarget), () =>
-      mkdirSync(basename(canonicalTarget))
-    );
+    withAnchoredDirectory(dirname(canonicalTarget), () => {
+      const leaf = basename(canonicalTarget);
+      mkdirSync(leaf);
+      pinManagedDirectorySnapshot(
+        canonicalTarget,
+        lstatSync(leaf, { bigint: true }),
+        realpathSync.native(leaf)
+      );
+    });
     createdTarget = canonicalTarget;
   }
 
@@ -746,10 +837,6 @@ try {
     preservedFiles.push(".gitignore");
     gitignoreAdded = [...plannedGitignoreAdditions];
     if (gitignoreAdded.length) {
-      const current = readManagedFile(gitignorePath);
-      if (!current.equals(plannedGitignoreOriginal)) {
-        throw new Error(`${gitignorePath} changed during initialization`);
-      }
       gitignoreBackup = join(
         canonicalTarget,
         `.gitignore.machine-bootstrap-${process.pid}-${randomUUID()}.backup`
@@ -762,9 +849,25 @@ try {
         identity: null,
         writeCompleted: false
       };
-      transactions.push(gitignoreTransaction);
       withAnchoredDirectory(canonicalTarget, () => {
+        const current = regularLeafSnapshot(
+          basename(gitignorePath),
+          gitignorePath
+        );
+        if (!current.contents.equals(plannedGitignoreOriginal)) {
+          throw new Error(`${gitignorePath} changed during initialization`);
+        }
+        transactions.push(gitignoreTransaction);
         renameSync(basename(gitignorePath), basename(gitignoreBackup));
+        if (
+          !sameFileIdentity(
+            fileIdentity(basename(gitignoreBackup)),
+            current.identity
+          )
+        ) {
+          throw new Error(`${gitignoreBackup} changed during initialization`);
+        }
+        gitignoreBackupIdentity = current.identity;
         let descriptor;
         try {
           descriptor = openSync(
@@ -797,18 +900,34 @@ try {
   }
 
   if (gitignoreBackup) {
+    let backupRemoved = false;
     try {
-      withAnchoredDirectory(canonicalTarget, () =>
-        unlinkSync(basename(gitignoreBackup))
-      );
+      withAnchoredDirectory(canonicalTarget, () => {
+        const backupLeaf = basename(gitignoreBackup);
+        if (
+          !gitignoreBackupIdentity ||
+          !entryExists(backupLeaf) ||
+          !sameFileIdentity(
+            fileIdentity(backupLeaf),
+            gitignoreBackupIdentity
+          )
+        ) {
+          throw new Error("backup changed concurrently");
+        }
+        unlinkSync(backupLeaf);
+        backupRemoved = true;
+      });
     } catch (error) {
       console.error(
         `Project initialization warning: .gitignore backup remains at ` +
           `${gitignoreBackup}: ${error.message}`
       );
     }
-    if (gitignoreTransaction) gitignoreTransaction.backupPath = null;
-    gitignoreBackup = null;
+    if (backupRemoved) {
+      if (gitignoreTransaction) gitignoreTransaction.backupPath = null;
+      gitignoreBackup = null;
+      gitignoreBackupIdentity = null;
+    }
   }
   transactions.length = 0;
 

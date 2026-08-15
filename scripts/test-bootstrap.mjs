@@ -1390,6 +1390,39 @@ await test("project initialization does not follow a replaced managed parent", (
   }
 }, { needsSymlinks: true });
 
+await test("project initialization pins the original target directory", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const project = join(workspaceRoot, "project-a");
+    const originalProject = `${project}.original`;
+    mkdirSync(project);
+
+    const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
+    const initializer = readFileSync(initializerPath, "utf8");
+    const needle = "    if (entryExists(destination)) {";
+    assert.ok(initializer.includes(needle), "target injection point must exist");
+    writeFileSync(
+      initializerPath,
+      initializer.replace(
+        needle,
+        `    if (relativePath === "CLAUDE.md") {\n` +
+          `      renameSync(canonicalTarget, ${JSON.stringify(originalProject)});\n` +
+          `      mkdirSync(canonicalTarget);\n` +
+          `    }\n` +
+          needle
+      )
+    );
+
+    const result = runProjectInitializer(checkoutRoot, project, testRoot);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /Managed parent changed during initialization/);
+    assert.equal(existsSync(join(project, "CLAUDE.md")), false);
+    assert.equal(existsSync(join(originalProject, "AGENTS.md")), true);
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
 await test("existing project guidance is preserved and gitignore entries merge", () => {
   const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
   try {
@@ -1536,6 +1569,48 @@ await test("project rollback preserves a concurrent gitignore and its original b
     assert.match(result.stderr, /Rollback requires attention:/);
     assert.match(result.stderr, /original preserved at/);
     assert.equal(existsSync(join(project, "AGENTS.md")), false);
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
+await test("project cleanup preserves a replaced gitignore backup", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const project = join(workspaceRoot, "project-a");
+    mkdirSync(project);
+    writeFileSync(join(project, ".gitignore"), "dist/\n");
+
+    const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
+    const initializer = readFileSync(initializerPath, "utf8");
+    const needle = "  if (gitignoreBackup) {";
+    assert.equal(
+      initializer.indexOf(needle),
+      initializer.lastIndexOf(needle),
+      "backup cleanup injection point must be unique"
+    );
+    writeFileSync(
+      initializerPath,
+      initializer.replace(
+        needle,
+        `  const displacedBackup = gitignoreBackup + ".original";\n` +
+          `  renameSync(gitignoreBackup, displacedBackup);\n` +
+          `  writeFileSync(gitignoreBackup, "concurrent backup\\n");\n\n` +
+          needle
+      )
+    );
+
+    const result = runProjectInitializer(checkoutRoot, project, testRoot);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stderr, /backup remains.*changed concurrently/i);
+    const backups = readdirSync(project).filter((name) =>
+      name.startsWith(".gitignore.machine-bootstrap-")
+    );
+    assert.equal(backups.length, 2);
+    const concurrentBackup = backups.find((name) => !name.endsWith(".original"));
+    const originalBackup = backups.find((name) => name.endsWith(".original"));
+    assert.equal(readFileSync(join(project, concurrentBackup), "utf8"), "concurrent backup\n");
+    assert.equal(readFileSync(join(project, originalBackup), "utf8"), "dist/\n");
   } finally {
     rmSync(testRoot, { recursive: true, force: true });
   }
@@ -1831,6 +1906,16 @@ const workflowSourceRoot = join(bootstrapRoot, "workflows", "product-delivery");
 const workflowManifest = JSON.parse(
   readFileSync(join(workflowSourceRoot, "manifest.json"), "utf8")
 );
+
+await test("implementation reports can record a review waiver accurately", () => {
+  const template = readFileSync(
+    join(workflowSourceRoot, "templates", "implementation-report.md"),
+    "utf8"
+  );
+  assert.match(template, /Independent review status.*pending.*waived/i);
+  assert.match(template, /Waiver reason/i);
+  assert.match(template, /pending unless.*waived/i);
+});
 
 function workflowRelativePaths(manifest) {
   return [
