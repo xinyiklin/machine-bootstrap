@@ -7,9 +7,11 @@ import {
   lstatSync,
   mkdirSync,
   readFileSync,
+  readlinkSync,
   realpathSync,
   renameSync,
   statSync,
+  symlinkSync,
   unlinkSync,
   writeFileSync
 } from "node:fs";
@@ -316,13 +318,35 @@ function isOwnedFile(transaction, path) {
 }
 
 function restoreNoClobber(source, destination, warnings, label) {
-  if (!entryExists(source)) return false;
   if (entryExists(destination)) {
     warnings.push(`${label} preserved at ${source}; ${destination} is occupied`);
     return false;
   }
+
+  let stat;
   try {
-    copyFileSync(source, destination, constants.COPYFILE_EXCL);
+    stat = lstatSync(source);
+  } catch (error) {
+    if (error?.code === "ENOENT" || error?.code === "ENOTDIR") {
+      warnings.push(`${label} missing from ${source}; recovery is not available`);
+    } else {
+      warnings.push(`${label} could not be inspected at ${source}: ${error.message}`);
+    }
+    return false;
+  }
+
+  try {
+    if (stat.isFile()) {
+      copyFileSync(source, destination, constants.COPYFILE_EXCL);
+    } else if (stat.isSymbolicLink()) {
+      symlinkSync(readlinkSync(source), destination);
+    } else {
+      const entryType = stat.isDirectory() ? "directory" : "unsupported entry type";
+      warnings.push(
+        `${label} preserved at ${source}; ${entryType} requires manual recovery`
+      );
+      return false;
+    }
     try {
       unlinkSync(source);
     } catch (error) {

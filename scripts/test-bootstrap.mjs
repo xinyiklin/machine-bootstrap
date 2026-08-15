@@ -9,10 +9,12 @@ import {
   copyFileSync,
   cpSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
+  readlinkSync,
   rmSync,
   symlinkSync,
   writeFileSync
@@ -1454,6 +1456,52 @@ await test("project rollback preserves a concurrently changed starter file", () 
     rmSync(testRoot, { recursive: true, force: true });
   }
 });
+
+await test("project rollback never dereferences a concurrent starter symlink", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const project = join(workspaceRoot, "project-a");
+    const externalTarget = join(testRoot, "external-private.txt");
+    mkdirSync(project);
+    writeFileSync(externalTarget, "external private bytes\n");
+    assert.equal(
+      spawnSync("git", ["init", "-q"], { cwd: project, encoding: "utf8" }).status,
+      0
+    );
+
+    const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
+    const initializer = readFileSync(initializerPath, "utf8");
+    const needle = "  const placeholderFiles = [...seedFiles, \".gitignore\"];";
+    assert.ok(initializer.includes(needle), "symlink rollback injection point must exist");
+    writeFileSync(
+      initializerPath,
+      initializer.replace(
+        needle,
+        `  const concurrentStarter = join(canonicalTarget, "AGENTS.md");\n` +
+          `  const linkResult = spawnSync(process.execPath, [\n` +
+          `    "-e",\n` +
+          `    "const { symlinkSync, unlinkSync } = require('node:fs'); " +\n` +
+          `      "unlinkSync(process.argv[1]); symlinkSync(process.argv[2], process.argv[1]);",\n` +
+          `    concurrentStarter,\n` +
+          `    ${JSON.stringify(externalTarget)}\n` +
+          `  ], { encoding: "utf8", shell: false });\n` +
+          `  if (linkResult.status !== 0) throw new Error(linkResult.stderr);\n` +
+          `  throw new Error("injected symlink replacement");\n\n` +
+          needle
+      )
+    );
+
+    const result = runProjectInitializer(checkoutRoot, project, testRoot);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /injected symlink replacement/);
+    const restoredStarter = join(project, "AGENTS.md");
+    assert.equal(lstatSync(restoredStarter).isSymbolicLink(), true);
+    assert.equal(readlinkSync(restoredStarter), externalTarget);
+    assert.equal(readFileSync(externalTarget, "utf8"), "external private bytes\n");
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+}, { needsSymlinks: true });
 
 await test("project rollback preserves a concurrently replaced empty directory", () => {
   const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
