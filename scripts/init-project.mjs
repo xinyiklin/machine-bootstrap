@@ -639,17 +639,60 @@ function restoreNoClobberHere(source, destination, warnings, label) {
   }
 }
 
-function restoreNoClobber(source, destination, warnings, label) {
-  if (dirname(source) !== dirname(destination)) {
-    warnings.push(`${label} preserved at ${source}; recovery parent differs`);
+function restoreTrackedBackup(transaction, warnings) {
+  const source = transaction.backupPath;
+  const destination = transaction.destination;
+  if (
+    !source ||
+    !transaction.backupIdentity ||
+    !Buffer.isBuffer(transaction.backupContents) ||
+    dirname(source) !== dirname(destination)
+  ) {
+    warnings.push(`original backup requires manual recovery at ${source}`);
     return false;
   }
+
   try {
-    return withAnchoredDirectory(dirname(destination), () =>
-      restoreNoClobberHere(source, destination, warnings, label)
-    );
+    return withAnchoredDirectory(dirname(destination), () => {
+      const sourceLeaf = basename(source);
+      const destinationLeaf = basename(destination);
+      if (entryExists(destinationLeaf)) {
+        warnings.push(
+          `original preserved at ${source}; ${destination} is occupied`
+        );
+        return false;
+      }
+
+      const backup = regularLeafSnapshot(sourceLeaf, source);
+      if (
+        !sameFileIdentity(backup.identity, transaction.backupIdentity) ||
+        !backup.contents.equals(transaction.backupContents)
+      ) {
+        warnings.push(
+          `original backup changed concurrently at ${source}; manual recovery required`
+        );
+        return false;
+      }
+
+      let descriptor;
+      try {
+        descriptor = openSync(
+          destinationLeaf,
+          constants.O_CREAT |
+            constants.O_EXCL |
+            constants.O_WRONLY |
+            (constants.O_NOFOLLOW ?? 0),
+          0o666
+        );
+        writeFileSync(descriptor, backup.contents);
+      } finally {
+        if (descriptor !== undefined) closeSync(descriptor);
+      }
+      warnings.push(`original restored; backup retained at ${source}`);
+      return true;
+    });
   } catch (error) {
-    warnings.push(`${label} preserved at ${source}: ${error.message}`);
+    warnings.push(`original backup preserved at ${source}: ${error.message}`);
     return false;
   }
 }
@@ -701,12 +744,7 @@ function rollback() {
     }
 
     if (transaction.backupPath) {
-      restoreNoClobber(
-        transaction.backupPath,
-        transaction.destination,
-        warnings,
-        "original"
-      );
+      restoreTrackedBackup(transaction, warnings);
     }
   }
   transactions.length = 0;
@@ -841,6 +879,8 @@ try {
         destination: gitignorePath,
         expectedContents: updatedContents,
         backupPath: gitignoreBackup,
+        backupContents: plannedGitignoreOriginal,
+        backupIdentity: null,
         identity: null,
         writeCompleted: false
       };
@@ -863,6 +903,7 @@ try {
           throw new Error(`${gitignoreBackup} changed during initialization`);
         }
         gitignoreBackupIdentity = current.identity;
+        gitignoreTransaction.backupIdentity = current.identity;
         let descriptor;
         try {
           descriptor = openSync(

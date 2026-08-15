@@ -1647,6 +1647,49 @@ await test("project cleanup preserves a replaced gitignore backup", () => {
   }
 });
 
+await test("project rollback never restores a replaced gitignore backup", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const project = join(workspaceRoot, "project-a");
+    mkdirSync(project);
+    writeFileSync(join(project, ".gitignore"), "dist/\n");
+
+    const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
+    const initializer = readFileSync(initializerPath, "utf8");
+    const needle = "          descriptor = openSync(";
+    assert.equal(
+      initializer.indexOf(needle),
+      initializer.lastIndexOf(needle),
+      "backup replacement injection point must be unique"
+    );
+    writeFileSync(
+      initializerPath,
+      initializer.replace(
+        needle,
+        `          renameSync(gitignoreBackup, gitignoreBackup + ".original");\n` +
+          `          writeFileSync(gitignoreBackup, "replacement backup\\n");\n` +
+          `          throw new Error("injected backup replacement");\n` +
+          needle
+      )
+    );
+
+    const result = runProjectInitializer(checkoutRoot, project, testRoot);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /backup changed concurrently.*manual recovery/i);
+    assert.equal(existsSync(join(project, ".gitignore")), false);
+    const backups = readdirSync(project).filter((name) =>
+      name.startsWith(".gitignore.machine-bootstrap-")
+    );
+    assert.equal(backups.length, 2);
+    const replacement = backups.find((name) => !name.endsWith(".original"));
+    const original = backups.find((name) => name.endsWith(".original"));
+    assert.equal(readFileSync(join(project, replacement), "utf8"), "replacement backup\n");
+    assert.equal(readFileSync(join(project, original), "utf8"), "dist/\n");
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
 await test("project initialization revalidates a preserved gitignore", () => {
   const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
   try {
