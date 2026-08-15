@@ -18,10 +18,11 @@ is read only when a task needs it.
   are independent repositories with self-contained guidance.
 - 2026-08-14 [USER+CODE] Project templates have one canonical source and are
   seeded missing-only into one explicit target. Existing project policy remains
-  project-owned; `.gitignore` keeps its environment rules ordered and ambiguous
-  existing policy stops before writes. Rollback removes only verified run-owned
-  files, restores concurrent symlinks without dereferencing them, never deletes
-  directories by pathname, and reports exact paths for manual cleanup.
+  project-owned; Git verifies the effective `.gitignore` environment policy and
+  ambiguous or overridden policy stops before writes. Rollback removes only
+  verified run-owned files, leaves identity-changed concurrent entries at their
+  original paths, restores in-place changes without dereferencing symlinks,
+  never deletes directories by pathname, and reports exact recovery paths.
 - 2026-08-14 [USER] Legacy parent guidance stops initialization for manual
   review and cleanup. Automatic migration and its versioned manifest are
   intentionally deferred (D022).

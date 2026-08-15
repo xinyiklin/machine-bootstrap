@@ -1374,6 +1374,30 @@ await test("ambiguous existing environment ignore policy is preserved for review
   }
 });
 
+await test("ineffective env example exception is preserved for review", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const project = join(workspaceRoot, "project-a");
+    mkdirSync(project);
+    const gitResult = spawnSync("git", ["init", "-q"], {
+      cwd: project,
+      encoding: "utf8",
+      shell: false
+    });
+    assert.equal(gitResult.status, 0, gitResult.stderr);
+    const original = ".env\n.env.*\n!.env.example\n*.example\n";
+    writeFileSync(join(project, ".gitignore"), original);
+
+    const result = runProjectInitializer(checkoutRoot, project, testRoot);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /environment rules.*manual review/i);
+    assert.equal(readFileSync(join(project, ".gitignore"), "utf8"), original);
+    assert.equal(existsSync(join(project, "AGENTS.md")), false);
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
 await test("project rollback preserves a concurrent gitignore and its original backup", () => {
   const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
   try {
@@ -1448,6 +1472,48 @@ await test("project rollback preserves a concurrently changed starter file", () 
     assert.equal(
       readFileSync(join(project, "AGENTS.md"), "utf8"),
       "concurrent user policy\n"
+    );
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
+await test("project rollback preserves a concurrent starter directory in place", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const project = join(workspaceRoot, "project-a");
+    mkdirSync(project);
+    assert.equal(
+      spawnSync("git", ["init", "-q"], { cwd: project, encoding: "utf8" }).status,
+      0
+    );
+
+    const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
+    const initializer = readFileSync(initializerPath, "utf8");
+    const needle = "  const placeholderFiles = [...seedFiles, \".gitignore\"];";
+    assert.ok(initializer.includes(needle), "directory rollback injection point must exist");
+    writeFileSync(
+      initializerPath,
+      initializer.replace(
+        needle,
+        "  const concurrentStarter = join(canonicalTarget, \"AGENTS.md\");\n" +
+          "  unlinkSync(concurrentStarter);\n" +
+          "  mkdirSync(concurrentStarter);\n" +
+          "  writeFileSync(join(concurrentStarter, \"keep.txt\"), \"keep me\\n\");\n" +
+          "  throw new Error(\"injected starter directory replacement\");\n\n" +
+          needle
+      )
+    );
+
+    const result = runProjectInitializer(checkoutRoot, project, testRoot);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /injected starter directory replacement/);
+    const starter = join(project, "AGENTS.md");
+    assert.equal(lstatSync(starter).isDirectory(), true);
+    assert.equal(readFileSync(join(starter, "keep.txt"), "utf8"), "keep me\n");
+    assert.equal(
+      readdirSync(project).some((name) => name.startsWith("AGENTS.md.rollback-")),
+      false
     );
   } finally {
     rmSync(testRoot, { recursive: true, force: true });

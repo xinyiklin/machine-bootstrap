@@ -29,8 +29,10 @@ the template paths by hand.
    target directory does not exist. The initializer copies only missing starter
    paths and preserves existing project-owned files. With no environment rules,
    it appends the complete ordered `.env`, `.env.*`, `!.env.example` block plus
-   missing independent safety rules. An incomplete or ambiguous existing
-   environment policy requires manual review before any write.
+   missing independent safety rules. Git verifies that the resulting policy
+   ignores local environment files while exposing `.env.example`; an
+   ineffective, incomplete, or ambiguous existing policy requires manual review
+   before any write.
 2. Replace every placeholder with facts verified from the real project and
    delete irrelevant sections and template notes.
 3. Keep the single `@AGENTS.md` import immediately below the project

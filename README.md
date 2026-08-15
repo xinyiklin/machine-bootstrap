@@ -129,11 +129,14 @@ Choose either setup style:
    files. For an existing `.gitignore` with no environment rules, it appends
    the complete ordered `.env`, `.env.*`, `!.env.example` policy plus missing
    independent safety rules. An existing canonical environment block is
-   preserved; incomplete or ambiguous environment rules stop for manual review
-   before any project writes. The initializer never copies `TEMPLATE-USAGE.md`
-   and never creates or replaces a README. On failure, rollback removes only
-   verified run-owned files. It never deletes directories by pathname; any
-   leftover directory cleanup is reported for manual review.
+   preserved only when Git confirms the resulting rules still ignore local
+   environment files and expose `.env.example`; ineffective, incomplete, or
+   ambiguous rules stop for manual review before any project writes. The
+   initializer never copies `TEMPLATE-USAGE.md` and never creates or replaces a
+   README. On failure, rollback removes only verified run-owned files and leaves
+   identity-changed concurrent entries at their original paths. It never deletes
+   directories by pathname; any leftover directory cleanup is reported for
+   manual review.
 6. Replace project placeholders with verified project facts. Start a new Codex
    or Claude session in that project root or relevant scoped directory.
 

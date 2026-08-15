@@ -6,17 +6,19 @@ import {
   copyFileSync,
   lstatSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   readlinkSync,
   realpathSync,
   renameSync,
+  rmSync,
   statSync,
   symlinkSync,
   unlinkSync,
   writeFileSync
 } from "node:fs";
 import { randomUUID } from "node:crypto";
-import { homedir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import {
   basename,
   dirname,
@@ -183,6 +185,78 @@ function gitProbe(path) {
   });
 }
 
+function withGitignoreAdditions(original, additions) {
+  if (!additions.length) return original;
+  const originalText = original.toString("utf8");
+  const newline = originalText.includes("\r\n") ? "\r\n" : "\n";
+  const separator = originalText.length && !originalText.endsWith("\n")
+    ? newline
+    : "";
+  const addition =
+    `${separator}${newline}# Added by machine-bootstrap project initializer${newline}` +
+    `${additions.join(newline)}${newline}`;
+  return Buffer.from(originalText + addition, "utf8");
+}
+
+function environmentPolicyProblem(contents) {
+  const probeRoot = mkdtempSync(join(tmpdir(), "machine-bootstrap-gitignore-"));
+  try {
+    writeFileSync(join(probeRoot, ".gitignore"), contents);
+    const environment = {
+      ...process.env,
+      GIT_CONFIG_NOSYSTEM: "1",
+      HOME: probeRoot,
+      USERPROFILE: probeRoot,
+      XDG_CONFIG_HOME: probeRoot,
+      LANG: "C",
+      LC_ALL: "C"
+    };
+    for (const name of ["GIT_DIR", "GIT_INDEX_FILE", "GIT_WORK_TREE"]) {
+      delete environment[name];
+    }
+    const initialized = spawnSync("git", ["init", "-q"], {
+      cwd: probeRoot,
+      encoding: "utf8",
+      env: environment,
+      shell: false
+    });
+    if (initialized.error) return initialized.error.message;
+    if (initialized.status !== 0) {
+      return `Git could not evaluate the environment rules: ${initialized.stderr.trim()}`;
+    }
+
+    for (const [path, shouldBeIgnored] of [
+      [".env", true],
+      [".env.local", true],
+      [".env.example", false]
+    ]) {
+      const checked = spawnSync(
+        "git",
+        ["check-ignore", "--quiet", "--no-index", "--", path],
+        {
+          cwd: probeRoot,
+          encoding: "utf8",
+          env: environment,
+          shell: false
+        }
+      );
+      if (checked.error) return checked.error.message;
+      if (checked.status !== 0 && checked.status !== 1) {
+        return `Git could not evaluate ${path}: ${checked.stderr.trim()}`;
+      }
+      const ignored = checked.status === 0;
+      if (ignored !== shouldBeIgnored) {
+        return shouldBeIgnored
+          ? `${path} is not ignored by the resulting policy`
+          : `${path} remains ignored by the resulting policy`;
+      }
+    }
+    return null;
+  } finally {
+    rmSync(probeRoot, { recursive: true, force: true });
+  }
+}
+
 let gitRoot = null;
 const probe = gitProbe(targetExisted ? requestedTarget : dirname(requestedTarget));
 if (probe.error) {
@@ -255,6 +329,7 @@ if (targetExisted) {
 const gitignorePath = join(canonicalTarget, ".gitignore");
 let plannedGitignoreOriginal = null;
 let plannedGitignoreAdditions = [...safetyEntries];
+let plannedGitignoreContents = readFileSync(join(templateRoot, ".gitignore"));
 if (targetExisted && entryExists(gitignorePath)) {
   plannedGitignoreOriginal = readFileSync(gitignorePath);
   const presentEntries = plannedGitignoreOriginal
@@ -286,6 +361,17 @@ if (targetExisted && entryExists(gitignorePath)) {
       (entry) => !presentEntrySet.has(entry)
     );
   }
+  plannedGitignoreContents = withGitignoreAdditions(
+    plannedGitignoreOriginal,
+    plannedGitignoreAdditions
+  );
+}
+const environmentProblem = environmentPolicyProblem(plannedGitignoreContents);
+if (environmentProblem) {
+  fail(
+    "Existing .gitignore environment rules require manual review before " +
+      `initialization: ${environmentProblem}`
+  );
 }
 
 const createdFiles = [];
@@ -302,14 +388,20 @@ function fileIdentity(path) {
   return { dev: stat.dev, ino: stat.ino, birthtimeNs: stat.birthtimeNs };
 }
 
+function sameFileIdentity(left, right) {
+  return (
+    left.dev === right.dev &&
+    left.ino === right.ino &&
+    left.birthtimeNs === right.birthtimeNs
+  );
+}
+
 function isOwnedFile(transaction, path) {
   if (!transaction.identity || !entryExists(path)) return false;
   try {
     const identity = fileIdentity(path);
     return (
-      identity.dev === transaction.identity.dev &&
-      identity.ino === transaction.identity.ino &&
-      identity.birthtimeNs === transaction.identity.birthtimeNs &&
+      sameFileIdentity(identity, transaction.identity) &&
       readFileSync(path).equals(transaction.expectedContents)
     );
   } catch {
@@ -363,6 +455,21 @@ function rollback() {
   const warnings = [];
   for (const transaction of [...transactions].reverse()) {
     if (transaction.identity && entryExists(transaction.destination)) {
+      let currentIdentity;
+      try {
+        currentIdentity = fileIdentity(transaction.destination);
+      } catch (error) {
+        warnings.push(
+          `could not inspect ${transaction.destination}: ${error.message}`
+        );
+        continue;
+      }
+      if (!sameFileIdentity(currentIdentity, transaction.identity)) {
+        warnings.push(
+          `${transaction.destination} changed concurrently and was preserved in place`
+        );
+        continue;
+      }
       const quarantine =
         `${transaction.destination}.rollback-${process.pid}-${randomUUID()}`;
       try {
@@ -501,14 +608,7 @@ try {
         canonicalTarget,
         `.gitignore.machine-bootstrap-${process.pid}-${randomUUID()}.backup`
       );
-      const originalText = plannedGitignoreOriginal.toString("utf8");
-      const newline = originalText.includes("\r\n") ? "\r\n" : "\n";
-      const separator =
-        originalText.length && !originalText.endsWith("\n") ? newline : "";
-      const addition =
-        `${separator}${newline}# Added by machine-bootstrap project initializer${newline}` +
-        `${gitignoreAdded.join(newline)}${newline}`;
-      const updatedContents = Buffer.from(originalText + addition, "utf8");
+      const updatedContents = plannedGitignoreContents;
       gitignoreTransaction = {
         destination: gitignorePath,
         expectedContents: updatedContents,
