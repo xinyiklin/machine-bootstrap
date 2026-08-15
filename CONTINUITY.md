@@ -24,9 +24,9 @@ is read only when a task needs it.
   and recovery use verified real-directory identities pinned for the full run
   plus no-follow leaf access. Machine and project template sources are
   snapshot-read as real in-checkout files before writes; preflighted starters
-  that disappear are not replaced.
-  new directories are identity-captured under private staging names before
-  publication, and all seeded files are revalidated before success. They reject
+  that disappear are not replaced. New directories use atomic no-replace claims
+  and are identity-snapshotted before use; all seeded files are revalidated
+  before success. They reject
   concurrent parent, entry, or backup replacement, leave
   identity-changed entries at their original paths, never delete entries after
   a separate content check, and report exact recovery paths.

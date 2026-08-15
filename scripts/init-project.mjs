@@ -911,30 +911,43 @@ function createAndPinManagedDirectory(path) {
       throw new Error(`Managed parent appeared during initialization: ${path}`);
     }
 
-    // Create under an unpredictable private name so this run can capture the
-    // directory identity before publishing it at the managed path. The rename
-    // and post-rename identity check keep a replaced staging entry from being
-    // learned as a trusted parent.
-    const stagingLeaf =
-      `.${leaf}.machine-bootstrap-${process.pid}-${randomUUID()}.directory`;
-    const stagingPath = join(dirname(path), stagingLeaf);
-    mkdirSync(stagingLeaf);
-    createdDirectories.push(stagingPath);
-    const stagingStat = lstatSync(stagingLeaf, { bigint: true });
-    if (stagingStat.isSymbolicLink() || !stagingStat.isDirectory()) {
+    // mkdir is the portable atomic no-replace claim for a directory path. An
+    // entry that appears after the check makes mkdir fail instead of being
+    // replaced. Capture the claimed directory through a descriptor on POSIX,
+    // then recheck its pathname identity before trusting it as an anchor.
+    mkdirSync(leaf);
+    createdDirectories.push(path);
+    const claimedStat = lstatSync(leaf, { bigint: true });
+    if (claimedStat.isSymbolicLink() || !claimedStat.isDirectory()) {
       throw new Error(`Managed parent must be a real directory: ${path}`);
     }
-    const stagingIdentity = identityFromStat(stagingStat);
-    if (entryExists(leaf)) {
-      throw new Error(`Managed parent appeared during initialization: ${path}`);
+    let claimedIdentity = identityFromStat(claimedStat);
+    let descriptor;
+    try {
+      if (process.platform !== "win32") {
+        descriptor = openSync(
+          leaf,
+          constants.O_RDONLY |
+            (constants.O_DIRECTORY ?? 0) |
+            (constants.O_NOFOLLOW ?? 0)
+        );
+        const opened = fstatSync(descriptor, { bigint: true });
+        if (
+          !opened.isDirectory() ||
+          !sameFileIdentity(identityFromStat(opened), claimedIdentity)
+        ) {
+          throw new Error(`Managed parent changed during initialization: ${path}`);
+        }
+        claimedIdentity = identityFromStat(opened);
+      }
+    } finally {
+      if (descriptor !== undefined) closeSync(descriptor);
     }
-    renameSync(stagingLeaf, leaf);
-    createdDirectories[createdDirectories.length - 1] = path;
     pinManagedDirectorySnapshot(
       path,
       lstatSync(leaf, { bigint: true }),
       realpathSync.native(leaf),
-      stagingIdentity
+      claimedIdentity
     );
   });
 }

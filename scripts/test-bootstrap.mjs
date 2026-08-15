@@ -1532,26 +1532,25 @@ await test("project initialization pins the original target directory", () => {
   }
 });
 
-await test("project initialization pins a newly created directory before publication", () => {
+await test("project initialization never replaces a late directory arrival", () => {
   const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
   try {
     const project = join(workspaceRoot, "project-a");
 
     const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
     const initializer = readFileSync(initializerPath, "utf8");
-    const needle = "    renameSync(stagingLeaf, leaf);";
-    assert.ok(initializer.includes(needle), "new directory injection point must exist");
+    const needle = "    mkdirSync(leaf);";
+    assert.ok(initializer.includes(needle), "directory claim injection point must exist");
     assert.equal(
       initializer.indexOf(needle),
       initializer.lastIndexOf(needle),
-      "new directory injection point must be unique"
+      "directory claim injection point must be unique"
     );
     writeFileSync(
       initializerPath,
       initializer.replace(
         needle,
-        "    renameSync(stagingLeaf, stagingLeaf + \".original\");\n" +
-          "    mkdirSync(stagingLeaf);\n" +
+        "    mkdirSync(leaf);\n" +
           needle
       )
     );
@@ -1563,8 +1562,9 @@ await test("project initialization pins a newly created directory before publica
       ["--create"]
     );
     assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /Managed parent changed during initialization/);
+    assert.match(result.stderr, /EEXIST|file already exists/i);
     assert.equal(existsSync(join(project, "AGENTS.md")), false);
+    assert.deepEqual(readdirSync(project), []);
   } finally {
     rmSync(testRoot, { recursive: true, force: true });
   }

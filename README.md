@@ -137,8 +137,8 @@ Choose either setup style:
    initializer never copies `TEMPLATE-USAGE.md` and never creates or replaces a
    README. Canonical template sources must remain real files inside this
    checkout and are snapshotted with no-follow reads before project writes.
-   Newly created parents are staged under private names so their identities are
-   captured before publication. Managed reads, writes, and
+   Newly created parents use an atomic no-replace directory claim and are
+   identity-snapshotted before use. Managed reads, writes, and
    rollback recovery are anchored to real parent-directory identities pinned
    for the full run; symbolic-link, parent, leaf, or backup replacement stops
    safely instead of being followed or deleted. Every seeded file is
