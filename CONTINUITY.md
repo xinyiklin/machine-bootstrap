@@ -1,255 +1,141 @@
 # Continuity Ledger — Machine Bootstrap
 
-Scope: the portable parent guides, project templates, shared-skill manifest,
-workflow foundation, and safe setup scripts in this repository. Each computer's
-workspace state belongs in its parent `MACHINE.md` and local continuity ledger.
+Scope: machine-level setup, one-time project templates, shared-skill manifest,
+workflow foundation, and safe administration scripts in this repository.
+Machine-local state belongs in optional parent `MACHINE.md`; project state
+belongs in each sibling project.
+
+Bounded ledger: **no more than 160 lines total**. Working set stays near 12
+paths. Active `Dnnn` entries are compact indexes; detailed rationale belongs in
+the owning contract. Rotated history lives in `docs/continuity/YYYY-MM.md` and
+is read only when a task needs it.
 
 ## Snapshot
 
-- 2026-08-14 [USER+CODE] Added a portable Git/GitHub delivery baseline from
-  CareFlow and RoleFit conventions: typed branches, Conventional Commits and
-  squash-compatible PR titles, a reviewable PR template, exact-head merge and
-  post-merge gates, release/deploy receipts, and explicit publication state.
-  New projects receive a self-contained copy under
-  `docs/engineering/git-workflow.md` and `.github/pull_request_template.md`;
-  project commands and CI remain project-owned.
-- 2026-08-13 [USER] Implementation guidance now requires the smallest
-  maintainable solution, discourages narrative comments and speculative
-  abstractions, and requires user approval before implementing useful ideas
-  outside the requested scope.
-- 2026-08-13 [USER] Every implementation now defaults to the implementer's own
-  verification plus one fresh independent review. Only the user may waive that
-  review for a specific change; requested additional reviewers are honored
-  after a firm risk-based recommendation.
-- 2026-08-13 [CODE] Product Delivery workflow 1.1.0 makes implementer diff
-  review and one independent review the default, and records the Delivery
-  Lead's post-review recommendation on whether additional reviewers are needed.
-- 2026-08-13 [USER] Product Delivery workflow 1.2.0 keeps five standard task
-  artifacts and makes Decision Log and Change Request conditional. Active work
-  stays local by default; tracked continuity references require the matching
-  completed task folder to be tracked too.
-- 2026-08-13 [USER] Dependency versions must be established from current
-  official sources rather than model memory. Prefer the latest compatible
-  stable release, preserve each project's package-manager/version-range policy,
-  update tracked lockfiles, and explain deliberate older or prerelease choices.
-- 2026-07-27 [USER] This repository exists so the same general agent guidance
-  and shared Claude Code/Codex skills can be restored on another machine.
-- 2026-07-27 [CODE] The skill manifest declares eight portable skills. The
-  installer adds missing canonical copies under `~/.agents/skills`, creates
-  Claude Code symlinks, and rejects redundant Codex-specific copies.
-- 2026-07-27 [CODE] Setup places portable parent guides without overwriting
-  differences by default, creates missing machine notes, and seeds project
-  templates. `--replace` creates timestamped guide backups.
-- 2026-07-27 [CODE] Machine-specific paths, project maps, ports, lifecycle
-  notes, and local tool preferences are intentionally excluded.
-- 2026-07-27 [USER] Ownership flows from the bootstrap repository to the
-  workspace guidance layer and then to self-contained child project guidance.
-- 2026-07-27 [CODE] `scripts/init-workspace.mjs` is the single safe entry point:
-  it rejects a Git-owned workspace root, initializes guidance and skills, and
-  finishes with read-only verification. Check mode also rejects unresolved
-  `MACHINE.md` placeholders.
-- 2026-07-27 [CODE] Differing portable guides or templates now fail closed.
-  Reviewed `--replace` operations preserve timestamped backups; `MACHINE.md`
-  remains machine-owned and is never replaced.
-- 2026-07-27 [CODE] Shared skills are materialized from exact reviewed Git
-  revisions and portable SHA-256 content checks. Bootstrap executes no upstream
-  package installer or lifecycle code.
-- 2026-07-27 [TOOL] Clean-home reconstruction caught and corrected an
-  Impeccable moving-branch pin; the manifest now uses the peeled 4.0.2 release
-  commit whose Git subtree exactly matches the reviewed installed content.
-- 2026-07-27 [CODE] Skill integrity ordering is deterministic UTF-8 byte order
-  rather than host locale order, and every directory entry—including OS
-  metadata and injected empty directories—is covered by the reviewed hash.
-  Empty directories carry their own record, which a reviewed Git tree can never
-  contain, so the eight pinned hashes were unaffected by closing that gap.
-- 2026-07-27 [CODE] Skill acquisition runs Git non-interactively
-  (`GIT_TERMINAL_PROMPT=0`, no inherited stdin), so an unreachable or private
-  repository fails fast instead of blocking unattended setup on a credential
-  prompt. Inherited askpass programs and credential helpers are also disabled;
-  Git errors name the real subcommand rather than a leading `-C`.
-- 2026-07-27 [CODE] Initialization treats the checkout's direct parent as the
-  workspace and rejects the filesystem root or user home before any writes.
-- 2026-07-27 [CODE] Setup validates `MACHINE.md` before any workspace writes.
-  New-project templates include a baseline `.gitignore` for personal agent
-  state, environment configuration, and OS metadata.
-- 2026-07-27 [CODE] Known argument, prerequisite, manifest, and hash-report
-  failures now report concise messages instead of raw stacks, including
-  `setup-guides.mjs` argument errors, an uninstalled `--print-hashes` roster,
-  invalid manifest data, wrong-typed portable sources, and missing Git.
-- 2026-07-27 [CODE] A canonical skill directory without `SKILL.md` fails closed
-  before any network fetch, with a message naming the path to review, rather
-  than surfacing "destination appeared during setup" after fetching sources.
-- 2026-07-27 [CODE] A skill root that exists as a non-directory is rejected with
-  a named path before any fetch or link, instead of raising `ENOTDIR` from
-  `lstat`; a non-directory ancestor now reads as "entry absent". SUPERSEDED
-  below: that check first used `lstat` and wrongly rejected a symlinked root.
-- 2026-07-27 [CODE] Skill roots and skill directories are resolved with `stat`,
-  so a root or a skill relocated behind a symlink stays supported while a
-  regular file in either position is still rejected. Entries inside a skill are
-  unchanged: they are still recorded as links, not as their targets.
-- 2026-07-27 [TOOL] A disposable-home end-to-end install fetched, hash-verified,
-  and linked all eight skills, and the follow-up `--check` passed.
-- 2026-07-27 [CODE] Workspace destinations are classified before comparison, so
-  a wrong-typed, symlinked, or unreadable guide reports its actual condition
-  instead of "differs", and an unreadable directory no longer raises `EACCES`
-  from `readdir`. Reviewed `--replace` still recovers by backing the entry up.
-  SUPERSEDED below on symlinks: classification first used `lstat`, so a
-  byte-identical symlinked guide could never pass `--check`.
-- 2026-07-27 [CODE] Workspace guides are compared through symlinks, because the
-  content an agent loads at that path is what the check is about. A symlinked
-  guide matching its portable source verifies as current; drifted, broken, and
-  wrong-typed links each report their own condition. Placement still renames
-  the existing entry to a backup before writing, so a link target is never
-  written through — covered by a test that asserts the external file survives.
-- 2026-07-27 [CODE] Guide and template placement share one `place()` helper, and
-  presence checks use `lstat` so a dangling symlink is not written through.
-- 2026-07-27 [CODE] A reviewed-hash mismatch names any stray OS metadata found
-  in the skill directory; the hash still covers every entry, unchanged by D007.
-- 2026-07-27 [CODE] Post-install verification covers newly installed skills
-  only; already-present skills are verified once per run instead of hashed
-  twice. Roster size is derived from the manifest in tests rather than pinned.
-- 2026-07-27 [TOOL] Running the suite against a disposable home showed five
-  checks failing with raw `ENOENT` before the first install, including three
-  added during this review. Those checks read the machine's own installed
-  roster; they now skip with a named reason and a rerun instruction, so the
-  documented verification command works on a fresh machine without hiding
-  coverage.
-- 2026-07-27 [CODE] Skill-manifest parsing and validation have one shared owner
-  used by initialization and installation. Invalid JSON, invalid entries, and
-  wrong-typed portable sources now fail before any workspace write, without a
-  raw runtime stack.
-- 2026-07-27 [CODE] Missing-skill installation atomically claims each
-  destination directory before adding it to rollback state. A path that appears
-  concurrently is rejected and never removed as if the bootstrap created it.
-- 2026-07-27 [CODE] New workspace files use exclusive creation and template
-  directories are atomically claimed before copying. A guide, machine file, or
-  template path that appears during setup is never overwritten or written
-  through.
-- 2026-07-31 [USER] The bootstrap now also owns a portable, provider-neutral
-  product-to-delivery workflow: Product Partner (why and what), Delivery Lead
-  (how and delivery), and Verifier (independent evidence), with two distinct
-  exact-version user approval gates.
-- 2026-07-31 [CODE] `workflows/registry.json` names the installed packages
-  explicitly; nothing is discovered by scanning directories. The
-  `product-delivery` package carries `manifest.json` (schema 1, version 1.0.0),
-  `WORKFLOW.md`, three role contracts, and seven artifact templates.
-- 2026-07-31 [CODE] Provider adapters are generated from the Markdown role
-  contracts rather than maintained separately: Claude subagents in
-  `$CLAUDE_CONFIG_DIR/agents/mb-*.md` when set (otherwise
-  `~/.claude/agents/mb-*.md`), Codex agents in `$CODEX_HOME/agents/mb_*.toml`
-  when set (otherwise `~/.codex/agents/mb_*.toml`), and Codex profiles following
-  the same `$CODEX_HOME` default. Each carries provenance naming its source
-  contract and pins no model.
-- 2026-07-31 [TOOL] Provider formats were verified against current official
-  documentation before implementation: Claude Code requires only `name` and
-  `description` frontmatter and runs a session-wide agent through
-  `claude --agent`; Codex custom agents require `name`, `description`, and
-  `developer_instructions`, and profiles are separate
-  `$CODEX_HOME/<name>.config.toml` files activated with `codex --profile`. The
-  legacy `[profiles.x]` table form is not used.
-- 2026-07-31 [CODE] `scripts/install-workflows.mjs` validates every manifest and
-  source, stages generated adapters in a temporary directory, preflights all
-  destinations, and only then writes. It owns exactly its namespaced paths and
-  never reads or writes `settings.json` in the Claude configuration root or
-  `config.toml` in the Codex home.
-- 2026-07-31 [CODE] Placement rules that guidance setup and workflow
-  installation share now live in `scripts/lib/fs-safety.mjs`; the portable path
-  predicate shared by reviewed skills and workflow sources lives in
-  `scripts/lib/portable-path.mjs`. `setup-guides.mjs` behavior is unchanged.
-- 2026-07-31 [CODE] The project template no longer ignores all of `.claude/`.
-  It excludes `CLAUDE.local.md`, `.claude/settings.local.json`, and
-  `.agent-work/`, so a project can track `.claude/agents/`, `.claude/rules/`,
-  `.claude/settings.json`, `.codex/agents/`, and `.codex/config.toml` when it
-  chooses. Nothing creates those files.
-- 2026-07-31 [TOOL] Environment-dependent checks now skip by name instead of
-  failing: a host that cannot create symbolic links skips five checks, and a
-  host that does not enforce POSIX permission bits skips one. The reviewed
-  Git-tree check accepts the Windows refusal of any reviewed symlink, still
-  asserting the escaping link is never materialized. Baseline confirmed these
-  same seven were already failing on this host before the change.
-- 2026-07-31 [TOOL] Every test that runs initialization now points `HOME` and
-  `USERPROFILE` at its disposable root. An earlier run of the suite, before that
-  fix, installed the workflow layer into the real user home; all twenty files
-  were verified byte-identical to generated artifacts and removed, leaving
-  skills and provider configuration untouched.
+- 2026-08-14 [USER+CODE] Sibling-only ownership replaces the workspace router
+  (D005, D017, D021): the parent has optional inert `MACHINE.md` but no live
+  `AGENTS.md`, `CLAUDE.md`, or `_templates/`. Machine-bootstrap and every project
+  are independent repositories with self-contained guidance.
+- 2026-08-14 [USER+CODE] Project templates have one canonical source and are
+  seeded missing-only into one explicit target. Existing project policy remains
+  project-owned; Git verifies the effective `.gitignore` environment policy and
+  ambiguous or overridden policy stops before writes. Rollback quarantines
+  run-owned files for review instead of deleting them. Managed reads, writes,
+  and recovery use verified real-directory identities pinned for the full run
+  plus no-follow leaf access. Machine and project template sources are
+  snapshot-read as real in-checkout files before writes; preflighted starters
+  that disappear are not replaced. New directories use atomic no-replace claims
+  and are identity-snapshotted before use; all seeded files are revalidated
+  before success. Git boundary probes discard inherited path overrides. They
+  reject concurrent parent, entry, or backup replacement, leave
+  identity-changed entries at their original paths, never delete entries after
+  a separate content check, and report exact recovery paths.
+- 2026-08-14 [USER] Legacy parent guidance stops initialization for manual
+  review and cleanup. Automatic migration and its versioned manifest are
+  intentionally deferred (D022).
+- 2026-08-14 [USER] Workspace and project initialization support a first-class
+  agent-assisted entry point; users may describe the target and outcome without
+  naming scripts, while agents still use the audited initializers (D023).
+- 2026-08-14 [CODE] Test fixtures exclude ignored generated roots and
+  machine-local/private files while preserving `.env.example` (D019).
+- 2026-08-14 [CODE] Active Codex guide chains target below 28 KiB (D020); line
+  counts are readability/rotation warnings rather than universal CI gates.
+- 2026-08-14 [USER+CODE] Continuity bounded and archived (D018); prior detail is
+  in append-only `docs/continuity/2026-07.md`.
+- 2026-08-14 [USER+CODE] Machine-bootstrap and project starters each own a
+  Git/GitHub contract: typed branches, Conventional Commits, exact-head review,
+  verification receipts, and explicit publication state.
+- 2026-08-14 [USER+CODE] Product Delivery workflow 1.3.0 activates its complete
+  flow only for a primary role, explicit request, active artifacts, or named
+  project work. Standalone Verifier selection activates only independent review.
+- 2026-08-13 [USER] Every implementation defaults to implementer verification
+  plus one fresh independent review; only the user may waive it per change.
+- 2026-08-13 [USER] Dependency versions come from current official sources.
+  Prefer the latest compatible stable release, preserve package-manager/range
+  policy, update tracked lockfiles, and explain older or prerelease choices.
+
+Milestones — detail in `docs/continuity/2026-07.md`:
+
+- 2026-07-27 Bootstrap foundation: safe initialization, missing-only placement,
+  fail-closed drift, and reviewed skill acquisition/content identity.
+- 2026-07-31 Workflow foundation: provider-neutral role contracts,
+  deterministic adapters, namespaced installation, and transactional rollback.
+- 2026-07-31 Test isolation: disposable workspace/home roots and named skips for
+  unavailable host capabilities.
 
 ## Decisions
 
-- 2026-07-27 [USER] D001 ACTIVE: portable guidance and skill setup live in this
-  dedicated repository rather than a Git repository around all child projects.
-- 2026-07-27 [CODE] D002 ACTIVE: `skills.json` is the desired roster; generated
-  global lockfiles remain machine state and are not the portable source.
-- 2026-07-27 [CODE] D003 ACTIVE: installation is missing-only. Updates and
-  unexpected existing paths require review rather than silent replacement.
+- 2026-07-27 [USER] D001 ACTIVE: portable machine and project setup lives in
+  this dedicated repository, never in a Git repository around all projects.
+- 2026-07-27 [CODE] D002 ACTIVE: `skills.json` is the reviewed desired roster;
+  generated global lockfiles remain machine state.
+- 2026-07-27 [CODE] D003 ACTIVE: bootstrap-owned global installation is
+  missing-only; differing destinations require review. Project seeding is also
+  missing-only but intentionally preserves customized project-owned files.
 - 2026-07-27 [CODE] D004 ACTIVE: Impeccable installs without optional hooks;
   hooks remain an explicit per-project choice.
-- 2026-07-27 [USER] D005 ACTIVE: the bootstrap repository owns AI setup and the
-  portable root guidance/templates used to initialize the workspace and each
-  project; projects retain their scoped product and engineering contracts.
-- 2026-07-27 [CODE] D006 ACTIVE: an AI agent initiates a machine through
-  `INIT.md` and `scripts/init-workspace.mjs`; silent partial synchronization is
-  not considered successful setup.
-- 2026-07-27 [CODE] D007 ACTIVE: the portable skill manifest pins both
-  acquisition and reviewed content identity; updates require an intentional
-  manifest revision rather than passing through presence-only checks.
-- 2026-07-31 [USER] D008 ACTIVE: this repository owns the portable workflow
-  foundation — role contracts, stages, approval and invalidation rules,
-  handoffs, artifact templates, and installation. `skills.json` stays
-  exclusively about reusable skills and is unchanged.
+- 2026-08-14 [USER] D005 ACTIVE: machine-bootstrap owns machine setup and the
+  only project starter source. The workspace parent owns only optional inert
+  `MACHINE.md`; each project owns its live product and engineering contracts.
+- 2026-07-27 [CODE] D006 ACTIVE: an agent initiates a machine through `INIT.md`
+  and `scripts/init-workspace.mjs`; partial synchronization is not success.
+- 2026-07-27 [CODE] D007 ACTIVE: the skill manifest pins acquisition revision
+  and reviewed content identity; updates require an intentional manifest change.
+- 2026-07-31 [USER] D008 ACTIVE: this repository owns the optional portable
+  Product Delivery workflow; `skills.json` remains reusable skills only.
 - 2026-07-31 [USER] D009 ACTIVE: project architecture, engineering rules,
-  commands, and required verification remain project-owned. The workflow never
-  rewrites project guidance; a project references the installed contract rather
-  than copying it.
-- 2026-07-31 [CODE] D010 ACTIVE: the provider-neutral Markdown role contracts
-  are the single source of truth. Claude and Codex files are generated
-  deterministically from them, so no separate provider prompt can drift.
-- 2026-07-31 [USER] D011 ACTIVE: a project may strengthen the workflow with
-  extra high-risk triggers, mandatory plan sections, required verification, or
-  specialist reviews. It may not weaken exact user approval, scope-change
-  escalation, or honest verification reporting.
-- 2026-07-31 [CODE] D012 ACTIVE: workflow installation follows the same
-  fail-closed contract as guides and skills — validate before writing,
-  missing-only by default, reject differing destinations before any partial
-  write, and keep timestamped backups on reviewed `--replace`.
-- 2026-07-31 [CODE] D013 ACTIVE: approval recording is bookkeeping, not
-  authentication. No file or command in this repository claims to prove that a
-  human supplied an approval.
-- 2026-08-13 [USER] D014 ACTIVE: one independent review is mandatory by default
-  after implementer verification. The user may explicitly waive it per change
-  or request more reviewers; additional-review recommendations are firm and
-  based on risk and coverage.
-- 2026-08-13 [USER] D015 ACTIVE: do not create empty task artifacts. Track the
-  five standard reports for completed referenced work; create Decision Logs and
-  Change Requests only when needed. A tracked `[TASK <task-id>]` continuity
-  reference must not point to an untracked local task folder.
-- 2026-08-13 [USER] D016 ACTIVE: dependency additions and upgrades require a
-  current official-source check for the stable or maintainer-recommended
-  release. Use the latest compatible stable version by default, preserve the
-  project's package-manager and version-range policy, update any tracked
-  lockfile, and explain any intentional older or prerelease choice.
+  commands, and required verification remain project-owned.
+- 2026-07-31 [CODE] D010 ACTIVE: provider-neutral role contracts generate Claude
+  and Codex adapters; adapters carry provenance and pin no model.
+- 2026-07-31 [USER] D011 ACTIVE: projects may strengthen workflow triggers,
+  checks, or review but not weaken approval, escalation, or honest verification.
+- 2026-07-31 [CODE] D012 ACTIVE: workflow installation validates before writes,
+  rejects drift, and preserves timestamped backups on reviewed replacement.
+- 2026-07-31 [CODE] D013 ACTIVE: approval records are bookkeeping, not proof of
+  human authentication.
+- 2026-08-13 [USER] D014 ACTIVE: one independent review follows implementer
+  verification unless explicitly waived by the user for that change.
+- 2026-08-13 [USER] D015 ACTIVE: create no empty task artifacts; tracked task
+  references require their completed artifact folders to be tracked.
+- 2026-08-13 [USER] D016 ACTIVE: dependency changes require current official
+  version evidence, compatibility, preserved range policy, and lockfile updates.
+- 2026-08-14 [USER+CODE] D017 ACTIVE: provider loading follows official
+  contracts and repository isolation. Codex discovers from project root to
+  launch directory; project sessions never depend on a workspace parent guide.
+- 2026-08-14 [USER] D018 ACTIVE: current continuity is bounded and paired with
+  append-only monthly history read only on demand.
+- 2026-08-14 [CODE] D019 ACTIVE: disposable fixtures exclude generated, backup,
+  root-local private state while preserving portable nested configuration.
+- 2026-08-14 [CODE] D020 ACTIVE: keep cumulative active `AGENTS.md` chains below
+  28 KiB; use soft line targets and move detail to on-demand owners.
+- 2026-08-14 [USER] D021 ACTIVE: a bootstrap session may administer or route a
+  sibling but is never its long-lived coding session. Access authorization does
+  not inject sibling instructions; start a new session in the target project.
+- 2026-08-14 [USER] D022 ACTIVE: do not support automatic legacy workspace
+  migration yet. Detect parent guidance/templates and fail closed with manual
+  cleanup instructions.
+- 2026-08-14 [USER] D023 ACTIVE: document agent-assisted setup as a normal
+  interface. Natural-language requests select the target and outcome; audited
+  scripts remain the execution and verification layer.
 
 ## Working Set
 
-- `README.md`
-- `INIT.md`
-- `guides/{AGENTS,CLAUDE,MACHINE.example}.md`
+- `AGENTS.md`, `CLAUDE.md`, `README.md`, `INIT.md`, `CONTINUITY.md`
+- `.github/{pull_request_template.md,workflows/bootstrap.yml}`
+- `machine-templates/`
 - `project-templates/`
-- `skills.json`
-- `workflows/registry.json`
-- `workflows/product-delivery/{manifest.json,WORKFLOW.md,roles/,templates/}`
-- `scripts/{init-workspace,install-skills,install-workflows,setup-guides,test-bootstrap}.mjs`
-- `scripts/lib/{fs-safety,portable-path,skill-integrity,skill-manifest,skill-source}.mjs`
-- `scripts/lib/{workflow-adapters,workflow-manifest}.mjs`
+- `docs/{engineering/git-workflow.md,guidance-loading-smoke.md,continuity/}`
+- `scripts/{init-workspace,init-project,test-bootstrap}.mjs`
+- `scripts/{install-skills,install-workflows}.mjs`
+- `scripts/lib/{fs-safety,portable-path,skill-*,workflow-*}.mjs`
+- `skills.json`, `workflows/`
 
 ## Next
 
-- Do not expand the workflow beyond a user's requested scope. Present useful
-  follow-up recommendations and wait for approval before implementing them.
+- Keep scratch optional and disposable; promote durable work into its own
+  sibling repository with project guidance.
 - Add a private remote only with explicit user authorization.
 
 ## Open Questions
 
 - 2026-07-27 [USER] UNCONFIRMED which private remote will host this repository.
-- 2026-07-31 [USER] RESOLVED 2026-08-13 by D015: task artifacts stay local while
-  active by default. Completed task folders referenced by tracked continuity are
-  tracked with it; otherwise the continuity summary is self-contained.

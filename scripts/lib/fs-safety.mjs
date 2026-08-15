@@ -1,5 +1,5 @@
 // One owner for the bootstrap's "never silently overwrite" placement rules,
-// shared by workspace guidance setup and workflow installation.
+// shared by workflow manifest validation and workflow installation.
 //
 // Symlinks are followed for comparison: what an agent loads at that path is the
 // content that matters. Placement always renames an existing entry to a backup

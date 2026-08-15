@@ -1,6 +1,6 @@
 # Change Request — <task title>
 
-Raised by: Delivery Lead · Assessed by: Product Partner · Decided by: the user
+Raised by: Delivery Lead · Assessed by: Product Partner · Decided by: the user · Workflow: `product-delivery` 1.3.0
 
 | Field | Value |
 | :--- | :--- |

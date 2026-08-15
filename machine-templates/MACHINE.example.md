@@ -1,8 +1,13 @@
 # Machine Workspace Notes
 
-Local facts for this computer and the workspace containing this file. Keep
-portable engineering rules in `AGENTS.md`. Do not commit secrets or copy this
-file blindly to another machine.
+Optional local registry for the computer and workspace containing this file.
+It is inert: Codex and Claude do not load it automatically. The
+`machine-bootstrap` repository reads it deliberately only for administration,
+discovery, port allocation, or sibling-project routing.
+
+Keep project architecture and agent policy in each project. Do not put
+credentials, tokens, private documents, secret filenames, or provider responses
+here, and do not copy this file blindly to another machine.
 
 ## Workspace Root
 

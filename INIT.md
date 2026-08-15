@@ -1,56 +1,69 @@
 # Initialize This Workspace
 
-This is the agent-facing entry point for a fresh checkout.
-
-Prerequisites: Git and Node.js 18 or newer.
+Agent-facing entry point for a fresh checkout. Prerequisites: Git and Node.js 24
+or newer.
 
 ## Instruction for an AI agent
 
-Read this file and `README.md`, then run from this repository:
+The user may request setup in ordinary language without naming any script. Treat
+“Set up this workspace using machine-bootstrap; follow `INIT.md`” as the
+agent-assisted entry point. Explain the intended scope, use the audited scripts
+below for execution and verification, stop for review-required conditions, and
+report the resulting state. Do not require the user to translate the request
+into CLI commands.
+
+Read this file, `README.md`, and `CONTINUITY.md`. Confirm this repository is a
+direct child of the intended dedicated, non-Git workspace folder, then run:
 
 ```bash
 node scripts/init-workspace.mjs
 ```
 
-Before running it, confirm this checkout is a direct child of the intended
-dedicated workspace folder. The script treats its parent as the workspace root
-and refuses to use the filesystem root or user home.
+The workspace initializer may create the optional parent `MACHINE.md` and
+install shared skills, workflows, and provider adapters. It never creates a
+parent `AGENTS.md`, `CLAUDE.md`, or `_templates/`. Replace `MACHINE.md` TODOs
+only with verified local facts and never add credentials, private documents, or
+secret filenames. Then run:
 
-After the command succeeds:
+```bash
+node scripts/init-workspace.mjs --check
+```
 
-1. Inspect the generated workspace-root `MACHINE.md`.
-2. Replace its `TODO` placeholders only with facts verified on this machine.
-   Never add credentials, tokens, private documents, or secret filenames.
-3. Run the read-only verification:
+If the parent contains a legacy `AGENTS.md`, `CLAUDE.md`, or `_templates/`, stop
+and report it. Automatic migration is not currently supported. Review the
+entries and move them manually outside the workspace root before rerunning;
+never move sibling projects or `MACHINE.md` as part of that cleanup.
 
-   ```bash
-   node scripts/init-workspace.mjs --check
-   ```
+Initialize one project explicitly:
 
-4. Report installed guidance, skill verification, installed workflow paths,
-   remaining `MACHINE.md` placeholders, and anything that requires review. Do
-   not initialize Git at the workspace root and do not stage, commit, publish,
-   or overwrite differing files unless the user explicitly asks.
+```bash
+node scripts/init-project.mjs ../project-a
+```
 
-The seeded `_templates/` directory includes a project-owned Git/GitHub workflow
-guide and `.github/pull_request_template.md`. Fill in project-specific checks,
-CI, release, and deployment details before using them.
+Add `--create` only when the target directory does not yet exist. The command
+seeds missing project-owned guidance directly from `project-templates/` and
+preserves existing files. With no existing environment ignore rules it appends
+the complete ordered environment block plus missing independent safety rules;
+incomplete or ambiguous environment rules stop for manual review before any
+write. It does not initialize Git, copy `TEMPLATE-USAGE.md`, replace a README,
+or edit any sibling project.
 
-If initialization reports differing workspace guides, templates, workflow
-files, or provider adapters, stop and show the differences. Use `--replace`
-only after the user reviews them; the replacement is recoverable because the
-existing files are renamed to timestamped backups.
+The user may instead say “Initialize `<target-project>` using
+machine-bootstrap.” Resolve and repeat the exact target before execution, then
+use the same initializer and safety rules above; do not copy template files by
+hand.
 
-Initialization also installs the portable `product-delivery` workflow to
-`~/.agents/workflows/product-delivery/` and generates its Claude and Codex
-adapters under `$CLAUDE_CONFIG_DIR/agents/` when that variable is set (otherwise
-`~/.claude/agents/`) and under `$CODEX_HOME/agents/` plus two
-`$CODEX_HOME/mb-*.config.toml` profiles when that variable is set (otherwise
-the equivalent paths under `~/.codex/`). It does not read or modify
-`settings.json` in the Claude configuration root or `config.toml` in the Codex
-home. Tell the user to start a new session so the provider rediscovers the
-definitions, and point them at `README.md` for the launch commands.
+Report the initialized paths, shared capability state, remaining placeholders,
+and review-required conditions. Do not initialize Git at the workspace root or
+stage, commit, publish, overwrite, or migrate anything without the user's
+authority for that action.
 
-Use `--skip-skills` only when the user explicitly wants workspace files without
-installing or verifying shared skills, and `--skip-workflows` only when they
-explicitly want no workflow writes or verification.
+After project initialization, start a new Codex or Claude session in that
+project root or relevant scoped directory. A bootstrap session may administer
+or route a sibling, but it must not become the long-lived coding session for
+that project. Parent or sibling access may require sandbox authorization;
+access does not load sibling instructions.
+
+Use `--skip-skills` or `--skip-workflows` only when the user explicitly wants
+that shared layer left untouched. Installing `product-delivery` makes its roles
+available but does not activate the workflow for ordinary work.

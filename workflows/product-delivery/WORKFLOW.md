@@ -1,12 +1,37 @@
 # Product Delivery Workflow
 
-Workflow id: `product-delivery` · version `1.2.0` · schema `1`
+Workflow id: `product-delivery` · version `1.3.0` · schema `1`
 
 Portable, provider-neutral contract for taking work from a broad idea to
 accepted delivery. Installed from the `machine-bootstrap` repository to
 `~/.agents/workflows/product-delivery/`. Provider agent definitions are
 generated from the role contracts in `roles/`; edit the contracts, never the
 generated adapters.
+
+## Activation
+
+Installation makes this workflow available; it does not make the workflow
+active for every project task. The workflow activates when any one condition is
+true:
+
+1. The user launches or selects the Product Partner or Delivery Lead role or
+   profile.
+2. The user explicitly asks to use the complete `product-delivery` workflow.
+3. The task continues an active Product Brief or Delivery Plan.
+4. Project guidance requires this workflow for a named class of work.
+
+An ordinary bug fix, documentation edit, review, or maintenance task does not
+activate the workflow merely because the package is installed or mentioned by
+project guidance. Once activated, the complete contract applies to that task;
+do not cherry-pick its artifacts, approvals, change control, or verification
+rules. If required entry artifacts are missing, the selected role reports that
+state and follows its documented entry condition rather than inventing them.
+
+Selecting the Verifier is the one role-specific exception: it activates only
+the independent verification portion for the supplied change. It does not
+retroactively create missing discovery, approval, execution, or implementation
+artifacts. Missing or ambiguous upstream artifacts remain explicit verification
+limitations, while all evidence-honesty and outcome rules still apply.
 
 ## Ownership Boundary
 
@@ -39,6 +64,8 @@ This workflow never rewrites a project's architecture or guidance.
 not the role names. Use Product Partner, Delivery Lead, and Verifier.
 
 ## Stages
+
+When the complete discovery-to-delivery flow is active, the stages are:
 
 1. **Product discovery** — Product Partner explores the real problem with the
    user.
@@ -170,10 +197,12 @@ Templates live in `~/.agents/workflows/product-delivery/templates/`.
 | Verification Report | Verifier drafts, Delivery Lead records | `verification-report.md` |
 
 The seven templates are a library, not a requirement to create seven files.
-A normal completed task uses Product Brief, Delivery Plan, Alignment Review,
-Implementation Report, and Verification Report. Create a Decision Log only for
-material product decisions and a Change Request only when its trigger occurs.
-Never create empty placeholder artifacts.
+An activated task that runs the full discovery-to-delivery sequence normally
+uses Product Brief, Delivery Plan, Alignment Review, Implementation Report, and
+Verification Report. Create a Decision Log only for material product decisions
+and a Change Request only when its trigger occurs. Never create empty
+placeholder artifacts. Ordinary work outside this workflow creates none of
+these artifacts by default.
 
 The default location for task artifacts is `.agent-work/tasks/<task-id>/`
 inside the project. Keep active artifacts local by default; the starter project

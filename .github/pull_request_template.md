@@ -1,5 +1,5 @@
 <!--
-Before drafting: read guides/git-workflow.md.
+Before drafting: read docs/engineering/git-workflow.md.
 Keep this receipt factual. If a check was not run, say why.
 -->
 

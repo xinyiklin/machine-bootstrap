@@ -1,6 +1,6 @@
 # Implementation Report — <task title>
 
-Owner: Delivery Lead · Workflow: `product-delivery` 1.2.0
+Owner: Delivery Lead · Workflow: `product-delivery` 1.3.0
 
 | Field | Value |
 | :--- | :--- |
@@ -13,59 +13,60 @@ Owner: Delivery Lead · Workflow: `product-delivery` 1.2.0
 
 ## Implemented Scope
 
-What was actually built, in the terms the brief used.
+What was actually built, in the terms the approved brief used.
 
 ## Significant Files And Components Changed
 
-Not an exhaustive diff — the changes a reviewer needs to understand.
+Not an exhaustive diff: list what an independent reviewer needs to understand.
 
 | Path | Change |
 | :--- | :--- |
-| `<path>` | … |
+| `<path>` | ... |
 
-## Acceptance-Criteria Status
+## Implementation Coverage By Acceptance Criterion
 
-Every criterion from the approved brief. Status is one of `met`, `not met`,
-`unverified`, or `deferred`.
+This is the implementer's coverage statement, not the final independent
+judgment. Status is one of `implemented`, `not implemented`, `deferred`, or
+`self-unverified`.
 
-| # | Criterion | Status | Evidence |
+| # | Criterion | Implementation status | Implementer evidence |
 | :--- | :--- | :--- | :--- |
-| 1 | … | met | `<command / file / output>` |
-| 2 | … | unverified | why it could not be established |
+| 1 | ... | implemented | `<path / command / observation>` |
+| 2 | ... | self-unverified | why the implementer could not establish it |
 
-## Tests And Verification Performed
+## Implementer Self-Verification
 
-The commands actually run and what each demonstrated. Include the ones that
-failed first and how they were resolved.
+Commands and observations performed by the implementer. A result here remains
+self-evidence until the Verifier independently evaluates the exact change.
 
-| Check | Command | Result |
-| :--- | :--- | :--- |
-| … | `<command>` | passed / failed / unverified / skipped |
-
-State the implementer's verification and the mandatory independent review
-separately. If the user explicitly waived independent review for this change,
-record the waiver and reason. The final recommendation on additional reviewers
-belongs in the Verification Report after the first independent review.
+| Check | Command or observation | Result | Evidence |
+| :--- | :--- | :--- | :--- |
+| ... | `<command>` | passed / failed / self-unverified / skipped | ... |
 
 ## Deviations From The Approved Plan
 
-Where execution differed from the approved plan, and whether each deviation was
-an ordinary internal technical decision or went through a Change Request.
-
 | Deviation | Kind | Reference |
 | :--- | :--- | :--- |
-| … | internal decision / change request | CR001 |
+| ... | internal decision / change request | CR001 |
 
-Write "none" when execution followed the plan.
+Write `none` when execution followed the plan.
 
 ## Known Limitations
 
-What is true but imperfect about the delivered result.
-
-- …
+- ...
 
 ## Explicitly Deferred
 
-Work intentionally not done, so it is not read as an oversight.
+- ...
 
-- …
+## Verification Handoff
+
+| Field | Value |
+| :--- | :--- |
+| Independent review status | pending / waived |
+| Waiver reason | `none, or the user's explicit waiver and reason` |
+
+Independent review is pending unless the user explicitly waived it for this
+change. The Verification Report alone records the final independent passed,
+failed, unverified, and skipped judgments or the explicit waiver. This report
+must not describe pending or waived verification as complete.

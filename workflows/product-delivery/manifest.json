@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "workflowId": "product-delivery",
-  "workflowVersion": "1.2.0",
+  "workflowVersion": "1.3.0",
   "title": "Product Delivery",
-  "summary": "Provider-neutral product-to-delivery workflow with two exact user approval gates.",
+  "summary": "Explicitly activated provider-neutral product-to-delivery workflow with two exact user approval gates.",
   "workflowDocument": "WORKFLOW.md",
   "taskArtifactPath": ".agent-work/tasks/<task-id>/",
   "roles": [
