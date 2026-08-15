@@ -310,7 +310,6 @@ try {
 if (
   templateRootStat.isSymbolicLink() ||
   !templateRootStat.isDirectory() ||
-  !sameCanonicalPath(canonicalTemplateRoot, templateRoot) ||
   !isInside(canonicalBootstrapRoot, canonicalTemplateRoot)
 ) {
   fail("Project template root must be a real directory inside machine-bootstrap");
@@ -330,7 +329,6 @@ for (const relativePath of [...seedFiles, ".gitignore"]) {
     if (
       sourceStat.isSymbolicLink() ||
       !sourceStat.isFile() ||
-      !sameCanonicalPath(canonicalSource, source) ||
       !isInside(canonicalTemplateRoot, canonicalSource)
     ) {
       fail(`Template must be a regular file: ${relativePath}`);
