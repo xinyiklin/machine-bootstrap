@@ -1423,6 +1423,37 @@ await test("project initialization pins the original target directory", () => {
   }
 });
 
+await test("project initialization preflights parents before starter writes", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const project = join(workspaceRoot, "project-a");
+    const writeMarker = join(testRoot, "starter-write-attempted.txt");
+    mkdirSync(project);
+    writeFileSync(join(project, "docs"), "user-owned file\n");
+
+    const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
+    const initializer = readFileSync(initializerPath, "utf8");
+    const needle = "function copyTrackedFile(source, destination) {";
+    assert.ok(initializer.includes(needle), "copy marker injection point must exist");
+    writeFileSync(
+      initializerPath,
+      initializer.replace(
+        needle,
+        needle +
+          `\n  writeFileSync(${JSON.stringify(writeMarker)}, destination + "\\n", { flag: "a" });`
+      )
+    );
+
+    const result = runProjectInitializer(checkoutRoot, project, testRoot);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /Managed parent must be a real directory/);
+    assert.equal(existsSync(writeMarker), false);
+    assert.deepEqual(readdirSync(project), ["docs"]);
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
 await test("existing project guidance is preserved and gitignore entries merge", () => {
   const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
   try {
@@ -1616,6 +1647,80 @@ await test("project cleanup preserves a replaced gitignore backup", () => {
   }
 });
 
+await test("project initialization revalidates a preserved gitignore", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const project = join(workspaceRoot, "project-a");
+    mkdirSync(project);
+    const canonicalIgnore = readFileSync(
+      join(checkoutRoot, "project-templates", ".gitignore")
+    );
+    writeFileSync(join(project, ".gitignore"), canonicalIgnore);
+
+    const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
+    const initializer = readFileSync(initializerPath, "utf8");
+    const needle = "  if (!entryExists(gitignorePath)) {";
+    assert.ok(initializer.includes(needle), "gitignore injection point must exist");
+    writeFileSync(
+      initializerPath,
+      initializer.replace(
+        needle,
+        `  renameSync(gitignorePath, gitignorePath + ".original");\n` +
+          `  writeFileSync(gitignorePath, "dist/\\n");\n\n` +
+          needle
+      )
+    );
+
+    const result = runProjectInitializer(checkoutRoot, project, testRoot);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /.gitignore changed during initialization/);
+    assert.equal(readFileSync(join(project, ".gitignore"), "utf8"), "dist/\n");
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
+await test("project rollback preserves a file changed after ownership review", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const project = join(workspaceRoot, "project-a");
+    mkdirSync(project);
+
+    const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
+    let initializer = readFileSync(initializerPath, "utf8");
+    const ownershipNeedle =
+      "          if (isOwnedFile(transaction, quarantineLeaf)) {";
+    const failureNeedle =
+      "  const placeholderFiles = [...seedFiles, \".gitignore\"];";
+    assert.ok(initializer.includes(ownershipNeedle), "ownership injection point must exist");
+    assert.ok(initializer.includes(failureNeedle), "failure injection point must exist");
+    initializer = initializer.replace(
+      ownershipNeedle,
+      ownershipNeedle +
+        `\n            if (transaction.destination.endsWith("AGENTS.md")) {` +
+        ` writeFileSync(quarantineLeaf, "concurrent after review\\n"); }`
+    );
+    initializer = initializer.replace(
+      failureNeedle,
+      `  throw new Error("injected rollback failure");\n\n` + failureNeedle
+    );
+    writeFileSync(initializerPath, initializer);
+
+    const result = runProjectInitializer(checkoutRoot, project, testRoot);
+    assert.notEqual(result.status, 0);
+    const quarantines = readdirSync(project).filter((name) =>
+      name.startsWith("AGENTS.md.rollback-")
+    );
+    assert.equal(quarantines.length, 1);
+    assert.equal(
+      readFileSync(join(project, quarantines[0]), "utf8"),
+      "concurrent after review\n"
+    );
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
 await test("project rollback preserves a concurrently changed starter file", () => {
   const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
   try {
@@ -1672,7 +1777,7 @@ await test("project rollback preserves a concurrent starter directory in place",
       initializer.replace(
         needle,
         "  const concurrentStarter = join(canonicalTarget, \"AGENTS.md\");\n" +
-          "  unlinkSync(concurrentStarter);\n" +
+          "  rmSync(concurrentStarter);\n" +
           "  mkdirSync(concurrentStarter);\n" +
           "  writeFileSync(join(concurrentStarter, \"keep.txt\"), \"keep me\\n\");\n" +
           "  throw new Error(\"injected starter directory replacement\");\n\n" +
@@ -1826,8 +1931,10 @@ await test("project rollback never deletes directories by pathname", () => {
     "utf8"
   );
   assert.doesNotMatch(initializer, /\brmdirSync\b/);
+  assert.doesNotMatch(initializer, /unlinkSync\(quarantineLeaf\)/);
   assert.match(initializer, /review directory cleanup manually/);
   assert.match(initializer, /review target cleanup manually/);
+  assert.match(initializer, /run-owned entry preserved at/);
 });
 
 await test("project initialization rejects a Git-owned workspace", () => {

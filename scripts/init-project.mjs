@@ -16,7 +16,6 @@ import {
   rmSync,
   statSync,
   symlinkSync,
-  unlinkSync,
   writeFileSync
 } from "node:fs";
 import { randomUUID } from "node:crypto";
@@ -330,10 +329,9 @@ const simpleSafetyEntries = safetyEntries.filter(
 if (targetExisted) {
   for (const relativePath of [...seedFiles, ".gitignore"]) {
     const destination = join(canonicalTarget, ...relativePath.split("/"));
-    if (!entryExists(destination)) continue;
     try {
-      pinManagedParentChain(destination);
-      readManagedFile(destination);
+      preflightManagedParentChain(destination);
+      if (entryExists(destination)) readManagedFile(destination);
     } catch (error) {
       fail(error instanceof Error ? error.message : String(error));
     }
@@ -454,7 +452,7 @@ function pinManagedDirectory(path) {
   );
 }
 
-function pinManagedParentChain(filePath) {
+function preflightManagedParentChain(filePath) {
   const parentPath = dirname(filePath);
   if (parentPath === canonicalTarget) return;
   if (!isInside(canonicalTarget, parentPath)) {
@@ -464,15 +462,21 @@ function pinManagedParentChain(filePath) {
   let current = canonicalTarget;
   for (const part of relative(canonicalTarget, parentPath).split(sep)) {
     const next = join(current, part);
+    let missing = false;
     if (!managedDirectoryAnchors.has(next)) {
-      withAnchoredDirectory(current, () =>
+      withAnchoredDirectory(current, () => {
+        if (!entryExists(part)) {
+          missing = true;
+          return;
+        }
         pinManagedDirectorySnapshot(
           next,
           lstatSync(part, { bigint: true }),
           realpathSync.native(part)
-        )
-      );
+        );
+      });
     }
+    if (missing) return;
     current = next;
   }
 }
@@ -627,18 +631,7 @@ function restoreNoClobberHere(source, destination, warnings, label) {
       );
       return false;
     }
-    try {
-      if (
-        entryExists(sourceLeaf) &&
-        sameFileIdentity(fileIdentity(sourceLeaf), identityFromStat(stat))
-      ) {
-        unlinkSync(sourceLeaf);
-      } else {
-        warnings.push(`${label} also remains at ${source}: source changed`);
-      }
-    } catch (error) {
-      warnings.push(`${label} also remains at ${source}: ${error.message}`);
-    }
+    warnings.push(`${label} also remains at ${source}; delete after review`);
     return true;
   } catch (error) {
     warnings.push(`${label} preserved at ${source}: ${error.message}`);
@@ -678,12 +671,14 @@ function rollback() {
           const quarantine =
             `${transaction.destination}.rollback-${process.pid}-${randomUUID()}`;
           const quarantineLeaf = basename(quarantine);
-          // Rename inside the anchored parent so identity/content cannot change
-          // between verification and removal. Unknown content is copied back
-          // without clobbering.
+          // Rename inside the anchored parent, then preserve the quarantine.
+          // Node cannot atomically couple a content check with pathname removal,
+          // so even a verified run-owned file remains recoverable for review.
           renameSync(destinationLeaf, quarantineLeaf);
           if (isOwnedFile(transaction, quarantineLeaf)) {
-            unlinkSync(quarantineLeaf);
+            warnings.push(
+              `run-owned entry preserved at ${quarantine}; delete after review`
+            );
           } else {
             warnings.push(`${transaction.destination} changed concurrently`);
             restoreNoClobberHere(
@@ -899,8 +894,23 @@ try {
     placeholderCount += contents.match(/\bTODO\b|<Project>/g)?.length ?? 0;
   }
 
+  const finalGitignore = readManagedFile(gitignorePath);
+  const expectedGitignore =
+    plannedGitignoreOriginal === null || gitignoreAdded.length
+      ? plannedGitignoreContents
+      : plannedGitignoreOriginal;
+  if (!finalGitignore.equals(expectedGitignore)) {
+    throw new Error(`${gitignorePath} changed during initialization`);
+  }
+  const finalEnvironmentProblem = environmentPolicyProblem(finalGitignore);
+  if (finalEnvironmentProblem) {
+    throw new Error(
+      `${gitignorePath} environment policy changed during initialization: ` +
+        finalEnvironmentProblem
+    );
+  }
+
   if (gitignoreBackup) {
-    let backupRemoved = false;
     try {
       withAnchoredDirectory(canonicalTarget, () => {
         const backupLeaf = basename(gitignoreBackup);
@@ -914,19 +924,13 @@ try {
         ) {
           throw new Error("backup changed concurrently");
         }
-        unlinkSync(backupLeaf);
-        backupRemoved = true;
       });
+      console.log(`Recovery backup retained: ${gitignoreBackup}`);
     } catch (error) {
       console.error(
         `Project initialization warning: .gitignore backup remains at ` +
           `${gitignoreBackup}: ${error.message}`
       );
-    }
-    if (backupRemoved) {
-      if (gitignoreTransaction) gitignoreTransaction.backupPath = null;
-      gitignoreBackup = null;
-      gitignoreBackupIdentity = null;
     }
   }
   transactions.length = 0;

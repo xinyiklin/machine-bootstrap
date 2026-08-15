@@ -19,12 +19,13 @@ is read only when a task needs it.
 - 2026-08-14 [USER+CODE] Project templates have one canonical source and are
   seeded missing-only into one explicit target. Existing project policy remains
   project-owned; Git verifies the effective `.gitignore` environment policy and
-  ambiguous or overridden policy stops before writes. Rollback removes only
-  verified run-owned files. Managed reads, writes, and recovery use verified
+  ambiguous or overridden policy stops before writes. Rollback quarantines
+  run-owned files for review instead of deleting them. Managed reads, writes,
+  and recovery use verified
   real-directory identities pinned for the full run plus no-follow leaf access,
   reject concurrent parent, entry, or backup replacement, leave
-  identity-changed entries at their original paths, never delete directories by
-  pathname, and report exact recovery paths.
+  identity-changed entries at their original paths, never delete entries after
+  a separate content check, and report exact recovery paths.
 - 2026-08-14 [USER] Legacy parent guidance stops initialization for manual
   review and cleanup. Automatic migration and its versioned manifest are
   intentionally deferred (D022).

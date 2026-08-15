@@ -136,10 +136,10 @@ Choose either setup style:
    README. Managed reads, writes, and rollback recovery are anchored to real
    parent-directory identities pinned for the full run; symbolic-link, parent,
    leaf, or backup replacement stops safely instead of being followed or
-   deleted. On failure, rollback removes only verified run-owned files and
-   leaves identity-changed concurrent entries at their original paths. It never
-   deletes directories by pathname; any leftover directory cleanup is reported
-   for manual review.
+   deleted. On failure, rollback moves run-owned files to named recovery paths
+   instead of deleting them, and leaves identity-changed concurrent entries at
+   their original paths. It never deletes directories by pathname; file and
+   directory cleanup is reported for manual review.
 6. Replace project placeholders with verified project facts. Start a new Codex
    or Claude session in that project root or relevant scoped directory.
 
