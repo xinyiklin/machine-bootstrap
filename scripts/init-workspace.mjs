@@ -180,10 +180,27 @@ function run(command, commandArgs, options = {}) {
   return result;
 }
 
+const gitEnvironmentOverrides = [
+  "GIT_DIR",
+  "GIT_WORK_TREE",
+  "GIT_COMMON_DIR",
+  "GIT_INDEX_FILE",
+  "GIT_OBJECT_DIRECTORY",
+  "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+  "GIT_CEILING_DIRECTORIES",
+  "GIT_DISCOVERY_ACROSS_FILESYSTEM"
+];
+
+function sanitizedGitEnvironment() {
+  const environment = { ...process.env, LANG: "C", LC_ALL: "C" };
+  for (const name of gitEnvironmentOverrides) delete environment[name];
+  return environment;
+}
+
 function gitProbe(path) {
   return spawnSync("git", ["-C", path, "rev-parse", "--show-toplevel"], {
     encoding: "utf8",
-    env: { ...process.env, LANG: "C", LC_ALL: "C" },
+    env: sanitizedGitEnvironment(),
     shell: false
   });
 }

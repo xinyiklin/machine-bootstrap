@@ -26,8 +26,8 @@ is read only when a task needs it.
   snapshot-read as real in-checkout files before writes; preflighted starters
   that disappear are not replaced. New directories use atomic no-replace claims
   and are identity-snapshotted before use; all seeded files are revalidated
-  before success. They reject
-  concurrent parent, entry, or backup replacement, leave
+  before success. Git boundary probes discard inherited path overrides. They
+  reject concurrent parent, entry, or backup replacement, leave
   identity-changed entries at their original paths, never delete entries after
   a separate content check, and report exact recovery paths.
 - 2026-08-14 [USER] Legacy parent guidance stops initialization for manual

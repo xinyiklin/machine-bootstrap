@@ -1255,18 +1255,70 @@ await test("legacy workspace entries stop for manual review without writes", () 
   }
 });
 
-function runProjectInitializer(checkoutRoot, target, testHome, extraArgs = []) {
+function runProjectInitializer(
+  checkoutRoot,
+  target,
+  testHome,
+  extraArgs = [],
+  environmentOverrides = {}
+) {
   return spawnSync(
     process.execPath,
     [join(checkoutRoot, "scripts", "init-project.mjs"), target, ...extraArgs],
     {
       cwd: checkoutRoot,
       encoding: "utf8",
-      env: isolatedEnvironment(testHome),
+      env: isolatedEnvironment(testHome, environmentOverrides),
       shell: false
     }
   );
 }
+
+await test("Git boundary probes ignore inherited path overrides", () => {
+  for (const initializer of ["workspace", "project"]) {
+    const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+    try {
+      const overrides = {
+        GIT_DIR: join(testRoot, "spoof.git"),
+        GIT_WORK_TREE: join(testRoot, "spoof-worktree"),
+        GIT_COMMON_DIR: join(testRoot, "spoof-common.git"),
+        GIT_INDEX_FILE: join(testRoot, "spoof.index"),
+        GIT_CEILING_DIRECTORIES: workspaceRoot
+      };
+      let result;
+      if (initializer === "workspace") {
+        result = spawnSync(
+          process.execPath,
+          [
+            join(checkoutRoot, "scripts", "init-workspace.mjs"),
+            "--skip-skills",
+            "--skip-workflows"
+          ],
+          {
+            encoding: "utf8",
+            env: isolatedEnvironment(testRoot, overrides),
+            shell: false
+          }
+        );
+        assert.equal(result.status, 0, result.stderr);
+        assert.equal(existsSync(join(workspaceRoot, "MACHINE.md")), true);
+      } else {
+        const project = join(workspaceRoot, "project-a");
+        result = runProjectInitializer(
+          checkoutRoot,
+          project,
+          testRoot,
+          ["--create"],
+          overrides
+        );
+        assert.equal(result.status, 0, result.stderr);
+        assert.equal(existsSync(join(project, "AGENTS.md")), true);
+      }
+    } finally {
+      rmSync(testRoot, { recursive: true, force: true });
+    }
+  }
+});
 
 function gitCheckIgnore(project, relativePath) {
   return spawnSync(

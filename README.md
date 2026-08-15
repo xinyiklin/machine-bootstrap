@@ -128,7 +128,9 @@ Choose either setup style:
 
    For a missing directory, add `--create`. The initializer does not initialize
    Git. It creates only missing project-owned files and preserves existing
-   files. For an existing `.gitignore` with no environment rules, it appends
+   files. Git boundary probes clear inherited repository/worktree path
+   overrides before evaluating their explicit `-C` targets. For an existing
+   `.gitignore` with no environment rules, it appends
    the complete ordered `.env`, `.env.*`, `!.env.example` policy plus missing
    independent safety rules. An existing canonical environment block is
    preserved only when Git confirms the resulting rules still ignore local

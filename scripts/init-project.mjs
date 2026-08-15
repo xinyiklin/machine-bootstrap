@@ -43,6 +43,16 @@ const positional = rawArgs.filter((arg) => !arg.startsWith("--"));
 const unknownOptions = rawArgs.filter(
   (arg) => arg.startsWith("--") && arg !== "--create"
 );
+const gitEnvironmentOverrides = [
+  "GIT_DIR",
+  "GIT_WORK_TREE",
+  "GIT_COMMON_DIR",
+  "GIT_INDEX_FILE",
+  "GIT_OBJECT_DIRECTORY",
+  "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+  "GIT_CEILING_DIRECTORIES",
+  "GIT_DISCOVERY_ACROSS_FILESYSTEM"
+];
 
 function fail(message) {
   console.error(`\nProject initialization failed: ${message}`);
@@ -198,10 +208,16 @@ try {
   fail(error instanceof Error ? error.message : String(error));
 }
 
+function sanitizedGitEnvironment(environment = process.env) {
+  const sanitized = { ...environment, LANG: "C", LC_ALL: "C" };
+  for (const name of gitEnvironmentOverrides) delete sanitized[name];
+  return sanitized;
+}
+
 function gitProbe(path) {
   return spawnSync("git", ["-C", path, "rev-parse", "--show-toplevel"], {
     encoding: "utf8",
-    env: { ...process.env, LANG: "C", LC_ALL: "C" },
+    env: sanitizedGitEnvironment(),
     shell: false
   });
 }
@@ -224,7 +240,7 @@ function environmentPolicyProblem(contents) {
   try {
     writeFileSync(join(probeRoot, ".gitignore"), contents);
     const environment = {
-      ...process.env,
+      ...sanitizedGitEnvironment(),
       GIT_CONFIG_NOSYSTEM: "1",
       HOME: probeRoot,
       USERPROFILE: probeRoot,
@@ -232,9 +248,6 @@ function environmentPolicyProblem(contents) {
       LANG: "C",
       LC_ALL: "C"
     };
-    for (const name of ["GIT_DIR", "GIT_INDEX_FILE", "GIT_WORK_TREE"]) {
-      delete environment[name];
-    }
     const initialized = spawnSync("git", ["init", "-q"], {
       cwd: probeRoot,
       encoding: "utf8",
