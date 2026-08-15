@@ -1325,19 +1325,22 @@ await test(
 
       const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
       const initializer = readFileSync(initializerPath, "utf8");
-      const needle =
-        "    const destination = join(canonicalTarget, ...parts);\n" +
-        "    if (entryExists(destination)) {";
+      const needle = "    const destination = join(canonicalTarget, ...parts);";
       assert.ok(initializer.includes(needle), "starter injection point must exist");
+      assert.equal(
+        initializer.indexOf(needle),
+        initializer.lastIndexOf(needle),
+        "starter injection point must be unique"
+      );
       writeFileSync(
         initializerPath,
         initializer.replace(
           needle,
-            `    const destination = join(canonicalTarget, ...parts);\n` +
+          needle +
+            `\n` +
             `    if (relativePath === "AGENTS.md") {\n` +
             `      symlinkSync(${JSON.stringify(externalTarget)}, destination);\n` +
-            `    }\n` +
-            `    if (entryExists(destination)) {`
+            `    }`
         )
       );
 
@@ -1405,20 +1408,23 @@ await test("project initialization pins the original target directory", () => {
 
     const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
     const initializer = readFileSync(initializerPath, "utf8");
-    const needle =
-      "    const destination = join(canonicalTarget, ...parts);\n" +
-      "    if (entryExists(destination)) {";
+    const needle = "    const destination = join(canonicalTarget, ...parts);";
     assert.ok(initializer.includes(needle), "target injection point must exist");
+    assert.equal(
+      initializer.indexOf(needle),
+      initializer.lastIndexOf(needle),
+      "target injection point must be unique"
+    );
     writeFileSync(
       initializerPath,
       initializer.replace(
         needle,
-        `    const destination = join(canonicalTarget, ...parts);\n` +
-        `    if (relativePath === "CLAUDE.md") {\n` +
+        needle +
+          `\n` +
+          `    if (relativePath === "CLAUDE.md") {\n` +
           `      renameSync(canonicalTarget, ${JSON.stringify(originalProject)});\n` +
           `      mkdirSync(canonicalTarget);\n` +
-          `    }\n` +
-          `    if (entryExists(destination)) {`
+          `    }`
       )
     );
 
@@ -1439,12 +1445,13 @@ await test("project initialization pins a newly created directory before publica
 
     const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
     const initializer = readFileSync(initializerPath, "utf8");
-    const needle =
-      "    if (entryExists(leaf)) {\n" +
-      "      throw new Error(`Managed parent appeared during initialization: ${path}`);\n" +
-      "    }\n" +
-      "    renameSync(stagingLeaf, leaf);";
+    const needle = "    renameSync(stagingLeaf, leaf);";
     assert.ok(initializer.includes(needle), "new directory injection point must exist");
+    assert.equal(
+      initializer.indexOf(needle),
+      initializer.lastIndexOf(needle),
+      "new directory injection point must be unique"
+    );
     writeFileSync(
       initializerPath,
       initializer.replace(
