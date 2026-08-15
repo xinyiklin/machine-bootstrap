@@ -754,6 +754,43 @@ await test("a wrong-typed machine template fails before workspace writes", () =>
   }
 });
 
+await test("a symlinked machine template fails before workspace writes", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const source = join(checkoutRoot, "machine-templates", "MACHINE.example.md");
+    const externalSource = join(testRoot, "external-machine-notes.md");
+    writeFileSync(externalSource, "external private machine bytes\n");
+    rmSync(source);
+    symlinkSync(externalSource, source);
+
+    const result = spawnSync(
+      process.execPath,
+      [
+        join(checkoutRoot, "scripts", "init-workspace.mjs"),
+        "--skip-skills",
+        "--skip-workflows"
+      ],
+      {
+        encoding: "utf8",
+        env: isolatedEnvironment(testRoot),
+        shell: false
+      }
+    );
+    assert.notEqual(result.status, 0);
+    assert.match(
+      result.stderr,
+      /machine-templates\/MACHINE\.example\.md must be a readable regular file/
+    );
+    assert.equal(existsSync(join(workspaceRoot, "MACHINE.md")), false);
+    assert.equal(
+      readFileSync(externalSource, "utf8"),
+      "external private machine bytes\n"
+    );
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+}, { needsSymlinks: true });
+
 await test("project template keeps local-state safety exclusions trackable", () => {
   const ignore = readFileSync(
     join(bootstrapRoot, "project-templates", ".gitignore"),
@@ -1313,6 +1350,30 @@ await test("project initialization reports a dangling target link cleanly", () =
   }
 }, { needsSymlinks: true });
 
+await test("project initialization reports a dangling target parent cleanly", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const parent = join(workspaceRoot, "dangling-parent");
+    const target = join(parent, "project-a");
+    symlinkSync(join(workspaceRoot, "missing-parent"), parent, "dir");
+
+    const result = runProjectInitializer(
+      checkoutRoot,
+      target,
+      testRoot,
+      ["--create"]
+    );
+    assert.notEqual(result.status, 0);
+    assert.match(
+      result.stderr,
+      /Project initialization failed: Target parent must resolve to an existing directory/
+    );
+    assert.doesNotMatch(result.stderr, /file:\/\/|node:internal|at canonicalCandidate/);
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+}, { needsSymlinks: true });
+
 await test("project initialization rejects a symlinked template source", () => {
   const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
   try {
@@ -1504,6 +1565,41 @@ await test("project initialization pins a newly created directory before publica
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /Managed parent changed during initialization/);
     assert.equal(existsSync(join(project, "AGENTS.md")), false);
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
+await test("project initialization fails before rewriting a vanished starter", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const project = join(workspaceRoot, "project-a");
+    mkdirSync(project);
+    writeFileSync(join(project, "AGENTS.md"), "project-owned policy\n");
+
+    const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
+    const initializer = readFileSync(initializerPath, "utf8");
+    const needle = "    const expected = managedFileAnchors.get(destination);";
+    assert.ok(initializer.includes(needle), "starter disappearance injection must exist");
+    assert.equal(
+      initializer.indexOf(needle),
+      initializer.lastIndexOf(needle),
+      "starter disappearance injection must be unique"
+    );
+    writeFileSync(
+      initializerPath,
+      initializer.replace(
+        needle,
+        `    if (relativePath === "AGENTS.md") rmSync(destination);\n` + needle
+      )
+    );
+
+    const result = runProjectInitializer(checkoutRoot, project, testRoot);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /AGENTS\.md disappeared during initialization/);
+    assert.equal(existsSync(join(project, "AGENTS.md")), false);
+    assert.equal(existsSync(join(project, "CLAUDE.md")), false);
+    assert.equal(existsSync(join(project, ".gitignore")), false);
   } finally {
     rmSync(testRoot, { recursive: true, force: true });
   }

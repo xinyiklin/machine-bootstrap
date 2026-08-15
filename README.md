@@ -100,8 +100,10 @@ Choose either setup style:
    ```
 
    The command creates `../MACHINE.md` only when missing, installs or verifies
-   shared skills and workflows, and generates provider adapters. It never
-   creates parent guidance or a parent template copy.
+   shared skills and workflows, and generates provider adapters. The canonical
+   machine template must be a real in-checkout file and is snapshot-read with
+   no-follow access before any workspace write. The command never creates
+   parent guidance or a parent template copy.
 3. Replace `MACHINE.md` TODOs with verified local facts, then run:
 
    ```bash
@@ -140,7 +142,8 @@ Choose either setup style:
    rollback recovery are anchored to real parent-directory identities pinned
    for the full run; symbolic-link, parent, leaf, or backup replacement stops
    safely instead of being followed or deleted. Every seeded file is
-   identity-and-byte checked again before success. On failure, rollback moves
+   identity-and-byte checked again before success; a preflighted starter that
+   disappears stops before replacement. On failure, rollback moves
    run-owned files to named recovery paths
    instead of deleting them, and leaves identity-changed concurrent entries at
    their original paths. It never deletes directories by pathname; file and

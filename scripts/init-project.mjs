@@ -147,7 +147,12 @@ function canonicalCandidate(path) {
   if (!entryExists(parent)) {
     fail("Only the final target directory may be missing; create its parent first");
   }
-  const canonicalParent = realpathSync.native(parent);
+  let canonicalParent;
+  try {
+    canonicalParent = realpathSync.native(parent);
+  } catch {
+    fail(`Target parent must resolve to an existing directory: ${parent}`);
+  }
   return join(canonicalParent, basename(path));
 }
 
@@ -958,14 +963,17 @@ try {
       ensureDirectory(parent);
     }
     const destination = join(canonicalTarget, ...parts);
-    if (entryExists(destination)) {
-      const expected = managedFileAnchors.get(destination);
-      if (!expected) {
-        throw new Error(`${destination} appeared during initialization; rerun`);
+    const expected = managedFileAnchors.get(destination);
+    if (expected) {
+      if (!entryExists(destination)) {
+        throw new Error(`${destination} disappeared during initialization`);
       }
       assertManagedFileSnapshot(destination, expected);
       preservedFiles.push(relativePath);
       continue;
+    }
+    if (entryExists(destination)) {
+      throw new Error(`${destination} appeared during initialization; rerun`);
     }
     copyTrackedFile(templateContents.get(relativePath), destination);
   }

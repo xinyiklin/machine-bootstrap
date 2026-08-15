@@ -2,15 +2,25 @@
 
 import {
   accessSync,
+  closeSync,
   constants,
-  copyFileSync,
+  fstatSync,
   lstatSync,
+  openSync,
   readFileSync,
   realpathSync,
-  statSync
+  writeFileSync
 } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join, parse, resolve } from "node:path";
+import {
+  dirname,
+  isAbsolute,
+  join,
+  parse,
+  relative,
+  resolve,
+  sep
+} from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
@@ -85,21 +95,60 @@ const requiredFiles = [
   "scripts/lib/workflow-adapters.mjs",
   "scripts/lib/workflow-manifest.mjs"
 ];
+let machineSourceContents = null;
+
+function isInside(parent, child) {
+  const path = relative(parent, child);
+  return (
+    Boolean(path) &&
+    !path.startsWith(`..${sep}`) &&
+    path !== ".." &&
+    !isAbsolute(path)
+  );
+}
+
+function sameFileIdentity(left, right) {
+  return (
+    left.dev === right.dev &&
+    left.ino === right.ino &&
+    left.birthtimeNs === right.birthtimeNs
+  );
+}
 
 for (const relativePath of requiredFiles) {
   const absolutePath = join(bootstrapRoot, relativePath);
+  let descriptor;
   try {
-    if (!statSync(absolutePath).isFile()) {
+    const sourceStat = lstatSync(absolutePath, { bigint: true });
+    const canonicalSource = realpathSync.native(absolutePath);
+    if (
+      sourceStat.isSymbolicLink() ||
+      !sourceStat.isFile() ||
+      !isInside(canonicalBootstrapRoot, canonicalSource)
+    ) {
       fail(`${relativePath} must be a readable regular file`);
     }
-    accessSync(absolutePath, constants.R_OK);
+    descriptor = openSync(
+      absolutePath,
+      constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0)
+    );
+    const opened = fstatSync(descriptor, { bigint: true });
+    if (!opened.isFile() || !sameFileIdentity(opened, sourceStat)) {
+      fail(`${relativePath} changed during validation`);
+    }
+    if (relativePath === "machine-templates/MACHINE.example.md") {
+      machineSourceContents = readFileSync(descriptor);
+    }
   } catch (error) {
     if (error?.code === "ENOENT" || error?.code === "ENOTDIR") {
       fail(`Bootstrap checkout is incomplete; missing: ${relativePath}`);
     }
     fail(`${relativePath} must be a readable regular file`);
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
   }
 }
+if (!machineSourceContents) fail("Machine template snapshot is unavailable");
 
 try {
   const { loadSkillManifest } = await import("./lib/skill-manifest.mjs");
@@ -169,16 +218,17 @@ if (!workspaceGit.stderr.includes("not a git repository")) {
 }
 
 const machinePath = join(workspaceRoot, "MACHINE.md");
-const machineSource = join(bootstrapRoot, "machine-templates", "MACHINE.example.md");
 if (entryExists(machinePath)) {
   let machineStat;
   try {
-    machineStat = statSync(machinePath);
+    machineStat = lstatSync(machinePath);
     accessSync(machinePath, constants.R_OK);
   } catch {
     fail(`${machinePath} must be a readable regular file`);
   }
-  if (!machineStat.isFile()) fail(`${machinePath} must be a readable regular file`);
+  if (machineStat.isSymbolicLink() || !machineStat.isFile()) {
+    fail(`${machinePath} must be a readable regular file`);
+  }
 }
 
 const legacyNames = ["AGENTS.md", "CLAUDE.md", "_templates"];
@@ -221,7 +271,7 @@ if (!checkOnly) {
   }
   if (!entryExists(machinePath)) {
     try {
-      copyFileSync(machineSource, machinePath, constants.COPYFILE_EXCL);
+      writeFileSync(machinePath, machineSourceContents, { flag: "wx" });
       console.log(`Created ${machinePath}; customize it for this machine`);
     } catch (error) {
       if (error?.code === "EEXIST") fail(`${machinePath} appeared during setup; rerun`);
