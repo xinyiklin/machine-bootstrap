@@ -1387,16 +1387,13 @@ await test("project rollback preserves a concurrent gitignore and its original b
 
     const initializerPath = join(checkoutRoot, "scripts", "init-project.mjs");
     const initializer = readFileSync(initializerPath, "utf8");
-    const needle =
-      "      renameSync(gitignorePath, gitignoreBackup);\n" +
-      "      writeFileSync(gitignorePath, updatedContents, {";
+    const needle = "      writeFileSync(gitignorePath, updatedContents, {";
     assert.ok(initializer.includes(needle), "rollback injection point must exist");
     writeFileSync(
       initializerPath,
       initializer.replace(
         needle,
-        "      renameSync(gitignorePath, gitignoreBackup);\n" +
-          "      writeFileSync(gitignorePath, \"concurrent ignore\\n\", { flag: \"wx\" });\n" +
+        "      writeFileSync(gitignorePath, \"concurrent ignore\\n\", { flag: \"wx\" });\n" +
           "      writeFileSync(gitignorePath, updatedContents, {"
       )
     );
