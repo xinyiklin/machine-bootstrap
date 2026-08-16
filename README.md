@@ -43,7 +43,7 @@ the current session.
   guidance, Git workflow, PR template, and ignore entries.
 - `docs/engineering/git-workflow.md` — this repository's Git/publication
   contract; the project starter has its own project-owned contract.
-- `.github/workflows/bootstrap.yml` — Linux and Windows verification.
+- `.github/workflows/bootstrap.yml` — Linux, Windows, and macOS verification.
 - `skills.json` and `scripts/install-skills.mjs` — reviewed shared skill roster
   and missing-only installer.
 - `workflows/` and `scripts/install-workflows.mjs` — provider-neutral workflow
@@ -338,9 +338,9 @@ manual-only legacy detection, explicit project target safety, missing-only
 seeding, existing guidance preservation, order-aware `.gitignore` handling,
 ownership-safe rollback, sibling byte isolation, import topology, byte budgets,
 skill integrity, workflow validation, deterministic adapter generation,
-check-only behavior, and Linux/Windows CI contracts. It makes no model or API
-calls and never points setup scripts at the live parent workspace or provider
-roots.
+check-only behavior, and Linux/Windows/macOS CI contracts. It makes no model or
+API calls and never points setup scripts at the live parent workspace or
+provider roots.
 
 Manual provider loading checks live in
 `docs/guidance-loading-smoke.md`. Static tests are not runtime loading evidence.
