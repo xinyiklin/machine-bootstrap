@@ -67,3 +67,11 @@ access does not load sibling instructions.
 Use `--skip-skills` or `--skip-workflows` only when the user explicitly wants
 that shared layer left untouched. Installing `product-delivery` makes its roles
 available but does not activate the workflow for ordinary work.
+
+Codex desktop is the primary interactive entry; use the task prompts in
+`README.md`. CLI profiles configure new CLI sessions only. Verify the selected
+provider roots: workflow adapters and Claude skill links honor
+`CLAUDE_CONFIG_DIR`; Codex adapters and duplicate-skill checks honor `CODEX_HOME`.
+Canonical shared skills remain under `~/.agents/skills/`. Use the expanded
+default/custom-root and nested-loading checks in `docs/guidance-loading-smoke.md`
+when establishing runtime support. Report unrun scenarios explicitly.

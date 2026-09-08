@@ -9,6 +9,7 @@ import {
   readdirSync,
   readFileSync,
   readlinkSync,
+  realpathSync,
   rmSync,
   statSync,
   symlinkSync
@@ -33,8 +34,14 @@ const preflightOnly = args.has("--preflight");
 const printHashes = args.has("--print-hashes");
 const userHome = homedir();
 const canonicalRoot = join(userHome, ".agents", "skills");
-const claudeRoot = join(userHome, ".claude", "skills");
-const codexRoot = join(userHome, ".codex", "skills");
+const claudeConfigRoot = process.env.CLAUDE_CONFIG_DIR
+  ? resolve(process.env.CLAUDE_CONFIG_DIR)
+  : join(userHome, ".claude");
+const codexHome = process.env.CODEX_HOME
+  ? resolve(process.env.CODEX_HOME)
+  : join(userHome, ".codex");
+const claudeRoot = join(claudeConfigRoot, "skills");
+const codexRoot = join(codexHome, "skills");
 const failures = [];
 
 function failSetup(message) {
@@ -82,6 +89,18 @@ function hasSkill(name) {
   return existsSync(join(canonicalSkillPath(name), "SKILL.md"));
 }
 
+function resolveMissingTarget(path) {
+  let current = path;
+  while (true) {
+    try {
+      return resolve(realpathSync(current), relative(current, path));
+    } catch (error) {
+      if (error?.code !== "ENOENT" || entryExists(current)) throw error;
+      current = dirname(current);
+    }
+  }
+}
+
 function validateClaudeDestination(name) {
   const source = canonicalSkillPath(name);
   const destination = join(claudeRoot, name);
@@ -94,9 +113,22 @@ function validateClaudeDestination(name) {
     return;
   }
 
-  const actual = resolve(claudeRoot, readlinkSync(destination));
-  if (comparablePath(actual) !== comparablePath(source)) {
-    failures.push(`${name}: Claude symlink points to ${actual}`);
+  try {
+    const expected = resolveMissingTarget(source);
+    let actual;
+    try {
+      actual = realpathSync(destination);
+    } catch (error) {
+      // A correct existing link may await installation of its canonical skill.
+      // Resolve its target from the effective directory, never the lexical root.
+      if (error?.code !== "ENOENT" || entryExists(source)) throw error;
+      actual = resolveMissingTarget(resolve(realpathSync(claudeRoot), readlinkSync(destination)));
+    }
+    if (comparablePath(actual) !== comparablePath(expected)) {
+      failures.push(`${name}: Claude symlink points to ${actual}`);
+    }
+  } catch {
+    failures.push(`${name}: Claude symlink cannot resolve to its canonical skill`);
   }
 }
 
@@ -115,15 +147,19 @@ function ensureClaudeLinks(skills) {
   const createdLinks = [];
   try {
     mkdirSync(claudeRoot, { recursive: true });
+    const effectiveClaudeRoot = realpathSync(claudeRoot);
     for (const skill of missingLinks) {
-      const source = canonicalSkillPath(skill.name);
+      const source = realpathSync(canonicalSkillPath(skill.name));
       const destination = join(claudeRoot, skill.name);
       if (process.platform === "win32") {
         symlinkSync(source, destination, "junction");
       } else {
-        symlinkSync(relative(claudeRoot, source), destination);
+        symlinkSync(relative(effectiveClaudeRoot, source), destination);
       }
       createdLinks.push(destination);
+      if (comparablePath(realpathSync(destination)) !== comparablePath(source)) {
+        throw new Error(`${skill.name}: Claude symlink does not resolve to its canonical skill`);
+      }
     }
   } catch (error) {
     for (const destination of createdLinks) {
@@ -303,19 +339,29 @@ function installMissingSkills(skills) {
 
 for (const [label, root] of [
   ["canonical skill root", canonicalRoot],
+  ["Claude configuration root", claudeConfigRoot],
+  ["Codex configuration root", codexHome],
   ["Claude skill root", claudeRoot],
   ["Codex skill root", codexRoot]
 ]) {
-  if (!entryExists(root)) continue;
-  // Followed, so a root relocated through a symlink stays supported.
-  let rootStat;
-  try {
-    rootStat = statSync(root);
-  } catch {
-    failSetup(`${label} cannot be read: ${root}`);
-  }
-  if (!rootStat.isDirectory()) {
-    failSetup(`${label} must be a directory: ${root}`);
+  // Follow relocated roots, but distinguish missing directories from a file
+  // or dangling symlink anywhere in their ancestors before acquisition.
+  let current = root;
+  while (true) {
+    let rootStat;
+    try {
+      rootStat = statSync(current);
+    } catch (error) {
+      if (error?.code === "ENOENT" && !entryExists(current)) {
+        current = dirname(current);
+        continue;
+      }
+      failSetup(`${label} cannot be read as a directory: ${root}`);
+    }
+    if (!rootStat.isDirectory()) {
+      failSetup(`${label} must be a directory: ${root}`);
+    }
+    break;
   }
 }
 

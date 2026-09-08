@@ -54,12 +54,42 @@ and keep its summary, scope, verification, risks, and skipped-checks sections
 accurate.
 
 If the project squash-merges by default, use the Conventional Commit subject as
-the PR title so the resulting base-branch commit remains consistent. Prefer a
-reviewable behavior slice; aim for 500 changed lines or fewer and document why
-an exception cannot be split.
+the PR title so the resulting base-branch commit remains consistent.
 
 For stacked PRs, state the dependency and base branch. Merge the base PR first,
 update the dependent branch onto the new base, and rerun affected checks.
+
+## PR size
+
+Plan PR boundaries before a large implementation. Each PR should deliver one
+coherent behavior change and pass its checks independently. Keep related code,
+tests, and necessary documentation together; separate unrelated refactors.
+
+Count additions plus deletions in the proposed PR diff against its actual base
+using the merge base, not the sum of individual commits. For stacked PRs, use
+the declared parent branch. Include handwritten code, tests, and documentation.
+Report generated output, lockfiles, pure renames, and binary files separately
+with exact paths and reasons; exclude them from the numeric threshold but still
+review them. Count edits within renamed files. Unknown or mixed-content files
+remain counted; do not classify handwritten changes as generated to fit a limit.
+
+| Counted changed lines | Required action |
+| :--- | :--- |
+| Up to 500 | Normal target; keep the PR focused |
+| 501–1,000 | Explain in the PR body why keeping the change together improves review |
+| Over 1,000 | Split it, or obtain a documented exception from the fresh independent reviewer before calling it ready or merging |
+
+For an exception, record the counted size, excluded paths, why a safe split is
+not useful, how the change can be reviewed, and the reviewer's explicit
+acceptance for the reviewed head. The author cannot self-approve. A material
+scope change or changed head requires renewed review and exception confirmation.
+An exception does not waive tests, independent review, or publication authority.
+If independent review is user-waived, only the user can explicitly grant the
+size exception; the review waiver alone is insufficient.
+
+These are review-policy gates, not an automated CI size check. Start with the
+500/1,000 defaults; any project-specific adjustment belongs in its owning Git
+contract with rationale, rather than an ad hoc per-PR threshold change.
 
 ## Verification and review
 
@@ -69,8 +99,11 @@ Before opening or updating a PR:
 2. Run the narrowest checks for the changed surface and affected consumers.
 3. Run `git diff --check` and inspect the complete diff for scope, regressions,
    stale paths, and secrets.
-4. Complete self-review and obtain one fresh independent review by default.
+4. Complete self-review, then obtain one fresh independent review by default
+   from a reviewer that did not make the change; `AGENTS.md` names which one.
    Only the user may waive that review for a specific change.
+   The root guide requires the same review before local completion, even when
+   no PR or full product-delivery workflow is requested.
 5. Update product, engineering, guidance, and continuity docs when behavior,
    ownership, commands, or durable state changed.
 

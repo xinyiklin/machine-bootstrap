@@ -12,6 +12,12 @@ is read only when a task needs it.
 
 ## Snapshot
 
+- 2026-09-08 [USER+CODE] PR size policy: 500-line target, 1,000-line review gate;
+  counting and exceptions live in each Git contract and PR template.
+
+- 2026-09-07 [USER+CODE] Codex-first calibration: custom provider roots and
+  maintenance/review policy (D025). Source findings, verification and recorded
+  process deviation: `docs/provider-calibration-2026-09-07.md`.
 - 2026-08-14 [USER+CODE] Sibling-only ownership replaces the workspace router
   (D005, D017, D021): the parent has optional inert `MACHINE.md` but no live
   `AGENTS.md`, `CLAUDE.md`, or `_templates/`. Machine-bootstrap and every project
@@ -52,6 +58,10 @@ is read only when a task needs it.
   project work. Standalone Verifier selection activates only independent review.
 - 2026-08-13 [USER] Every implementation defaults to implementer verification
   plus one fresh independent review; only the user may waive it per change.
+- 2026-08-19 [USER+CODE] Workflow activation must be stated as checkable
+  conditions, the independent reviewer is named rather than implied, an
+  unrecorded skip is a process failure, and this repository applies the
+  workflow to itself (D024).
 - 2026-08-13 [USER] Dependency versions come from current official sources.
   Prefer the latest compatible stable release, preserve package-manager/range
   policy, update tracked lockfiles, and explain older or prerelease choices.
@@ -119,16 +129,22 @@ Milestones — detail in `docs/continuity/2026-07.md`:
 - 2026-08-14 [USER] D023 ACTIVE: document agent-assisted setup as a normal
   interface. Natural-language requests select the target and outcome; audited
   scripts remain the execution and verification layer.
+- 2026-08-19 [USER+CODE] D024 ACTIVE: workflow triggers are checkable conditions, not
+  self-assessed judgment; the satisfying reviewer is named; skips are recorded;
+  and machine-bootstrap is in scope for its own workflow. Provider adapters own
+  harness mechanics; README and shared reviewer guidance name provider roles.
+
+- 2026-09-07 [USER+CODE] D025 ACTIVE: Codex desktop is the primary documented
+  entry; Claude retains native loading. Workflow triggers name changed contracts;
+  maintenance keeps fresh review and existing user authorization carries forward.
 
 ## Working Set
 
 - `AGENTS.md`, `CLAUDE.md`, `README.md`, `INIT.md`, `CONTINUITY.md`
 - `.github/{pull_request_template.md,workflows/bootstrap.yml}`
-- `machine-templates/`
-- `project-templates/`
+- `machine-templates/`, `project-templates/`
 - `docs/{engineering/git-workflow.md,guidance-loading-smoke.md,continuity/}`
-- `scripts/{init-workspace,init-project,test-bootstrap}.mjs`
-- `scripts/{install-skills,install-workflows}.mjs`
+- `scripts/{init-workspace,init-project,test-bootstrap,install-skills,install-workflows}.mjs`
 - `scripts/lib/{fs-safety,portable-path,skill-*,workflow-*}.mjs`
 - `skills.json`, `workflows/`
 
@@ -136,8 +152,5 @@ Milestones — detail in `docs/continuity/2026-07.md`:
 
 - Keep scratch optional and disposable; promote durable work into its own
   sibling repository with project guidance.
-- Add a private remote only with explicit user authorization.
-
-## Open Questions
-
-- 2026-07-27 [USER] UNCONFIRMED which private remote will host this repository.
+- Impeccable 4.0.2 restored with explicit user authorization and a recoverable
+  4.0.4 backup; retain the pin until a freshly reviewed upgrade recommendation.

@@ -56,6 +56,32 @@ facts. It is not an agent-policy source.
 - Sandbox authorization to access the parent registry or a sibling target does
   not load that sibling's instructions into this session.
 
+## Product-delivery hook
+
+The installed `~/.agents/workflows/product-delivery/` contract applies to this
+repository, not only to the projects it seeds. In addition to its explicit
+role, user-request, and active-artifact triggers, its complete flow activates
+when a change alters any of these contracts:
+
+- installation ownership, target boundaries, overwrite or recovery behavior;
+- skill acquisition sources, reviewed revisions/hashes, or integrity validation;
+- provider adapter fields, discovery locations, or generated instruction meaning;
+- workflow activation, approval, delegation, or required review policy;
+- the hard invariants above, or guidance propagated into sibling projects.
+
+Check the resulting behavior and contract diff in `workflows/`, templates,
+manifests, scripts, and owning guidance. A path match alone does not activate
+the flow. Typo/link corrections, reflow, tests of unchanged behavior, and
+internal refactors preserving these contracts are maintenance. Record the
+classification and evidence; any listed contract change activates the full
+flow even if most of the diff is maintenance. Continuity-only updates remain
+outside it unless they continue an active workflow artifact.
+
+Independent review means a fresh reviewer that did not make the change: the
+installed Verifier role unless the user names another. When a listed condition
+matches and the workflow or its review is not run, say so and record it; an
+unrecorded skip is a process failure, not a judgment call.
+
 ## Working method
 
 - Keep changes scoped to the requested behavior and its necessary cleanup.
@@ -83,3 +109,10 @@ The full regression suite is the primary gate. Guidance changes also require
 path, import, byte-budget, and internal-consistency checks. Line targets are
 readability warnings, not CI gates. Report skipped host-capability checks and
 unverified external behavior explicitly.
+
+Every implementation, including maintenance outside the full workflow, needs
+implementer verification and one fresh independent review before local
+completion. Delegate it to the installed Verifier (`mb_verifier` in Codex,
+`mb-verifier` in Claude), unless the user names another reviewer. Only the user
+may waive review for a specific change; record the waiver without calling it
+passed. This requirement does not activate the full workflow by itself.

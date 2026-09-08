@@ -176,6 +176,50 @@ function runScript(script, scriptArgs, testHome, environmentOverrides = {}) {
   return result;
 }
 
+async function createSkillInstallerFixture() {
+  const testHome = createTestHome("skill-provider-roots");
+  const checkout = join(testHome, "installer");
+  const fixtureScriptDir = join(checkout, "scripts");
+  mkdirSync(fixtureScriptDir, { recursive: true });
+  copyFileSync(
+    join(scriptDir, "install-skills.mjs"),
+    join(fixtureScriptDir, "install-skills.mjs")
+  );
+  cpSync(join(scriptDir, "lib"), join(fixtureScriptDir, "lib"), {
+    recursive: true
+  });
+  const name = "fixture-skill";
+  const canonical = join(testHome, ".agents", "skills", name);
+  mkdirSync(canonical, { recursive: true });
+  writeFileSync(join(canonical, "SKILL.md"), "# Disposable test skill\n");
+  const { hashDirectory } = await import("./lib/skill-integrity.mjs");
+  writeFileSync(join(checkout, "skills.json"), JSON.stringify({
+    schemaVersion: 3,
+    skills: [{
+      name,
+      repository: "https://github.com/example/fixture.git",
+      sourcePath: "skills/fixture-skill",
+      sourceRevision: "a".repeat(40),
+      contentSha256: hashDirectory(canonical)
+    }]
+  }));
+  return {
+    testHome,
+    name,
+    canonical,
+    run(args = [], overrides = {}) {
+      return spawnSync(process.execPath, [
+        join(fixtureScriptDir, "install-skills.mjs"), ...args
+      ], {
+        cwd: testHome,
+        encoding: "utf8",
+        env: isolatedEnvironment(testHome, { PATH: "", ...overrides }),
+        shell: false
+      });
+    }
+  };
+}
+
 async function test(
   name,
   callback,
@@ -465,6 +509,261 @@ await test("incompatible Claude state fails before skill installation", () => {
     assert.equal(existsSync(join(testHome, ".agents", "skills")), false);
   } finally {
     rmSync(testHome, { recursive: true, force: true });
+  }
+});
+
+await test("skill links and checks use custom provider roots without changing defaults", async () => {
+  const fixture = await createSkillInstallerFixture();
+  const { testHome, name, canonical } = fixture;
+  try {
+    // Relative overrides resolve from the invocation directory, as workflows do.
+    const overrides = {
+      CLAUDE_CONFIG_DIR: "providers/claude config",
+      CODEX_HOME: "providers/codex config"
+    };
+    const customClaude = join(testHome, overrides.CLAUDE_CONFIG_DIR, "skills");
+    const defaultClaude = join(testHome, ".claude", "skills");
+    const defaultCodex = join(testHome, ".codex", "skills", name);
+    mkdirSync(defaultClaude, { recursive: true });
+    symlinkSync(canonical, join(defaultClaude, name),
+      process.platform === "win32" ? "junction" : "dir");
+    const originalLink = readlinkSync(join(defaultClaude, name));
+    mkdirSync(customClaude, { recursive: true });
+    writeFileSync(join(customClaude, "keep.txt"), "unrelated Claude entry\n");
+
+    const missing = fixture.run(["--check"], overrides);
+    assert.notEqual(missing.status, 0);
+    assert.match(missing.stderr, /fixture-skill: Claude symlink is missing/);
+    assert.doesNotMatch(missing.stderr, /redundant Codex-specific copy/);
+    assert.equal(existsSync(join(customClaude, name)), false);
+
+    mkdirSync(defaultCodex, { recursive: true });
+    writeFileSync(join(defaultCodex, "keep.txt"), "unrelated inactive copy\n");
+    const installed = fixture.run([], overrides);
+    assert.equal(installed.status, 0, installed.stderr);
+    const destination = join(customClaude, name);
+    assert.equal(lstatSync(destination).isSymbolicLink(), true);
+    assert.equal(readFileSync(join(destination, "SKILL.md"), "utf8"),
+      readFileSync(join(canonical, "SKILL.md"), "utf8"));
+    const checked = fixture.run(["--check"], overrides);
+    assert.equal(checked.status, 0, checked.stderr);
+    assert.equal(readlinkSync(join(defaultClaude, name)), originalLink);
+    assert.deepEqual(readdirSync(defaultClaude), [name]);
+    assert.equal(readFileSync(join(defaultCodex, "keep.txt"), "utf8"),
+      "unrelated inactive copy\n");
+    assert.equal(readFileSync(join(customClaude, "keep.txt"), "utf8"),
+      "unrelated Claude entry\n");
+    assert.equal(existsSync(join(testHome, overrides.CODEX_HOME)), false);
+  } finally {
+    rmSync(testHome, { recursive: true, force: true });
+  }
+}, { needsSymlinks: true });
+
+await test("unset and empty provider overrides retain default skill roots", async () => {
+  for (const overrides of [{}, { CLAUDE_CONFIG_DIR: "", CODEX_HOME: "" }]) {
+    const fixture = await createSkillInstallerFixture();
+    const { testHome, name } = fixture;
+    try {
+      const installed = fixture.run([], overrides);
+      assert.equal(installed.status, 0, installed.stderr);
+      assert.equal(lstatSync(join(testHome, ".claude", "skills", name))
+        .isSymbolicLink(), true);
+      const checked = fixture.run(["--check"], overrides);
+      assert.equal(checked.status, 0, checked.stderr);
+      const duplicate = join(testHome, ".codex", "skills", name);
+      mkdirSync(duplicate, { recursive: true });
+      const rejected = fixture.run(["--check"], overrides);
+      assert.notEqual(rejected.status, 0);
+      assert.match(rejected.stderr, /redundant Codex-specific copy exists/);
+    } finally {
+      rmSync(testHome, { recursive: true, force: true });
+    }
+  }
+}, { needsSymlinks: true });
+
+await test("relocated Claude roots create readable links and reject broken lexical links", async () => {
+  for (const relocatedPart of ["configuration", "skills"]) {
+    const fixture = await createSkillInstallerFixture();
+    const { testHome, name, canonical } = fixture;
+    try {
+      const config = join(testHome, "config");
+      const effectiveRoot = join(testHome, "deeper", "relocated", relocatedPart);
+      mkdirSync(effectiveRoot, { recursive: true });
+      const relocated = relocatedPart === "configuration" ? config : join(config, "skills");
+      mkdirSync(dirname(relocated), { recursive: true });
+      symlinkSync(effectiveRoot, relocated,
+        process.platform === "win32" ? "junction" : "dir");
+      const overrides = { CLAUDE_CONFIG_DIR: config };
+      const result = fixture.run([], overrides);
+      assert.equal(result.status, 0, result.stderr);
+      const link = join(config, "skills", name);
+      assert.equal(readFileSync(join(link, "SKILL.md"), "utf8"),
+        readFileSync(join(canonical, "SKILL.md"), "utf8"));
+      const checked = fixture.run(["--check"], overrides);
+      assert.equal(checked.status, 0, checked.stderr);
+
+      // Reproduce the previously accepted link based on the lexical root depth.
+      rmSync(link);
+      symlinkSync("../../.agents/skills/fixture-skill", link, "dir");
+      const broken = fixture.run(["--check"], overrides);
+      assert.notEqual(broken.status, 0);
+      assert.match(broken.stderr, /Claude symlink cannot resolve to its canonical skill/);
+      assert.doesNotMatch(broken.stderr, /node:internal|file:\/\//);
+    } finally {
+      rmSync(testHome, { recursive: true, force: true });
+    }
+  }
+}, { needsSymlinks: true });
+
+await test("a correct Claude link can await its missing canonical skill", async () => {
+  const fixture = await createSkillInstallerFixture();
+  const { testHome, name, canonical } = fixture;
+  try {
+    const claudeRoot = join(testHome, "custom-claude", "skills");
+    mkdirSync(claudeRoot, { recursive: true });
+    symlinkSync(canonical, join(claudeRoot, name),
+      process.platform === "win32" ? "junction" : "dir");
+    rmSync(canonical, { recursive: true });
+    const overrides = { CLAUDE_CONFIG_DIR: dirname(claudeRoot) };
+    const preflight = fixture.run(["--preflight"], overrides);
+    assert.equal(preflight.status, 0, preflight.stderr);
+    const checked = fixture.run(["--check"], overrides);
+    assert.notEqual(checked.status, 0);
+    assert.match(checked.stderr, /canonical skill is missing/);
+    assert.doesNotMatch(checked.stderr, /Claude symlink/);
+    const install = fixture.run([], overrides);
+    assert.notEqual(install.status, 0);
+    assert.match(install.stdout, /Fetching reviewed source/);
+    assert.doesNotMatch(install.stderr, /Claude symlink/);
+    assert.equal(existsSync(canonical), false);
+  } finally {
+    rmSync(testHome, { recursive: true, force: true });
+  }
+}, { needsSymlinks: true });
+
+await test("provider roots beneath files fail preflight before acquisition", async () => {
+  for (const variable of ["CLAUDE_CONFIG_DIR", "CODEX_HOME"]) {
+    const fixture = await createSkillInstallerFixture();
+    const { testHome, canonical } = fixture;
+    try {
+      const ancestor = join(testHome, "ancestor");
+      writeFileSync(ancestor, "preserve ancestor\n");
+      rmSync(canonical, { recursive: true });
+      for (const args of [[], ["--check"], ["--preflight"]]) {
+        const result = fixture.run(args, { [variable]: join(ancestor, "nested") });
+        assert.notEqual(result.status, 0);
+        assert.match(result.stderr, /configuration root cannot be read as a directory/);
+        assert.doesNotMatch(result.stderr, /ENOTDIR|node:internal/);
+        assert.doesNotMatch(result.stdout, /Fetching reviewed source/);
+        assert.equal(existsSync(canonical), false);
+        assert.equal(readFileSync(ancestor, "utf8"), "preserve ancestor\n");
+      }
+    } finally {
+      rmSync(testHome, { recursive: true, force: true });
+    }
+  }
+});
+
+await test("dangling provider roots and ancestors fail before acquisition", async () => {
+  for (const variable of ["CLAUDE_CONFIG_DIR", "CODEX_HOME"]) {
+    const fixture = await createSkillInstallerFixture();
+    const { testHome, canonical } = fixture;
+    try {
+      const dangling = join(testHome, "dangling");
+      const missing = join(testHome, "missing");
+      symlinkSync(missing, dangling, "dir");
+      rmSync(canonical, { recursive: true });
+      for (const configRoot of [dangling, join(dangling, "nested")]) {
+        for (const args of [[], ["--check"], ["--preflight"]]) {
+          const result = fixture.run(args, { [variable]: configRoot });
+          assert.notEqual(result.status, 0);
+          assert.match(result.stderr, /configuration root cannot be read as a directory/);
+          assert.doesNotMatch(result.stderr, /node:internal/);
+          assert.doesNotMatch(result.stdout, /Fetching reviewed source/);
+          assert.equal(existsSync(canonical), false);
+          assert.equal(existsSync(missing), false);
+          assert.equal(readlinkSync(dangling), missing);
+        }
+      }
+    } finally {
+      rmSync(testHome, { recursive: true, force: true });
+    }
+  }
+}, { needsSymlinks: true });
+
+await test("custom Codex duplicates fail all setup modes before skill acquisition", async () => {
+  const fixture = await createSkillInstallerFixture();
+  const { testHome, name, canonical } = fixture;
+  try {
+    const codexHome = join(testHome, "custom-codex");
+    const duplicate = join(codexHome, "skills", name);
+    mkdirSync(duplicate, { recursive: true });
+    writeFileSync(join(duplicate, "keep.txt"), "preserve duplicate\n");
+    rmSync(canonical, { recursive: true });
+    for (const args of [[], ["--check"], ["--preflight"]]) {
+      const result = fixture.run(args, { CODEX_HOME: codexHome });
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, /redundant Codex-specific copy exists/);
+      assert.doesNotMatch(result.stdout, /Fetching reviewed source/);
+      assert.equal(existsSync(canonical), false);
+      assert.equal(existsSync(join(testHome, ".claude")), false);
+      assert.equal(existsSync(join(testHome, ".codex")), false);
+      assert.equal(readFileSync(join(duplicate, "keep.txt"), "utf8"),
+        "preserve duplicate\n");
+    }
+  } finally {
+    rmSync(testHome, { recursive: true, force: true });
+  }
+});
+
+await test("incompatible custom Claude destination stops before skill acquisition", async () => {
+  const fixture = await createSkillInstallerFixture();
+  const { testHome, name, canonical } = fixture;
+  try {
+    const claudeConfig = join(testHome, "custom-claude");
+    const destination = join(claudeConfig, "skills", name);
+    mkdirSync(dirname(destination), { recursive: true });
+    writeFileSync(destination, "preserve existing destination\n");
+    rmSync(canonical, { recursive: true });
+    for (const args of [[], ["--preflight"]]) {
+      const result = fixture.run(args, { CLAUDE_CONFIG_DIR: claudeConfig });
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, /Claude destination exists but is not a symlink/);
+      assert.doesNotMatch(result.stdout, /Fetching reviewed source/);
+      assert.equal(existsSync(canonical), false);
+      assert.equal(existsSync(join(testHome, ".claude")), false);
+      assert.equal(readFileSync(destination, "utf8"),
+        "preserve existing destination\n");
+    }
+  } finally {
+    rmSync(testHome, { recursive: true, force: true });
+  }
+});
+
+await test("malformed custom provider roots stop before skill acquisition", async () => {
+  for (const [variable, provider] of [
+    ["CLAUDE_CONFIG_DIR", "Claude"], ["CODEX_HOME", "Codex"]
+  ]) {
+    for (const leaf of ["configuration", "skill"]) {
+      const fixture = await createSkillInstallerFixture();
+      const { testHome, canonical } = fixture;
+      try {
+        const configRoot = join(testHome, "custom-provider");
+        const invalid = leaf === "configuration" ? configRoot : join(configRoot, "skills");
+        mkdirSync(dirname(invalid), { recursive: true });
+        writeFileSync(invalid, "preserve root file\n");
+        rmSync(canonical, { recursive: true });
+        const result = fixture.run([], { [variable]: configRoot });
+        assert.notEqual(result.status, 0);
+        assert.match(result.stderr, new RegExp(`${provider} ${leaf} root must be a directory`));
+        assert.doesNotMatch(result.stderr, /ENOTDIR|node:internal/);
+        assert.doesNotMatch(result.stdout, /Fetching reviewed source/);
+        assert.equal(existsSync(canonical), false);
+        assert.equal(readFileSync(invalid, "utf8"), "preserve root file\n");
+      } finally {
+        rmSync(testHome, { recursive: true, force: true });
+      }
+    }
   }
 });
 

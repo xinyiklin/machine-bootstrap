@@ -13,6 +13,15 @@ Keep this receipt factual. If a check was not run, say why.
 - Related product / engineering / continuity docs:
 - Breaking change, migration, or rollout note: None / describe
 
+## PR size
+
+- Counted additions + deletions against the PR base:
+- Excluded generated/lockfile/pure-rename/binary paths and reasons: None / describe
+- Above 500 lines: why keeping this change together improves review:
+- Above 1,000 lines: split plan, or explicit independent-reviewer exception
+  (reviewed head, rationale, and review approach):
+  <!-- If independent review was user-waived, record the user's separate size exception. -->
+
 ## Verification
 
 - Focused checks:
