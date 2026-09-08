@@ -652,7 +652,9 @@ await test("provider roots beneath files fail preflight before acquisition", asy
       for (const args of [[], ["--check"], ["--preflight"]]) {
         const result = fixture.run(args, { [variable]: join(ancestor, "nested") });
         assert.notEqual(result.status, 0);
-        assert.match(result.stderr, /configuration root cannot be read as a directory/);
+        // Windows can report ENOENT for the child and reach the file ancestor;
+        // POSIX reports ENOTDIR immediately. Both must reject before fetching.
+        assert.match(result.stderr, /configuration root (?:cannot be read as|must be) a directory/);
         assert.doesNotMatch(result.stderr, /ENOTDIR|node:internal/);
         assert.doesNotMatch(result.stdout, /Fetching reviewed source/);
         assert.equal(existsSync(canonical), false);

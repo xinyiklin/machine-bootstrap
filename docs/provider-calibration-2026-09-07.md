@@ -111,7 +111,10 @@ Provider documentation sources are linked in README.
 - Codex desktop: installed `mb_verifier` successfully delegated during review.
   Other desktop/CLI profile and nested-loading scenarios were not run.
 - Claude: native runtime loading/delegation was not exercised.
-- Cross-platform CI: not run in this local task.
+- Initial Linux/macOS CI passed. Windows rejected an obstructed root correctly
+  but exposed a platform-specific error-message assertion. The maintenance fix
+  accepts both valid rejection diagnostics while retaining acquisition and
+  preservation assertions. Final cross-platform results are recorded in the PR.
 - Independent review found and retested fixes for unreadable links through
   relocated Claude directories and file-obstructed ancestors. The final full
   diff review found no unresolved implementation or guidance defect. Its only
