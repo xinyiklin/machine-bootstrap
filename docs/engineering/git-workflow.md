@@ -35,6 +35,38 @@ Keep commits coherent and reviewable. Inspect the complete staged diff and run
 the relevant local checks before committing. Never bypass hooks unless the user
 explicitly authorizes the exception.
 
+## PR size
+
+Plan PR boundaries before a large implementation. Each PR should deliver one
+coherent behavior change and pass its checks independently. Keep related code,
+tests, and necessary documentation together; separate unrelated refactors.
+
+Count additions plus deletions in the proposed PR diff against its actual base
+using the merge base, not the sum of individual commits. For stacked PRs, use
+the declared parent branch. Include handwritten code, tests, and documentation.
+Report generated output, lockfiles, pure renames, and binary files separately
+with exact paths and reasons; exclude them from the numeric threshold but still
+review them. Count edits within renamed files. Unknown or mixed-content files
+remain counted; do not classify handwritten changes as generated to fit a limit.
+
+| Counted changed lines | Required action |
+| :--- | :--- |
+| Up to 500 | Normal target; keep the PR focused |
+| 501–1,000 | Explain in the PR body why keeping the change together improves review |
+| Over 1,000 | Split it, or obtain a documented exception from the fresh independent reviewer before calling it ready or merging |
+
+For an exception, record the counted size, excluded paths, why a safe split is
+not useful, how the change can be reviewed, and the reviewer's explicit
+acceptance for the reviewed head. The author cannot self-approve. A material
+scope change or changed head requires renewed review and exception confirmation.
+An exception does not waive tests, independent review, or publication authority.
+If independent review is user-waived, only the user can explicitly grant the
+size exception; the review waiver alone is insufficient.
+
+These are review-policy gates, not an automated CI size check. Start with the
+500/1,000 defaults; any project-specific adjustment belongs in its owning Git
+contract with rationale, rather than an ad hoc per-PR threshold change.
+
 ## Pull requests and review
 
 Use `.github/pull_request_template.md`. A PR title should match the intended
@@ -46,8 +78,10 @@ Before opening or updating a PR:
 1. Confirm worktree, branch, base, and exact changed paths.
 2. Run focused owner checks and affected consumer checks.
 3. Run `git diff --check` and inspect the complete diff.
-4. Complete implementer self-review and one fresh independent review unless the
-   user explicitly waives it for this change.
+4. Complete implementer self-review, then one fresh independent review by a
+   reviewer that did not make the change — the installed Verifier role unless
+   the user names another. Only the user may waive that review for a change.
+   `AGENTS.md` also requires this before local completion, including maintenance.
 5. Update affected guidance, engineering, and continuity owners.
 
 Before merge, confirm the PR head is the exact reviewed and verified commit.

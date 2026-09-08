@@ -60,10 +60,21 @@ activates independent verification only and never creates missing upstream artif
 When active, follow the installed contract without copying its gates or
 artifacts here. Project-specific additions only:
 
-- Named work that activates the workflow: TODO, or `none`.
+- Named work that activates the workflow: TODO as checkable conditions — paths,
+  contracts, or artifact kinds a reader can evaluate — never a self-assessed
+  size or importance test; or `none`.
+- Maintenance outside those conditions: typo/link corrections, reflow, tests
+  of unchanged behavior, and internal refactors preserving the named contracts.
+  A change to a named contract still activates the flow; record the classification.
 - Additional Change Request triggers: TODO, or `none`.
 - Required project checks or specialist review: TODO, or `the commands below`.
+- Reviewer that satisfies independent review: TODO exact agent or command name,
+  or `the installed Verifier`; resolve any project agent that shares its name.
 - Artifact-retention policy: TODO, or `local while active`.
+
+When a listed condition matches and the workflow or its review is not run, say
+so in the response with the reason. An unrecorded skip is a process failure,
+not a judgment call.
 
 ## Commands
 
@@ -84,7 +95,9 @@ Run from the repository root unless a command says otherwise.
 - Implement the smallest maintainable change that satisfies the request. Avoid
   speculative features, abstractions, configuration, and drive-by cleanup.
 - Ask before changing dependencies, schemas, authentication, deployment,
-  destructive storage behavior, paid services, or public network exposure.
+  destructive storage behavior, paid services, or public network exposure
+  when the user's current request or prior authorization does not cover it.
+  Continue authorized work; ask only for an unresolved decision or new scope.
 - For dependencies, inspect compatibility and version policy, verify the latest
   compatible stable or maintainer-recommended release from official sources,
   preserve the package manager/range policy, and update a tracked lockfile.
@@ -111,6 +124,15 @@ Verify UI, generated artifacts, file formats, migrations, and round trips when
 they are part of the changed contract. If no harness exists, run the strongest
 lightweight check and state the gap. Report passed, failed, unverified, and
 skipped evidence honestly; missing evidence is not a pass.
+
+Every implementation, including ordinary work outside the full workflow,
+requires implementer verification and one fresh independent review before
+local completion. Delegate to the reviewer named above; the installed Verifier
+is `mb_verifier` in Codex and `mb-verifier` in Claude. The reviewer must not have
+implemented the change. Only the user may waive review for a specific change;
+record the waiver and reason, never a pass. If that reviewer is unavailable,
+report the gap and request a replacement or waiver. This review alone does not
+activate the full workflow or require its upstream artifacts.
 
 ## Git and existing work
 

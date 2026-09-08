@@ -11,6 +11,12 @@ copied or renamed as one.
 - `docs/engineering/git-workflow.md`: project-owned Git/publication contract.
 - `.github/pull_request_template.md`: PR scope and verification receipt.
 
+The Git contract defines a 500-line PR target and a 1,000-line review gate;
+the PR template records size, exclusions, and any required explanation or
+reviewer exception. Keep related code/tests/docs together. Projects may adjust
+the defaults in their own contract with rationale; existing seeded projects
+are not changed when this starter is updated.
+
 The starter `.gitignore` keeps shared `.claude/` and `.codex/` configuration
 trackable. It excludes `CLAUDE.local.md`, `.claude/settings.local.json`, and
 active `.agent-work/` artifacts. Remove the last exclusion only when the
@@ -84,6 +90,19 @@ activates only when Product Partner or Delivery Lead is selected, the user
 explicitly requests the complete workflow, an active Product Brief or Delivery
 Plan is continued, or project guidance requires it for named work. Selecting
 the Verifier activates only independent verification for the supplied change.
+
+Fill the project's activating conditions with checkable facts — paths,
+contracts, or artifact kinds — and name the reviewer that satisfies independent
+review. A self-assessed test such as "non-trivial work" is not a condition, and
+an unrecorded skip is a process failure.
+
+Prefer contract changes over blanket directory matches when defining triggers.
+For example, name changes to data retention, authorization, or installation
+ownership; exclude mechanical maintenance only when those contracts remain
+unchanged. Ordinary implementations still receive self-verification and one
+fresh independent review before local completion. This standalone review does
+not require the full workflow's brief and plan. Existing user authorization
+continues to apply; do not repeat a permission question for the same scope.
 
 Personal preferences may live in gitignored `CLAUDE.local.md`, but they must
 remain compatible with tracked project instructions.

@@ -174,6 +174,22 @@ Verifier activates only independent verification for the supplied change; it
 does not retroactively create missing upstream gates or artifacts. Ordinary
 work creates neither by default.
 
+For this repository, `AGENTS.md` names the activating contracts: installation
+ownership and recovery, acquisition integrity, provider formats/discovery,
+workflow policy, hard invariants, and propagation to siblings. Mechanical
+maintenance that preserves those contracts stays outside the full flow. Every
+implementation still receives self-verification and fresh independent review
+before local completion. Record the classification rather than judging a task
+by its apparent size. Existing project-owned starters are never synchronized
+when these defaults change.
+
+The Git contracts and PR templates use a 500-line target and a 1,000-line
+review gate, measured as additions plus deletions. Changes over 1,000 require a
+split or an explicit reviewer exception; generated/lockfile/rename/binary
+changes are reported separately. See `docs/engineering/git-workflow.md` for
+counting, exceptions, and review requirements. These gates are guidance for
+both providers, not an automated CI size limit.
+
 ### The three roles
 
 | Role | Owns | Claude agent | Codex agent |
@@ -244,6 +260,45 @@ it does not read or write `settings.json` in the Claude configuration root or
 
 ### Launching a role
 
+#### Codex desktop (primary workspace)
+
+Open a task in the target repository, then state the outcome in ordinary
+language. Root guidance routes routine work; inspect the nearest scoped guide
+before editing a subtree. Use a fresh task starting in that scope when relying
+on automatic nested instruction discovery.
+
+For ordinary implementation:
+
+> Implement the requested change within the existing contract. Run the affected
+> checks, then delegate a fresh independent review to `mb_verifier`. Report the
+> evidence and unresolved findings. Keep changes local.
+
+For a review without implementation:
+
+> Delegate review of the current changes to `mb_verifier`. Inspect the actual
+> diff and checks; report findings without editing or publishing. Missing full
+> workflow artifacts are a limitation only where that workflow was required.
+
+For the complete discovery-to-delivery workflow:
+
+> Use the complete `product-delivery` workflow for this task. Read its installed
+> contract, begin Product Partner discovery, and follow its separate brief and
+> plan approval gates. Keep the approved artifacts available for role handoffs.
+
+These are task instructions, not an app profile selector. The CLI profile
+commands below configure a primary CLI session; do not assume they select the
+role of an existing desktop task. Custom agents are delegated specialists.
+Codex currently supports delegation explicitly requested by the user or by
+applicable project/skill instructions. Leave model and reasoning settings
+inherited unless the user chooses otherwise; bootstrap adapters pin neither.
+
+Confirm `mb_product_partner`, `mb_delivery_lead`, and `mb_verifier` are available
+in a fresh task after installation. If the harness cannot expose an installed
+role, report that limit and request a replacement reviewer or explicit waiver
+when review is required. A new user-owned task is not needed for each subagent.
+
+#### Claude Code and Codex CLI
+
 Launching Product Partner or Delivery Lead activates the complete workflow.
 Launching the Verifier activates only its independent verification portion for
 the supplied change.
@@ -280,6 +335,10 @@ profile because it is not a primary-session role.
 Start a new session after installation so the provider rediscovers the
 definitions.
 
+Claude retains its native `--agent` entry and `@AGENTS.md` shared-guidance
+adapter. Its lazy nested `CLAUDE.md` loading differs from Codex's startup guide
+chain; use the provider-specific checks in `docs/guidance-loading-smoke.md`.
+
 ### Updating a workflow
 
 Edit the canonical contract or template in `workflows/`, bump
@@ -307,6 +366,15 @@ contains only this conditional hook. Once active, a project may strengthen but
 not weaken exact user approval, scope-change escalation, or honest verification.
 
 ## Updating
+
+Shared skill content lives in `~/.agents/skills/`, which Codex discovers
+directly. Claude links live under `$CLAUDE_CONFIG_DIR/skills/` when set, or
+`~/.claude/skills/` otherwise. Checks for redundant Codex-specific copies use
+`$CODEX_HOME/skills/` when set, or `~/.codex/skills/` otherwise. Changing a
+provider configuration root does not relocate canonical shared skills. Relative
+override paths resolve from the command's working directory; empty overrides
+use the defaults, matching workflow installation. Inactive default provider
+directories and unrelated entries remain untouched.
 
 The installer adds only missing skills and rejects content that differs from
 `skills.json`. To update a skill, review the upstream change at its repository,
@@ -344,3 +412,12 @@ provider roots.
 
 Manual provider loading checks live in
 `docs/guidance-loading-smoke.md`. Static tests are not runtime loading evidence.
+
+Provider contracts checked against official documentation on 2026-09-07:
+[Codex instructions](https://developers.openai.com/codex/guides/agents-md),
+[Codex skills](https://developers.openai.com/codex/skills),
+[Codex subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents),
+[Claude memory](https://code.claude.com/docs/en/memory), and
+[Claude configuration directories](https://code.claude.com/docs/en/claude-directory).
+These sources establish supported contracts, not successful loading on every
+installed provider version.
