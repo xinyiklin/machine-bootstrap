@@ -101,8 +101,10 @@ default file read returns only its first 2,000 lines.
 
 Shorter guides are followed more reliably: unnecessary requirements make agent
 tasks harder and more expensive, so state only what an agent cannot infer from
-the repository. In Claude Code 2.1.283 and later, `/doctor prompt-audit` finds
-stale or conflicting instructions.
+the repository. From machine-bootstrap, `node scripts/audit-workspace.mjs`
+reports these budgets for every sibling without changing anything. In Claude
+Code 2.1.283 and later, `/doctor prompt-audit` finds stale or conflicting
+instructions.
 
 ## Optional product-delivery workflow
 
