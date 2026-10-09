@@ -86,10 +86,12 @@ resolved history to append-only `docs/continuity/YYYY-MM.md` files.
 ## Optional product-delivery workflow
 
 The installed workflow is inactive during ordinary work. Its complete flow
-activates only when Product Partner or Delivery Lead is selected, the user
-explicitly requests the complete workflow, an active Product Brief or Delivery
-Plan is continued, or project guidance requires it for named work. Selecting
-the Verifier activates only independent verification for the supplied change.
+activates only when Delivery Lead or Product Partner is selected, the user
+explicitly requests the complete workflow, an active Implementation Plan (or a
+legacy 1.x Product Brief or Delivery Plan) is continued, or project guidance
+requires it for named work. Selecting the Verifier activates only independent
+verification for the supplied change. When active, the Delivery Lead keeps one
+living Implementation Plan; routine progress never requires re-approval.
 
 Fill the project's activating conditions with checkable facts — paths,
 contracts, or artifact kinds — and name the reviewer that satisfies independent
@@ -101,7 +103,7 @@ For example, name changes to data retention, authorization, or installation
 ownership; exclude mechanical maintenance only when those contracts remain
 unchanged. Ordinary implementations still receive self-verification and one
 fresh independent review before local completion. This standalone review does
-not require the full workflow's brief and plan. Existing user authorization
+not require the full workflow's Implementation Plan. Existing user authorization
 continues to apply; do not repeat a permission question for the same scope.
 
 Personal preferences may live in gitignored `CLAUDE.local.md`, but they must

@@ -1,35 +1,35 @@
 # Verification Report — <task title>
 
-Drafted by: Verifier · Recorded by: Delivery Lead · Workflow: `product-delivery` 1.3.0
+Drafted by: Verifier · Recorded by: plan owner · Workflow: `product-delivery` 2.0.0
 
 | Field | Value |
 | :--- | :--- |
 | Task id | `<task-id>` |
 | Date | `<YYYY-MM-DD>` |
-| Implementer verification | `<commands and evidence>` |
+| Implementer verification | `<plan section or commands and evidence>` |
 | Independent review | completed / explicitly waived by user |
-| Reviewer(s) | `<identity or waiver reason>` |
-| Additional review recommendation | required / optional — `<risk and coverage rationale>` / not applicable — independent review waived |
+| Reviewer(s) | `<identity, confirmation it did not implement the change, or waiver reason>` |
+| Additional review recommendation | recommended / not recommended — `<remaining risk or coverage gap>` / not applicable — independent review waived |
 
-When independent review is completed, the Delivery Lead records this
-recommendation after reviewing the first Verifier's evidence, then honors any
-user request for more reviewers. If the user waived independent review, record
-the recommendation as not applicable.
+When independent review is completed, the plan owner records the additional
+review recommendation after reading the first Verifier's evidence, then honors
+any user request for more reviewers. If the user waived independent review,
+record the recommendation as not applicable.
 
 This report is the sole owner of final independent passed, failed, unverified,
-and skipped judgments. The Implementation Report supplies implementer evidence
-but cannot establish this report's outcome.
+and skipped judgments. Implementer coverage and evidence in the Implementation
+Plan are claims to check, not results.
 
-## Artifacts Reviewed
+## Plan Reviewed
 
-| Artifact | Version | Note |
-| :--- | :--- | :--- |
-| Product Brief | v1 (approved `<YYYY-MM-DD>`) | … |
-| Delivery Plan | v1 (approved `<YYYY-MM-DD>`) | … |
-| Implementation Report | `<date>` | … |
+| Item | Value |
+| :--- | :--- |
+| Implementation Plan | scope revision `r<n>`, authorization `<source>` |
+| Decisions checked | `<IDs, including superseded criteria and the decisions that changed them>` |
+| Optional artifacts | `<links, or none>` |
 
-Note any artifact that was missing or whose version was ambiguous, and what you
-verified against instead.
+Note anything missing, stale, or ambiguous, and what you verified against
+instead.
 
 ## Repository State Reviewed
 
@@ -38,7 +38,10 @@ verified against instead.
 | Repository | `<path or remote>` |
 | Branch | `<branch>` |
 | Commit | `<full sha>` |
-| Diff reviewed | `<base sha>..<head sha>` |
+| Change reviewed | `<base sha>..<head sha>` / working tree on `<sha>`: `<diff summary or hash>` |
+
+This result covers only this state. A later change needs follow-up checks and
+review.
 
 ## Checks Performed
 
@@ -53,16 +56,16 @@ Every check lands in exactly one bucket. Missing evidence is never a pass.
 
 ## Acceptance Criteria
 
-| # | Criterion | Result | Evidence |
+| ID | Criterion | Result | Evidence |
 | :--- | :--- | :--- | :--- |
-| 1 | … | passed | … |
-| 2 | … | failed | … |
-| 3 | … | unverified | … |
+| AC1 | … | passed | … |
+| AC2 | … | failed | … |
+| AC3 | … | unverified | … |
 
 ## Regressions Found
 
 Behavior that worked before and does not now, or preserved-behavior guarantees
-from the brief that no longer hold. Cite the file, line, and reproduction.
+from the plan that no longer hold. Cite the file, line, and reproduction.
 
 - …
 
@@ -71,7 +74,8 @@ proof of absence.
 
 ## Unsupported Scope
 
-Changes present in the diff that no approved artifact covers.
+Changes present in the diff that the authorized scope does not cover, and any
+criterion weakened without a recorded user decision.
 
 - …
 
