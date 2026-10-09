@@ -3,7 +3,10 @@
 @AGENTS.md
 
 > Template: copy beside `AGENTS.md`, replace `<Project>` and the TODO below,
-> then delete this note. Keep the import exactly once.
+> then delete this note. Keep the import exactly once, and keep this file even
+> though Claude can read `AGENTS.md` natively: any `CLAUDE.md` or
+> `CLAUDE.local.md` on the path turns native reading off, while the import
+> loads `AGENTS.md` once in every Claude version and session.
 
 `AGENTS.md` is the canonical shared policy. This adapter adds only Claude-specific
 mechanics and must not duplicate or contradict it. Follow applicable instruction
@@ -17,8 +20,8 @@ required project process for convenience.
 
 - TODO: name only real Claude-specific launch, browser, MCP, or harness facts;
   delete this section when there are none.
-- Use `/context` for live context composition and an `InstructionsLoaded` hook
-  when exact file-level loading evidence is required.
+- Use `/memory` or `/context` for loaded instruction files and an
+  `InstructionsLoaded` hook when exact file-level loading evidence is required.
 - Put path-scoped Claude-only mechanics in `.claude/rules/*.md`. For shared
   subtree policy, use nested `AGENTS.md` and optionally pair it with a nested
   `CLAUDE.md` containing only `@AGENTS.md`.

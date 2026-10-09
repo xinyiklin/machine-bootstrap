@@ -248,13 +248,87 @@ if (entryExists(machinePath)) {
   }
 }
 
-const legacyNames = ["AGENTS.md", "CLAUDE.md", "_templates"];
-const presentLegacy = legacyNames.filter((name) => entryExists(join(workspaceRoot, name)));
-if (presentLegacy.length) {
+// Claude Code loads instruction files from its working directory and every
+// directory above it, and Codex reads root guidance when started at the
+// workspace. Any of these at the workspace root would become shared policy for
+// every sibling session.
+const rootGuidanceNames = [
+  "AGENTS.md",
+  "CLAUDE.md",
+  "_templates",
+  "AGENTS.override.md",
+  "CLAUDE.local.md",
+  ".claude/AGENTS.md",
+  ".claude/CLAUDE.md",
+  ".claude/rules"
+];
+// A guidance path that cannot be inspected stops setup: a sandbox or privacy
+// denial for this process does not mean an agent would not load the file.
+function guidanceEntryExists(path) {
+  try {
+    lstatSync(path);
+    return true;
+  } catch (error) {
+    if (error?.code === "ENOENT" || error?.code === "ENOTDIR") return false;
+    fail(
+      `Could not inspect agent guidance path ${path} ` +
+        `(${error?.code ?? error?.message}); review its permissions, then rerun`
+    );
+  }
+}
+
+const presentRootGuidance = rootGuidanceNames.filter((name) =>
+  guidanceEntryExists(join(workspaceRoot, ...name.split("/")))
+);
+if (presentRootGuidance.length) {
   fail(
-    `Legacy workspace layout detected (${presentLegacy.join(", ")}); ` +
+    `Legacy workspace layout detected (${presentRootGuidance.join(", ")}); ` +
       "automatic migration is not supported. Review the entries, then move " +
       "them manually out of the workspace root before rerunning"
+  );
+}
+
+// The same upward discovery reaches folders above the workspace. A user home's
+// (or CLAUDE_CONFIG_DIR's) `.claude/CLAUDE.md` is user memory rather than
+// ancestor project guidance; every other name still counts, including a
+// `.claude/AGENTS.md` that native AGENTS.md reading loads from above.
+const ancestorGuidanceNames = [
+  "AGENTS.md",
+  "CLAUDE.md",
+  "CLAUDE.local.md",
+  ".claude/AGENTS.md",
+  ".claude/CLAUDE.md"
+];
+const claudeConfigCandidates = [process.env.CLAUDE_CONFIG_DIR]
+  .filter(Boolean)
+  .map((candidate) => {
+    try {
+      return realpathSync.native(resolve(candidate));
+    } catch {
+      return resolve(candidate);
+    }
+  });
+const ancestorGuidance = [];
+for (
+  let current = dirname(canonicalWorkspaceRoot);
+  ;
+  current = dirname(current)
+) {
+  const userMemoryFolder =
+    userHomeCandidates.includes(current) ||
+    claudeConfigCandidates.includes(join(current, ".claude"));
+  for (const name of ancestorGuidanceNames) {
+    if (userMemoryFolder && name === ".claude/CLAUDE.md") continue;
+    const path = join(current, ...name.split("/"));
+    if (guidanceEntryExists(path)) ancestorGuidance.push(path);
+  }
+  if (dirname(current) === current) break;
+}
+if (ancestorGuidance.length) {
+  fail(
+    "Agent guidance above the workspace would load into every sibling " +
+      `Claude session (${ancestorGuidance.join(", ")}). Review it and move it ` +
+      "manually, or use a workspace outside that folder, before rerunning"
   );
 }
 
@@ -339,8 +413,8 @@ if (checkOnly && todoCount > 0) {
   fail(`${machinePath} still contains ${todoCount} TODO placeholder(s)`);
 }
 
-for (const name of legacyNames) {
-  if (entryExists(join(workspaceRoot, name))) {
+for (const name of rootGuidanceNames) {
+  if (entryExists(join(workspaceRoot, ...name.split("/")))) {
     fail(`Legacy workspace entry remains after initialization: ${name}`);
   }
 }

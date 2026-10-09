@@ -559,6 +559,35 @@ await test("skill links and checks use custom provider roots without changing de
   }
 }, { needsSymlinks: true });
 
+await test("skill checks report unmanaged shared skills without owning them", async () => {
+  const fixture = await createSkillInstallerFixture();
+  const { testHome, name } = fixture;
+  try {
+    const sharedRoot = join(testHome, ".agents", "skills");
+    const unmanaged = join(sharedRoot, "local-extra");
+    mkdirSync(unmanaged);
+    writeFileSync(join(unmanaged, "SKILL.md"), "# Unreviewed local skill\n");
+    writeFileSync(join(sharedRoot, ".hidden-state"), "ignored\n");
+    writeFileSync(join(sharedRoot, "stray-note.txt"), "not a skill\n");
+    const before = snapshotTree(unmanaged);
+
+    const installed = fixture.run();
+    assert.equal(installed.status, 0, installed.stderr);
+    const checked = fixture.run(["--check"]);
+    assert.equal(checked.status, 0, checked.stderr);
+    for (const result of [installed, checked]) {
+      assert.match(result.stdout, /1 shared skill\(s\) .* not in skills\.json: local-extra\./);
+      assert.match(result.stdout, /Codex discovers them; Claude has no bootstrap link/);
+      assert.doesNotMatch(result.stdout, new RegExp(`not in skills\\.json:.*${name}`));
+      assert.doesNotMatch(result.stdout, /\.hidden-state|stray-note/);
+    }
+    assert.deepEqual(snapshotTree(unmanaged), before);
+    assert.equal(existsSync(join(testHome, ".claude", "skills", "local-extra")), false);
+  } finally {
+    rmSync(testHome, { recursive: true, force: true });
+  }
+}, { needsSymlinks: true });
+
 await test("unset and empty provider overrides retain default skill roots", async () => {
   for (const overrides of [{}, { CLAUDE_CONFIG_DIR: "", CODEX_HOME: "" }]) {
     const fixture = await createSkillInstallerFixture();
@@ -1145,6 +1174,21 @@ await test("repository and project guidance are self-contained", () => {
   assert.match(init, /ordinary language without naming any script/);
   assert.match(init, /use the audited scripts/);
   assert.match(usage, /canonical initializer rather than copying/);
+  // Claude reads AGENTS.md natively; guidance explains why the adapter stays.
+  for (const [label, source] of [
+    ["starter AGENTS.md", projectAgents],
+    ["starter CLAUDE.md", projectClaude],
+    ["template usage", usage],
+    ["README", readme]
+  ]) {
+    assert.doesNotMatch(source, /Claude does not (discover|read|load) (nested )?`?AGENTS\.md/, label);
+  }
+  for (const source of [usage, readme]) {
+    assert.match(source, /2\.1\.277/);
+    assert.match(source, /CLAUDE\.local\.md/);
+  }
+  assert.match(readme, /### Why projects keep `CLAUDE\.md`/);
+  assert.match(projectClaude, /keep this file even\s+> though Claude can read `AGENTS\.md` natively/);
   assert.equal(existsSync(join(bootstrapRoot, "project-templates", "README.md")), false);
   const retiredGuides = join(bootstrapRoot, "guides");
   assert.equal(
@@ -1236,14 +1280,32 @@ await test("modeled provider scenarios isolate sibling repositories", () => {
         current = dirname(current);
       }
     }
-    function modeledClaudeFiles(root) {
-      const adapter = join(root, "CLAUDE.md");
-      if (!existsSync(adapter)) return [];
-      const files = [adapter];
-      for (const match of readFileSync(adapter, "utf8").matchAll(/^@([^\s]+)\s*$/gm)) {
-        files.push(resolve(root, match[1]));
+    // Claude (2.1.277+, default setting) loads CLAUDE.md files and their
+    // imports from the start directory and every folder above it, and reads
+    // AGENTS.md natively only when no CLAUDE.md file exists on that path.
+    // The walk stops at the disposable root it does not control.
+    function modeledClaudeFiles(cwd) {
+      const folders = [];
+      for (let current = resolve(cwd); ; current = dirname(current)) {
+        folders.unshift(current);
+        if (current === testRoot) break;
       }
-      return files;
+      const claudeNames = ["CLAUDE.md", join(".claude", "CLAUDE.md"), "CLAUDE.local.md"];
+      const files = [];
+      for (const folder of folders) {
+        for (const name of claudeNames) {
+          const file = join(folder, name);
+          if (!existsSync(file)) continue;
+          files.push(file);
+          for (const match of readFileSync(file, "utf8").matchAll(/^@([^\s]+)\s*$/gm)) {
+            files.push(resolve(dirname(file), match[1]));
+          }
+        }
+      }
+      if (files.length) return files;
+      return folders
+        .map((folder) => join(folder, "AGENTS.md"))
+        .filter((file) => existsSync(file));
     }
 
     assert.deepEqual(modeledCodexFiles(bootstrap, bootstrap), [join(bootstrap, "AGENTS.md")]);
@@ -1257,6 +1319,28 @@ await test("modeled provider scenarios isolate sibling repositories", () => {
     ]);
     assert.equal(modeledClaudeFiles(projectA).includes(join(bootstrap, "AGENTS.md")), false);
     assert.equal(modeledClaudeFiles(projectB).includes(join(projectA, "AGENTS.md")), false);
+    assert.deepEqual(modeledClaudeFiles(workspace), []);
+    assert.deepEqual(modeledClaudeFiles(scratch), []);
+
+    // Without the adapter Claude reads AGENTS.md natively, until any personal
+    // CLAUDE.local.md switches that off; the adapter's import survives both.
+    rmSync(join(projectB, "CLAUDE.md"));
+    assert.deepEqual(modeledClaudeFiles(projectB), [join(projectB, "AGENTS.md")]);
+    writeFileSync(join(projectB, "CLAUDE.local.md"), "personal notes\n");
+    assert.deepEqual(modeledClaudeFiles(projectB), [join(projectB, "CLAUDE.local.md")]);
+    writeFileSync(join(projectB, "CLAUDE.md"), "@AGENTS.md\n");
+    assert.deepEqual(modeledClaudeFiles(projectB), [
+      join(projectB, "CLAUDE.md"),
+      join(projectB, "AGENTS.md"),
+      join(projectB, "CLAUDE.local.md")
+    ]);
+
+    // Guidance anywhere above the workspace would reach every sibling, which
+    // is why initialization stops on it.
+    writeFileSync(join(testRoot, "CLAUDE.md"), "ANCESTOR\n");
+    for (const root of [bootstrap, projectA, projectB, workspace, scratch]) {
+      assert.equal(modeledClaudeFiles(root)[0], join(testRoot, "CLAUDE.md"));
+    }
   } finally {
     rmSync(testRoot, { recursive: true, force: true });
   }
@@ -1553,6 +1637,144 @@ await test("legacy workspace entries stop for manual review without writes", () 
     assert.match(removedOption.stderr, /Unknown argument.*--migrate-legacy-layout/);
     assert.equal(existsSync(legacyTemplates), true);
   } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
+await test("every root instruction file Claude or Codex would load stops setup", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  const command = [
+    join(checkoutRoot, "scripts", "init-workspace.mjs"),
+    "--skip-skills",
+    "--skip-workflows"
+  ];
+  const run = (extraArgs = []) =>
+    spawnSync(process.execPath, [...command, ...extraArgs], {
+      encoding: "utf8",
+      env: isolatedEnvironment(testRoot),
+      shell: false
+    });
+  try {
+    // Non-instruction provider files at the root, such as a launch config,
+    // are not shared policy.
+    mkdirSync(join(workspaceRoot, ".claude"));
+    writeFileSync(join(workspaceRoot, ".claude", "launch.json"), "{}\n");
+    const clean = run();
+    assert.equal(clean.status, 0, clean.stderr);
+    rmSync(join(workspaceRoot, "MACHINE.md"));
+
+    for (const [entry, kind] of [
+      ["AGENTS.override.md", "file"],
+      ["CLAUDE.local.md", "file"],
+      [".claude/AGENTS.md", "file"],
+      [".claude/CLAUDE.md", "file"],
+      [".claude/rules", "directory"]
+    ]) {
+      const path = join(workspaceRoot, ...entry.split("/"));
+      if (kind === "directory") mkdirSync(path);
+      else writeFileSync(path, "workspace policy\n");
+      for (const extraArgs of [[], ["--check"]]) {
+        const result = run(extraArgs);
+        assert.notEqual(result.status, 0, `${entry} ${extraArgs}`);
+        assert.ok(result.stderr.includes(entry), `${entry} named`);
+        assert.match(result.stderr, /move .* manually/i);
+        assert.equal(existsSync(join(workspaceRoot, "MACHINE.md")), false, entry);
+      }
+      rmSync(path, { recursive: true, force: true });
+    }
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
+await test("guidance paths that cannot be inspected stop setup cleanly", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  const otherHome = createTestHome("unsearchable-home");
+  const guarded = [join(workspaceRoot, ".claude"), join(testRoot, ".claude")];
+  try {
+    for (const directory of guarded) {
+      mkdirSync(directory);
+      chmodSync(directory, 0o000);
+      const result = spawnSync(
+        process.execPath,
+        [join(checkoutRoot, "scripts", "init-workspace.mjs"), "--skip-skills", "--skip-workflows"],
+        { encoding: "utf8", env: isolatedEnvironment(otherHome), shell: false }
+      );
+      chmodSync(directory, 0o755);
+      assert.notEqual(result.status, 0, directory);
+      assert.match(result.stderr, /Could not inspect agent guidance path .*\(EACCES\)/);
+      assert.doesNotMatch(result.stderr, /node:internal|\n\s+at /);
+      assert.equal(existsSync(join(workspaceRoot, "MACHINE.md")), false);
+      rmSync(directory, { recursive: true, force: true });
+    }
+  } finally {
+    for (const directory of guarded) {
+      if (existsSync(directory)) chmodSync(directory, 0o755);
+    }
+    rmSync(otherHome, { recursive: true, force: true });
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+}, { needsPosixPermissions: true });
+
+await test("guidance above the workspace stops setup; a home .claude stays user config", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  const command = [
+    join(checkoutRoot, "scripts", "init-workspace.mjs"),
+    "--skip-skills",
+    "--skip-workflows"
+  ];
+  const run = (home, extraArgs = [], overrides = {}) =>
+    spawnSync(process.execPath, [...command, ...extraArgs], {
+      encoding: "utf8",
+      env: isolatedEnvironment(home, overrides),
+      shell: false
+    });
+  const otherHome = createTestHome("ancestor-home");
+  try {
+    // testRoot is both the workspace's parent and the isolated home.
+    mkdirSync(join(testRoot, ".claude"));
+    writeFileSync(join(testRoot, ".claude", "CLAUDE.md"), "user memory\n");
+    const asHome = run(testRoot);
+    assert.equal(asHome.status, 0, asHome.stderr);
+    rmSync(join(workspaceRoot, "MACHINE.md"));
+
+    // A selected CLAUDE_CONFIG_DIR's CLAUDE.md is user memory too.
+    const asConfig = run(otherHome, ["--check"], {
+      CLAUDE_CONFIG_DIR: join(testRoot, ".claude")
+    });
+    assert.equal(asConfig.status, 0, asConfig.stderr);
+
+    // Only CLAUDE.md is user memory: native AGENTS.md reading loads a
+    // .claude/AGENTS.md from above the working directory, even at home.
+    writeFileSync(join(testRoot, ".claude", "AGENTS.md"), "home agents\n");
+    const homeAgents = run(testRoot, ["--check"]);
+    assert.notEqual(homeAgents.status, 0);
+    assert.match(homeAgents.stderr, /above the workspace/);
+    assert.ok(homeAgents.stderr.includes(join(".claude", "AGENTS.md")));
+    assert.ok(!homeAgents.stderr.includes(join(".claude", "CLAUDE.md")));
+    rmSync(join(testRoot, ".claude", "AGENTS.md"));
+
+    // The same folder is an ordinary ancestor when it is not the home.
+    for (const extraArgs of [[], ["--check"]]) {
+      const asAncestor = run(otherHome, extraArgs);
+      assert.notEqual(asAncestor.status, 0);
+      assert.match(asAncestor.stderr, /above the workspace/);
+      assert.ok(asAncestor.stderr.includes(join(".claude", "CLAUDE.md")));
+      assert.equal(existsSync(join(workspaceRoot, "MACHINE.md")), false);
+    }
+    rmSync(join(testRoot, ".claude"), { recursive: true, force: true });
+
+    for (const name of ["AGENTS.md", "CLAUDE.md", "CLAUDE.local.md"]) {
+      writeFileSync(join(testRoot, name), "ancestor policy\n");
+      const result = run(testRoot);
+      assert.notEqual(result.status, 0, name);
+      assert.match(result.stderr, /above the workspace/);
+      assert.ok(result.stderr.includes(name), `${name} named`);
+      assert.equal(existsSync(join(workspaceRoot, "MACHINE.md")), false, name);
+      rmSync(join(testRoot, name));
+    }
+  } finally {
+    rmSync(otherHome, { recursive: true, force: true });
     rmSync(testRoot, { recursive: true, force: true });
   }
 });
@@ -2881,6 +3103,16 @@ await test("workflow package versions, names, and templates stay consistent", ()
       ["verifier", "mb-verifier", false, "mb_verifier", null]
     ]
   );
+  // Only the Verifier, which never edits the change it reviews, loses Claude's
+  // file-editing tools; it keeps the shell to run the project's checks.
+  assert.deepEqual(
+    workflowManifest.roles.map((role) => [role.id, role.claude.disallowedTools ?? null]),
+    [
+      ["product-partner", null],
+      ["delivery-lead", null],
+      ["verifier", ["Edit", "Write", "NotebookEdit"]]
+    ]
+  );
 
   // Every template file is declared, so none can be left unowned.
   const declared = workflowManifest.templates.map((template) => template.source).sort();
@@ -3031,6 +3263,26 @@ await test("workflow manifests and sources fail closed when invalid", async () =
         "hyphenated Codex agent name",
         (m) => { m.roles[0].codex.name = "mb-product-partner"; },
         /invalid Codex adapter/
+      ],
+      [
+        "empty Claude tool restriction",
+        (m) => { m.roles[0].claude.disallowedTools = []; },
+        /invalid Claude adapter/
+      ],
+      [
+        "Claude tool restriction with a specifier",
+        (m) => { m.roles[0].claude.disallowedTools = ["Bash(git push *)"]; },
+        /invalid Claude adapter/
+      ],
+      [
+        "Claude tool restriction that breaks YAML",
+        (m) => { m.roles[0].claude.disallowedTools = ["Edit\nmodel: opus"]; },
+        /invalid Claude adapter/
+      ],
+      [
+        "duplicate Claude tool restriction",
+        (m) => { m.roles[0].claude.disallowedTools = ["Edit", "Edit"]; },
+        /invalid Claude adapter/
       ],
       [
         "duplicate Claude name",
@@ -3402,6 +3654,15 @@ await test("adapters carry provenance and the canonical role contract", () => {
       );
       assert.match(claudeFile, new RegExp(`^---\\nname: ${role.claude.name}\\n`));
       assert.match(claudeFile, /^description: "/m);
+      const frontmatter = claudeFile.split("\n---\n")[0];
+      if (role.claude.disallowedTools) {
+        assert.match(
+          frontmatter,
+          new RegExp(`^disallowedTools: ${role.claude.disallowedTools.join(", ")}$`, "m")
+        );
+      } else {
+        assert.doesNotMatch(frontmatter, /disallowedTools/);
+      }
       assert.match(claudeFile, /Generated by machine-bootstrap/);
       assert.match(
         claudeFile,

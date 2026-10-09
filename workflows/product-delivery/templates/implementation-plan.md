@@ -1,6 +1,6 @@
 # Implementation Plan — <task title>
 
-Owner: `<Delivery Lead | Product Partner until handoff>` · Workflow: `product-delivery` 2.0.0
+Owner: `<Delivery Lead | Product Partner until handoff>` · Workflow: `product-delivery` 2.1.0
 
 The authoritative living record for task `<task-id>`. Keep it in proportion to
 the task: omit sections that do not apply, link detailed evidence rather than

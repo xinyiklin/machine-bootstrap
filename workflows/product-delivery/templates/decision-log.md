@@ -1,6 +1,6 @@
 # Decision Log — <task title>
 
-Owner: plan owner · Workflow: `product-delivery` 2.0.0
+Owner: plan owner · Workflow: `product-delivery` 2.1.0
 
 Optional. Decisions normally live in the Implementation Plan's Questions,
 Assumptions, And Decisions section. Use this log only when decision history

@@ -20,6 +20,19 @@ const claudeNamePattern = /^[a-z][a-z0-9-]*$/;
 const codexNamePattern = /^[a-z][a-z0-9_]*$/;
 // Codex profile files are $CODEX_HOME/<profile>.config.toml.
 const codexProfilePattern = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
+// Plain Claude tool names (letters, digits, underscores). Specifier forms like
+// Bash(git push *) are rejected: in disallowedTools they would still remove the
+// whole tool, which is better stated plainly.
+const claudeToolPattern = /^[A-Za-z][A-Za-z0-9_]*$/;
+
+function isToolNameList(value) {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    new Set(value).size === value.length &&
+    value.every((tool) => typeof tool === "string" && claudeToolPattern.test(tool))
+  );
+}
 
 function readJson(path, label) {
   let contents;
@@ -110,7 +123,9 @@ function validateRole(role, manifestPath, seenIds) {
     typeof claude !== "object" ||
     typeof claude.name !== "string" ||
     !claudeNamePattern.test(claude.name) ||
-    typeof claude.primarySession !== "boolean"
+    typeof claude.primarySession !== "boolean" ||
+    (claude.disallowedTools !== undefined &&
+      !isToolNameList(claude.disallowedTools))
   ) {
     throw new Error(`${label}: ${role.id} has an invalid Claude adapter`);
   }

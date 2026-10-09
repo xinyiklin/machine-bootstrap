@@ -23,19 +23,9 @@ is read only when a task needs it.
   `AGENTS.md`, `CLAUDE.md`, or `_templates/`. Machine-bootstrap and every project
   are independent repositories with self-contained guidance.
 - 2026-08-14 [USER+CODE] Project templates have one canonical source and are
-  seeded missing-only into one explicit target. Existing project policy remains
-  project-owned; Git verifies the effective `.gitignore` environment policy and
-  ambiguous or overridden policy stops before writes. Rollback quarantines
-  run-owned files for review instead of deleting them. Managed reads, writes,
-  and recovery use verified real-directory identities pinned for the full run
-  plus no-follow leaf access. Machine and project template sources are
-  snapshot-read as real in-checkout files before writes; preflighted starters
-  that disappear are not replaced. New directories use atomic no-replace claims
-  and are identity-snapshotted before use; all seeded files are revalidated
-  before success. Git boundary probes discard inherited path overrides. They
-  reject concurrent parent, entry, or backup replacement, leave
-  identity-changed entries at their original paths, never delete entries after
-  a separate content check, and report exact recovery paths.
+  seeded missing-only into one explicit target; project policy stays
+  project-owned. Safety detail lives in README step 5; the full entry is in
+  `docs/continuity/2026-10.md`.
 - 2026-08-14 [USER] Legacy parent guidance stops initialization for manual
   review and cleanup. Automatic migration and its versioned manifest are
   intentionally deferred (D022).
@@ -56,6 +46,10 @@ is read only when a task needs it.
 - 2026-10-06 [USER+CODE] Product Delivery 2.0.0 (D026): one living
   Implementation Plan owned by the Delivery Lead replaces brief/plan gates.
   Accounting and review: `docs/workflow-consolidation-2026-10-06.md`.
+- 2026-10-09 [USER+CODE] Guidance review fixes (D027), workflow 2.1.0:
+  boundary checks cover every root/ancestor instruction file Claude loads; the
+  Claude Verifier adapter drops file-editing tools; unmanaged skills
+  reported. Receipt: `docs/guidance-review-2026-10-09.md`.
 - 2026-08-13 [USER] Every implementation defaults to implementer verification
   plus one fresh independent review; only the user may waive it per change.
 - 2026-08-19 [USER+CODE] Workflow activation must be stated as checkable
@@ -140,6 +134,9 @@ Milestones — detail in `docs/continuity/2026-07.md`:
 - 2026-10-06 [USER+CODE] D026 ACTIVE: authorized scope is separate from the
   plan's execution record; routine updates never re-trigger approval; material
   changes need a user decision. Legacy brief/plan templates are redirects.
+- 2026-10-09 [USER+CODE] D027 ACTIVE: starters keep a thin `CLAUDE.md` with one
+  `@AGENTS.md` import although Claude reads `AGENTS.md` natively; a
+  `CLAUDE.local.md` or ancestor `CLAUDE.md` would switch native reading off.
 
 ## Working Set
 

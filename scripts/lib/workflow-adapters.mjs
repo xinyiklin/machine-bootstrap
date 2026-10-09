@@ -58,10 +58,17 @@ export function generateClaudeAgent(pkg, role) {
     .join("\n")
     .trimStart();
 
+  // Tool restrictions enforce what the role contract already says the role
+  // does not do; they never grant anything the contract withholds.
+  const disallowedTools = role.claude.disallowedTools
+    ? `disallowedTools: ${role.claude.disallowedTools.join(", ")}\n`
+    : "";
+
   return (
     "---\n" +
     `name: ${role.claude.name}\n` +
     `description: ${yamlQuoted(role.summary)}\n` +
+    disallowedTools +
     "---\n" +
     "\n" +
     `<!-- ${provenance} -->\n` +

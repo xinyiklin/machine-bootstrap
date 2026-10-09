@@ -1,6 +1,6 @@
 # Product Delivery Workflow
 
-Workflow id: `product-delivery` · version `2.0.0` · schema `1`
+Workflow id: `product-delivery` · version `2.1.0` · schema `1`
 
 Portable, provider-neutral contract for taking work from a request to accepted
 delivery through one living Implementation Plan. Installed from the

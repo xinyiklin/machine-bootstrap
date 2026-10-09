@@ -116,9 +116,15 @@ Choose either setup style:
    Use `--skip-skills` or `--skip-workflows` to omit that layer from both setup
    and verification.
 4. If an older bootstrap generated parent `AGENTS.md`, `CLAUDE.md`, or
-   `_templates/`, initialization stops without moving anything. Automatic
-   migration is not currently supported. Review those entries and move them
-   manually outside the workspace root before rerunning; never move
+   `_templates/`, initialization stops without moving anything. The same stop
+   applies to `AGENTS.override.md`, `CLAUDE.local.md`, `.claude/AGENTS.md`,
+   `.claude/CLAUDE.md`, or `.claude/rules/` at the workspace root, and to
+   `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`, `.claude/AGENTS.md`, or
+   `.claude/CLAUDE.md` in any folder above it, because Claude loads those into
+   every sibling session. A user home's (or `CLAUDE_CONFIG_DIR`'s)
+   `.claude/CLAUDE.md` is user memory and is not flagged; a path that cannot be
+   inspected also stops setup. Automatic migration is not currently supported.
+   Review those entries and move them manually before rerunning; never move
    `MACHINE.md` or sibling project guidance as part of that cleanup.
 5. Seed one existing project root:
 
@@ -157,6 +163,42 @@ To initialize only one project through an agent, specify its exact path:
 **“Initialize `../project-a` using machine-bootstrap. Preserve existing files,
 stop for review-required conditions, verify the result, and do not commit or
 publish anything.”**
+
+### Recommended Claude permissions
+
+Bootstrap installers never edit Claude's `settings.json`. Add these rules to
+the user settings yourself (or ask an agent to, preserving existing keys):
+
+```json
+{
+  "permissions": {
+    "allow": ["Read(~/.agents/workflows/**)"],
+    "deny": [
+      "Read(//**/*.pem)", "Read(//**/*.key)", "Read(~/.ssh/**)",
+      "Read(~/.aws/**)", "Read(~/.gnupg/**)", "Read(//**/.env)",
+      "Read(//**/.env.local)", "Read(//**/.env.*.local)",
+      "Read(//**/.env.production)", "Read(//**/.env.development)"
+    ]
+  }
+}
+```
+
+The allow rule lets workflow roles read their installed contract without a
+prompt. Deny rules keep `.env.example` readable and cover Claude's file tools
+and recognized shell file commands, not arbitrary scripts; use Claude's
+sandbox for OS-level enforcement. Add a rule for any other environment file
+name your projects use, such as `.env.test` or `.env.staging`. Keep keys and
+credentials outside the workspace regardless.
+
+### Why projects keep `CLAUDE.md`
+
+Claude Code 2.1.277 and later can read `AGENTS.md` without a `CLAUDE.md`, but
+only while no `CLAUDE.md`, `.claude/CLAUDE.md`, or `CLAUDE.local.md` exists on
+the path. Starters keep a thin `CLAUDE.md` whose single `@AGENTS.md` import
+loads the shared guide once in every Claude version and session, survives a
+personal `CLAUDE.local.md`, and keeps `InstructionsLoaded` evidence. All shared
+policy stays in `AGENTS.md`; `CLAUDE.md` holds only Claude-specific mechanics,
+which Codex never loads.
 
 ## Product delivery workflow
 
@@ -246,7 +288,11 @@ The canonical package holds `manifest.json`, `WORKFLOW.md`, the three role
 contracts in `roles/`, and the artifact templates in `templates/`. The
 Markdown role contracts are the source of truth; every provider file is
 generated from them, carries a provenance comment naming its source contract,
-and pins no model, so each provider keeps its own default.
+and pins no model, so each provider keeps its own default. The Claude Verifier
+adapter also removes `Edit`, `Write`, and `NotebookEdit`, enforcing that the
+Verifier does not edit the change it reviews while keeping the shell for checks.
+Its Codex adapter inherits the parent sandbox, because a read-only sandbox would
+block test suites that write disposable files.
 
 An activated task normally creates two artifacts: the Implementation Plan and
 the Verification Report. Implementation Report, Alignment Review, Decision Log,
@@ -348,8 +394,9 @@ Start a new session after installation so the provider rediscovers the
 definitions.
 
 Claude retains its native `--agent` entry and `@AGENTS.md` shared-guidance
-adapter. Its lazy nested `CLAUDE.md` loading differs from Codex's startup guide
-chain; use the provider-specific checks in `docs/guidance-loading-smoke.md`.
+adapter. Its upward and lazy nested `CLAUDE.md` loading differs from Codex's
+startup guide chain; use the provider-specific checks in
+`docs/guidance-loading-smoke.md`.
 
 ### Updating a workflow
 
@@ -369,7 +416,7 @@ Reviewed replacement renames each existing entry to a timestamped backup before
 writing, so a customized adapter is recoverable and a symlinked destination is
 never written through.
 
-Upgrading an installed 1.x workflow to 2.0.0 is this same reviewed path: the
+Upgrading an installed 1.x workflow to 2.x is this same reviewed path: the
 default install reports every changed file and writes nothing, and `--replace`
 backs up the previous contract, adapters, and templates before writing. Active
 1.x task artifacts in projects are consolidated into an Implementation Plan
@@ -403,6 +450,10 @@ pass bootstrap verification until that portable manifest is updated
 intentionally. Generated global lockfiles from other skill managers remain
 machine state and are not authoritative for this bootstrap.
 
+Installation and `--check` also list any skill in `~/.agents/skills/` that is
+not in `skills.json`. Codex discovers such a skill while Claude has no link to
+it; review and add it to the manifest, or move it out of the shared root.
+
 Print the installed content hashes after review with:
 
 ```bash
@@ -432,11 +483,17 @@ provider roots.
 Manual provider loading checks live in
 `docs/guidance-loading-smoke.md`. Static tests are not runtime loading evidence.
 
-Provider contracts checked against official documentation on 2026-09-07:
-[Codex instructions](https://developers.openai.com/codex/guides/agents-md),
-[Codex skills](https://developers.openai.com/codex/skills),
+Provider contracts checked against official documentation on 2026-10-09:
+[Codex instructions](https://learn.chatgpt.com/docs/agent-configuration/agents-md),
+[Codex skills](https://learn.chatgpt.com/docs/build-skills),
 [Codex subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents),
-[Claude memory](https://code.claude.com/docs/en/memory), and
+[Codex configuration](https://learn.chatgpt.com/docs/config-file/config-basic),
+[Claude memory and `AGENTS.md`](https://code.claude.com/docs/en/memory),
+[Claude subagents](https://code.claude.com/docs/en/sub-agents),
+[Claude permissions](https://code.claude.com/docs/en/permissions), and
 [Claude configuration directories](https://code.claude.com/docs/en/claude-directory).
+Guidance length follows
+[Evaluating AGENTS.md](https://arxiv.org/abs/2602.11988): unnecessary
+requirements lowered agent success and raised cost.
 These sources establish supported contracts, not successful loading on every
 installed provider version.
