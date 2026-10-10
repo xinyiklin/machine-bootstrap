@@ -54,8 +54,8 @@ or required compatibility. -->
 
 The installed `~/.agents/workflows/product-delivery/` contract is inactive for ordinary work.
 Its complete flow activates when the user selects Delivery Lead or Product Partner,
-explicitly requests the complete workflow, continues an active Implementation Plan
-(or legacy Product Brief/Delivery Plan), or project guidance names required work.
+explicitly requests the complete workflow, continues an active Implementation Plan,
+or project guidance names required work.
 Selecting the Verifier activates independent verification only and never creates
 a missing plan or authorization.
 
@@ -72,7 +72,6 @@ rules or artifacts here. Project-specific additions only:
 - Required project checks or specialist review: TODO, or `the commands above`.
 - Reviewer that satisfies independent review: TODO exact agent or command name,
   or `the installed Verifier`; resolve any project agent that shares its name.
-- Artifact-retention policy: TODO, or `local while active`.
 
 When a listed condition matches and the workflow or its review is not run, say
 so in the response with the reason. An unrecorded skip is a process failure,

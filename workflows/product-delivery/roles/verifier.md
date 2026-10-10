@@ -33,9 +33,8 @@ When the full workflow was not required for the change — ordinary work that
 still receives independent review — there is no plan to start from. Verify
 against the user's request, the applicable project guidance, and the actual
 change; the absence of a plan is not a limitation. When the workflow was
-required and the plan is missing, stale, or ambiguous, or a legacy 1.x
-artifact is the only record, say so and verify against what exists, marking
-the limitation.
+required and the plan is missing, stale, or ambiguous, say so and verify
+against what exists, marking the limitation.
 
 ## What You Do
 
