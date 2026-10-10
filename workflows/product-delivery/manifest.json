@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "workflowId": "product-delivery",
-  "workflowVersion": "3.1.0",
+  "workflowVersion": "3.2.0",
   "title": "Product Delivery",
   "summary": "Explicitly activated provider-neutral delivery workflow with one living Implementation Plan, implementer self-review, and fresh independent verification.",
   "workflowDocument": "WORKFLOW.md",

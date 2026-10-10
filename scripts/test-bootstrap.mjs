@@ -3594,6 +3594,10 @@ await test("one living Implementation Plan replaces the brief and plan gates", (
   assert.match(workflow, /Authorization covers what the user described and the non-material detail needed to deliver it/);
   assert.match(workflow, /work may proceed on them/);
   assert.match(deliveryLead, /proceed, without asking the user to confirm each one/);
+  // Added assumptions reach the user, since the plan stays local.
+  assert.match(workflow, /lists the assumptions the plan added when it starts work on them and again in the PR body or final report; listing them is not a request for approval/);
+  assert.match(workflow, /carry the durable outcome — scope, added assumptions,/);
+  assert.match(deliveryLead, /tell the user which assumptions the plan added when you start work on them, then proceed without waiting, and list them again in the PR body or final report/);
   // The guard half: material additions never ride in as assumptions.
   assert.match(workflow, /material change is a proposal, not part of the baseline, until the user decides/);
   assert.match(deliveryLead, /A material addition is a proposal until the user decides/);
