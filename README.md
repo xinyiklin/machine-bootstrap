@@ -36,32 +36,11 @@ the current session.
 
 ## What belongs here
 
-- `AGENTS.md` and `CLAUDE.md` — instructions for this repository only.
-- `machine-templates/MACHINE.example.md` — starter for the optional inert parent
-  registry.
-- `project-templates/` — the single canonical starter source for project-owned
-  guidance, Git workflow, PR template, and ignore entries.
-- `docs/engineering/git-workflow.md` — this repository's Git/publication
-  contract; the project starter has its own project-owned contract.
-- `.github/workflows/bootstrap.yml` — Linux, Windows, and macOS verification.
-- `skills.json` and `scripts/install-skills.mjs` — reviewed shared skill roster
-  and missing-only installer; `skills/` holds first-party skills such as
-  `continuity`.
-- `workflows/` and `scripts/install-workflows.mjs` — provider-neutral workflow
-  packages and deterministic adapters.
-- `scripts/init-workspace.mjs` — parent registry plus shared capabilities.
-- `scripts/init-project.mjs` — explicit, target-scoped, one-time project seeding.
-- `scripts/audit-workspace.mjs` — read-only report of every sibling's guide
-  sizes, Claude import, and continuity length.
-- `scripts/starter-diff.mjs` — read-only comparison of one project's seeded
-  starter files with the current starters.
-- `scripts/test-bootstrap.mjs` — disposable regression suite.
-- `CONTINUITY.md` — bounded current state; `docs/decisions.md` — active
-  decisions; `docs/continuity/` — on-demand, append-only history and receipts.
-
-`project-templates/TEMPLATE-USAGE.md` documents the starter set but is never
-copied into a project or renamed as its README. Once starter files are copied,
-they are project-owned and are not synchronized against machine-bootstrap.
+`AGENTS.md` carries the ownership map for every tracked path; this README adds
+only the operator view. `project-templates/TEMPLATE-USAGE.md` documents the
+starter set but is never copied into a project or renamed as its README. Once
+starter files are copied, they are project-owned and are not synchronized
+against machine-bootstrap.
 
 ## What stays machine-local
 
@@ -95,71 +74,15 @@ Choose either setup style:
   automation, repeatable machine provisioning, or inspecting each command
   directly.
 
-1. Clone this repository as a direct child of the dedicated non-Git folder that
-   will contain sibling projects. The filesystem root and user home are rejected
-   as unsafe workspace targets.
-2. Initialize the optional registry and shared capabilities:
-
-   ```bash
-   node scripts/init-workspace.mjs
-   ```
-
-   The command creates `../MACHINE.md` only when missing, installs or verifies
-   shared skills and workflows, and generates provider adapters. The canonical
-   machine template must be a real in-checkout file and is snapshot-read with
-   no-follow access before any workspace write. The command never creates
-   parent guidance or a parent template copy.
-3. Replace `MACHINE.md` TODOs with verified local facts, then run:
-
-   ```bash
-   node scripts/init-workspace.mjs --check
-   ```
-
-   Check mode is read-only. It allows the optional registry to be absent, but
-   fails on unresolved placeholders when the file exists, shared-capability
-   drift, or retired parent guidance/template entries.
-   Use `--skip-skills` or `--skip-workflows` to omit that layer from both setup
-   and verification.
-4. If an older bootstrap generated parent `AGENTS.md`, `CLAUDE.md`, or
-   `_templates/`, initialization stops without moving anything. The same stop
-   applies to `AGENTS.override.md`, `CLAUDE.local.md`, `.claude/AGENTS.md`,
-   `.claude/CLAUDE.md`, or `.claude/rules/` at the workspace root, and to
-   `AGENTS.md`, `CLAUDE.md`, `CLAUDE.local.md`, `.claude/AGENTS.md`, or
-   `.claude/CLAUDE.md` in any folder above it, because Claude loads those into
-   every sibling session. A user home's (or `CLAUDE_CONFIG_DIR`'s)
-   `.claude/CLAUDE.md` is user memory and is not flagged; a path that cannot be
-   inspected also stops setup. Automatic migration is not currently supported.
-   Review those entries and move them manually before rerunning; never move
-   `MACHINE.md` or sibling project guidance as part of that cleanup.
-5. Seed one existing project root:
-
-   ```bash
-   node scripts/init-project.mjs ../project-a
-   ```
-
-   For a missing directory, add `--create`. The initializer does not initialize
-   Git, copies only missing starter files, preserves existing files, and never
-   copies `TEMPLATE-USAGE.md` or creates a README. For an existing `.gitignore`
-   with no environment rules it appends the ordered `.env`, `.env.*`,
-   `!.env.example` policy plus missing safety rules. Git must confirm that the
-   result ignores local environment files and exposes `.env.example`;
-   ineffective, incomplete, or ambiguous rules stop for manual review before
-   any write. Template sources, target parents, and seeded files are
-   identity-checked for the whole run: a symbolic link, replacement, or
-   concurrent change stops safely, and rollback moves run-owned files to named
-   recovery paths instead of deleting them.
-6. Replace project placeholders with verified project facts. Start a new Codex
-   or Claude session in that project root or relevant scoped directory.
-7. Audit sibling guidance whenever useful; it reads guide sizes and continuity
-   length and changes nothing:
-
-   ```bash
-   node scripts/audit-workspace.mjs
-   ```
-
-   Fix findings in a session started in that project. In Claude Code 2.1.283
-   and later, `/doctor prompt-audit` also finds stale or conflicting
-   instructions.
+`INIT.md` holds the step-by-step contract: clone as a direct child of the
+dedicated non-Git workspace folder, run `node scripts/init-workspace.mjs`,
+fill `MACHINE.md`, verify with `--check`, seed one project with
+`node scripts/init-project.mjs ../project-a`, then fill its placeholders in a
+new session there. It also lists the root and ancestor instruction files that
+stop setup for manual review, the `.gitignore` environment policy, and the
+read-only `node scripts/audit-workspace.mjs` report. In Claude Code 2.1.283
+and later, `/doctor prompt-audit` also finds stale or conflicting
+instructions.
 
 To initialize only one project through an agent, specify its exact path:
 **“Initialize `../project-a` using machine-bootstrap. Preserve existing files,

@@ -49,8 +49,18 @@ project.
   fetches brand URLs the user supplies, refusing private addresses.
 - Bootstrap CI runs the full disposable suite on Linux, Windows, and macOS;
   a separate PR size check enforces the 1,000-line gate (D035).
-- Impeccable stays pinned at 4.0.2 until a freshly reviewed upgrade
-  recommendation.
+- 2026-10-10 Skill pins refreshed: `systematic-debugging` moved to superpowers
+  bb92a777 (two shell-portability lines); `verification-before-completion` and
+  both Vercel skills re-pinned to current upstream heads with identical
+  content. README setup steps moved into `INIT.md`, which now owns the
+  ancestor-instruction stop list; CI parses the generated Codex TOML with a
+  real tomllib on Linux and macOS.
+- Impeccable stays pinned at 4.0.2. Reviewed 2026-10-10: upstream 4.5.2 (and
+  every release from 4.2.0) replaces the Node scripts with a launcher that
+  downloads a platform binary from GitHub releases on first run, verified only
+  against a `.sha256` sidecar from the same URL. 4.1.3 (c0f49521, hash
+  00c08bdd…) is the last Node-only release. Awaiting the user's decision: hold,
+  move to 4.1.3, or accept the binary download.
 
 ## Next
 
