@@ -1,6 +1,6 @@
 # Alignment Review — <task title>
 
-Owner: Product Partner · Workflow: `product-delivery` 3.0.0
+Owner: Product Partner · Workflow: `product-delivery` 3.1.0
 
 Optional. Use only when product-alignment findings need more room than the
 plan's Questions, Assumptions, And Decisions section. Return the result to the

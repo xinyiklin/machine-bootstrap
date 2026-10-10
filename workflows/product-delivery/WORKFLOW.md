@@ -1,6 +1,6 @@
 # Product Delivery Workflow
 
-Workflow id: `product-delivery` · version `3.0.0` · schema `1`
+Workflow id: `product-delivery` · version `3.1.0` · schema `1`
 
 Portable, provider-neutral contract for taking work from a request to accepted
 delivery through one living Implementation Plan. Installed from the
@@ -252,4 +252,5 @@ inter-session messaging, or model choice. Role contracts are the source of
 truth; provider agent definitions are generated from them.
 
 Launch instructions for each provider are documented in the `machine-bootstrap`
-`README.md`, because they are installation facts rather than workflow rules.
+repository's `docs/product-delivery.md`, because they are installation facts
+rather than workflow rules.

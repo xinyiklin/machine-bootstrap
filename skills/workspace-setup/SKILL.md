@@ -35,8 +35,8 @@ node scripts/init-workspace.mjs --check
 - **Workflow files differ:** usually a new workflow version. Show the version
   change and the files the check lists. With the user's approval, run
   `node scripts/install-workflows.mjs --replace`, which backs up every replaced
-  file. Then remove files the new version retired, as the README's "Updating a
-  workflow" section names them, to the trash.
+  file. Then move files the new version retired, as the "Updating a workflow"
+  section of `docs/product-delivery.md` names them, to the trash.
 - **An unmanaged skill is reported:** report it; never delete it.
 - **Legacy or ancestor guidance stops setup:** stop and list the paths. Cleanup
   is manual; never move `MACHINE.md` or a project's guidance.

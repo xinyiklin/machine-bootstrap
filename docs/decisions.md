@@ -118,3 +118,9 @@ number.
   runtime check of provider loading and discovery. It makes model calls, so it
   never runs in the suite or CI, and its results hold only for the provider
   versions observed.
+- 2026-10-10 [USER] D037 ACTIVE: this repository's full-workflow triggers
+  narrow to installation ownership and recovery, acquisition integrity,
+  adapter fields and discovery, workflow activation, authorization,
+  delegation, review, or artifact policy, starter safety, authorization, or
+  review rules that seeded projects inherit, and the hard invariants. Wording
+  changes that keep those contracts are ordinary work with normal review.

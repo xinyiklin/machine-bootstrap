@@ -1661,6 +1661,37 @@ await test("automatically loaded guidance stays within byte budgets", () => {
   assert.ok(projectChain < 28 * 1024);
 });
 
+await test("this repository's workflow triggers stay narrow and its operator guide is separate", () => {
+  const agents = readNormalized(bootstrapRoot, "AGENTS.md");
+  const hook = agents.slice(agents.indexOf("## Product-delivery hook"), agents.indexOf("## Working method"));
+  for (const contract of [
+    "installation ownership, target boundaries, overwrite or recovery behavior",
+    "skill acquisition sources, pinned hashes, or integrity validation",
+    "generated adapter fields or provider discovery locations",
+    "workflow activation, authorization, delegation, review, or artifact policy",
+    "starter safety, authorization, or review rules that seeded projects inherit",
+    "the hard invariants above"
+  ]) {
+    assert.ok(hook.includes(contract), contract);
+  }
+  assert.doesNotMatch(hook, /propagated into sibling projects|generated instruction meaning/);
+  assert.match(hook, /are ordinary changes with the normal review/);
+  const readme = readFileSync(join(bootstrapRoot, "README.md"), "utf8");
+  const guide = readFileSync(join(bootstrapRoot, "docs", "product-delivery.md"), "utf8");
+  assert.match(readme, /`docs\/product-delivery\.md`/);
+  assert.doesNotMatch(readme, /^#{3,4} Launching a role/m);
+  for (const heading of ["## Activation", "## Installed paths", "## Launching a role", "## Updating a workflow"]) {
+    assert.match(guide, new RegExp(`^${heading}$`, "m"));
+  }
+  assert.match(guide, /claude --agent mb-delivery-lead/);
+  // The moved guide agrees with the decisions made alongside it.
+  assert.doesNotMatch(guide, /propagation to siblings|not an automated CI size limit|artifact-retention/);
+  assert.match(
+    readFileSync(join(bootstrapRoot, "workflows", "product-delivery", "WORKFLOW.md"), "utf8"),
+    /`docs\/product-delivery\.md`/
+  );
+});
+
 await test("continuity stays bounded and preserves archived history", () => {
   const continuity = readFileSync(join(bootstrapRoot, "CONTINUITY.md"), "utf8");
   assert.ok(Buffer.byteLength(continuity, "utf8") <= 12 * 1024);
@@ -3570,6 +3601,7 @@ await test("one living Implementation Plan replaces the brief and plan gates", (
   // No live guidance or template reintroduces the retired gates.
   const liveGuidance = [
     "README.md",
+    "docs/product-delivery.md",
     "INIT.md",
     "docs/guidance-loading-smoke.md",
     "project-templates/AGENTS.md",
@@ -3642,6 +3674,8 @@ await test("independent review semantics survive the consolidation", () => {
   assert.match(workflow, /records it in the Verification Report/);
   assert.match(deliveryLead, /fresh independent Verifier that did not implement the change/);
   assert.match(deliveryLead, /an earlier pass does not cover it/);
+  // One complete brief instead of rounds of follow-up review.
+  assert.match(deliveryLead, /Brief it once and completely: the plan, the actual change and its exact repository state, the contracts it alters, the checks to run, your evidence/);
   assert.match(verifier, /You did not implement the change you review/);
   assert.match(verifier, /never count them as an independent pass/);
   assert.match(verifier, /Record the repository state you reviewed/);
