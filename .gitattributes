@@ -1,2 +1,4 @@
-# First-party skill content is hashed byte-for-byte; keep text line endings stable.
+# First-party skill content is hashed byte-for-byte, and Git hooks run under
+# sh even on Windows; keep their text line endings LF on every checkout.
 skills/** text=auto eol=lf
+scripts/hooks/* text eol=lf
