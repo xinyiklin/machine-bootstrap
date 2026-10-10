@@ -1768,6 +1768,82 @@ await test("CI enforces the PR size gate and the push hook runs the suite", () =
   }
 });
 
+await test("provider smoke harness judges loading without calling providers", async () => {
+  const smoke = await import("./smoke-providers.mjs");
+  const root = mkdtempSync(join(tmpdir(), "machine-bootstrap-smoke-test-"));
+  try {
+    const fixture = smoke.buildFixture(root, "abc123");
+    const at = (...parts) => join(fixture.workspace, ...parts);
+    assert.match(readFileSync(at("project-a", "CLAUDE.md"), "utf8"), /^@AGENTS\.md$/m);
+    assert.equal(existsSync(at("project-b", "CLAUDE.md")), false);
+    assert.match(readFileSync(at("project-c", "CLAUDE.local.md"), "utf8"), /SMOKE_L_abc123/);
+    assert.deepEqual(readdirSync(at("scratch")), []);
+
+    assert.deepEqual(
+      smoke.parseReply('Result:\n```json\n{"markers":["SMOKE_A_x"],"skills":["continuity"],"agents":[]}\n```'),
+      { markers: ["SMOKE_A_x"], skills: ["continuity"], agents: [] }
+    );
+    assert.equal(smoke.parseReply("no structured reply"), null);
+
+    // A fake provider that loads exactly what each provider documents.
+    const expectations = { skills: ["continuity"], agents: { claude: ["mb-verifier"], codex: ["mb_verifier"] } };
+    const markersIn = (dir, names) =>
+      names
+        .filter((name) => existsSync(join(dir, name)))
+        .flatMap((name) => readFileSync(join(dir, name), "utf8").match(/SMOKE_[A-Z]+_[0-9a-f]+/g) ?? []);
+    const documented = (scenario) => {
+      const claudeFiles = ["CLAUDE.md", "CLAUDE.local.md"].filter((name) => existsSync(join(scenario.cwd, name)));
+      let markers;
+      if (scenario.provider === "codex") markers = markersIn(scenario.cwd, ["AGENTS.md"]);
+      else if (claudeFiles.length) {
+        const imports = claudeFiles.some((name) => /^@AGENTS\.md$/m.test(readFileSync(join(scenario.cwd, name), "utf8")));
+        markers = markersIn(scenario.cwd, [...claudeFiles, ...(imports ? ["AGENTS.md"] : [])]);
+      } else markers = markersIn(scenario.cwd, ["AGENTS.md"]);
+      const agent = scenario.provider === "claude" ? "mb-verifier" : "mb_verifier";
+      return { text: JSON.stringify({ markers, skills: ["plugin:continuity"], agents: [agent] }) };
+    };
+    const passing = smoke.runSmoke({ run: documented, available: {}, expectations, root: join(root, "pass") });
+    assert.equal(passing.length, 7);
+    assert.deepEqual([...new Set(passing.map((result) => result.outcome))], ["passed"]);
+
+    // Claude ignoring native AGENTS.md, a tool-using reply, a missing skill,
+    // and an unavailable CLI each land in their own outcome.
+    const flawed = (scenario) => {
+      if (scenario.provider === "claude" && scenario.dir === "project-b") return { text: '{"markers":[]}' };
+      if (scenario.provider === "codex" && scenario.dir === "project-c") return { ...documented(scenario), usedTools: true };
+      if (scenario.provider === "codex" && scenario.dir === "project-a") return { text: '{"markers":["SMOKE_A_' + scenario.cwd.length + '"]}' };
+      if (scenario.provider === "codex") return { skipped: "codex CLI not found" };
+      return documented(scenario);
+    };
+    const outcomes = Object.fromEntries(
+      smoke.runSmoke({ run: flawed, available: {}, expectations, root: join(root, "flawed") })
+        .map((result) => [`${result.scenario.provider}/${result.scenario.dir}`, result])
+    );
+    assert.equal(outcomes["claude/project-b"].outcome, "failed");
+    assert.match(outcomes["claude/project-b"].detail, /missing SMOKE_B_/);
+    assert.equal(outcomes["codex/project-c"].outcome, "unverified");
+    assert.equal(outcomes["codex/project-a"].outcome, "failed");
+    assert.match(outcomes["codex/project-a"].detail, /not discovered: continuity, mb_verifier/);
+    assert.equal(outcomes["codex/scratch"].outcome, "skipped");
+    assert.equal(outcomes["claude/scratch"].outcome, "passed");
+    assert.match(smoke.prompt, /Do not run commands or read files/);
+    // Claude's event stream exposes tool use the same way Codex's does.
+    const events = [
+      JSON.stringify({ type: "assistant", message: { content: [{ type: "tool_use", name: "Agent" }] } }),
+      "progress text",
+      JSON.stringify({ type: "result", result: '{"markers":[]}' })
+    ].join("\n");
+    const parsed = [...smoke.jsonLines(events)];
+    assert.equal(parsed.length, 2);
+    assert.equal(parsed[0].message.content[0].type, "tool_use");
+    const source = readFileSync(join(scriptDir, "smoke-providers.mjs"), "utf8");
+    assert.match(source, /"--output-format", "stream-json", "--verbose"/);
+    assert.match(source, /realpathSync\.native\(resolve\(process\.argv\[1\]\)\)/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 await test("CI covers the full bootstrap suite on Linux, Windows, and macOS", () => {
   const workflow = readFileSync(
     join(bootstrapRoot, ".github", "workflows", "bootstrap.yml"),

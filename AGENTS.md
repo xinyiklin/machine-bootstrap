@@ -100,8 +100,10 @@ node scripts/init-workspace.mjs --check
 ```
 
 The suite is the primary gate. For guidance changes, also check paths, imports,
-and cross-file consistency. Report skipped host-capability checks and
-unverified provider behavior explicitly.
+and cross-file consistency. When a change depends on provider loading, ask
+before running the opt-in `node scripts/smoke-providers.mjs`, which makes model
+calls. Report skipped host-capability checks and unverified provider behavior
+explicitly.
 
 After your own verification and before local completion, every change gets one
 fresh independent review by a reviewer that did not make it: the installed

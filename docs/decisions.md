@@ -114,3 +114,7 @@ number.
   the reviewer's documented exception for that head; CI runs the base
   branch's script. The suite can run as an opt-in pre-push hook
   (`core.hooksPath`).
+- 2026-10-10 [USER] D036 ACTIVE: `scripts/smoke-providers.mjs` is the opt-in
+  runtime check of provider loading and discovery. It makes model calls, so it
+  never runs in the suite or CI, and its results hold only for the provider
+  versions observed.
