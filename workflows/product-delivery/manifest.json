@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "workflowId": "product-delivery",
-  "workflowVersion": "2.1.0",
+  "workflowVersion": "3.0.0",
   "title": "Product Delivery",
   "summary": "Explicitly activated provider-neutral delivery workflow with one living Implementation Plan, implementer self-review, and fresh independent verification.",
   "workflowDocument": "WORKFLOW.md",
@@ -56,8 +56,6 @@
     { "id": "implementation-report", "source": "templates/implementation-report.md" },
     { "id": "alignment-review", "source": "templates/alignment-review.md" },
     { "id": "decision-log", "source": "templates/decision-log.md" },
-    { "id": "change-request", "source": "templates/change-request.md" },
-    { "id": "product-brief", "source": "templates/product-brief.md" },
-    { "id": "delivery-plan", "source": "templates/delivery-plan.md" }
+    { "id": "change-request", "source": "templates/change-request.md" }
   ]
 }

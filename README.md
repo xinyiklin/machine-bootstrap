@@ -223,11 +223,10 @@ product behavior, architecture, engineering rules, and required verification.
 Installation makes the workflow available, not universally active. The complete
 flow activates only when the user selects Delivery Lead or Product Partner,
 explicitly requests the complete workflow, continues an active Implementation
-Plan (or a legacy 1.x Product Brief or Delivery Plan), or a project requires it
-for a named class of work. Selecting the Verifier activates only independent
-verification for the supplied change; it does not retroactively create a
-missing plan or authorization. Ordinary work creates no workflow artifacts by
-default.
+Plan, or a project requires it for a named class of work. Selecting the
+Verifier activates only independent verification for the supplied change; it
+does not retroactively create a missing plan or authorization. Ordinary work
+creates no workflow artifacts by default.
 
 For this repository, `AGENTS.md` names the activating contracts: installation
 ownership and recovery, acquisition integrity, provider formats/discovery,
@@ -310,12 +309,10 @@ An activated task normally creates two artifacts: the Implementation Plan and
 the Verification Report. Implementation Report, Alignment Review, Decision Log,
 and Change Request templates are optional detail linked from the plan, never
 competing requirement sources; empty placeholder artifacts are not created.
-`product-brief.md` and `delivery-plan.md` remain only as short deprecated
-redirects, because the installer never deletes files it no longer declares.
-Active task artifacts stay local by default. If a project tracks agent
-guidance/configuration and `CONTINUITY.md`, it removes the starter
-`.agent-work/` ignore rule and also tracks completed task folders referenced
-with `[TASK <task-id>]` so continuity never points to missing local files.
+Task artifacts are local working records under the ignored `.agent-work/`.
+The PR body (or the final report for unpublished work) carries the durable
+outcome, and the task folder is deleted when the task completes; tracked
+documents cite the PR or commit instead.
 
 The plan records the implementer's coverage and self-verification.
 Verification Reports alone own final independent passed, failed, unverified,
@@ -428,11 +425,12 @@ Reviewed replacement renames each existing entry to a timestamped backup before
 writing, so a customized adapter is recoverable and a symlinked destination is
 never written through.
 
-Upgrading an installed 1.x workflow to 2.x is this same reviewed path: the
-default install reports every changed file and writes nothing, and `--replace`
-backs up the previous contract, adapters, and templates before writing. Active
-1.x task artifacts in projects are consolidated into an Implementation Plan
-when their task resumes; completed ones stay as history.
+A major upgrade, such as 2.x to 3.0.0, is this same reviewed path: the default
+install reports every changed file and writes nothing, and `--replace` backs up
+the previous contract, adapters, and templates before writing. The installer
+never deletes a file the new version no longer declares; after upgrading to
+3.0.0, remove the retired `templates/product-brief.md` and
+`templates/delivery-plan.md` redirects from the installed package by hand.
 
 ### Adding project-specific requirements
 

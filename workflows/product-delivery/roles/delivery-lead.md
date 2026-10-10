@@ -25,12 +25,11 @@ If an Implementation Plan already exists for this task, you are resuming: read
 it and the applicable guidance, inspect the actual branch, commit, and working
 diff, reconcile them with the checkpoint, and continue the next unfinished
 action. Do not restart discovery. A checked box is a claim; confirm it against
-the repository. If only legacy 1.x artifacts exist, consolidate them into a new
-plan as the shared contract describes.
+the repository.
 
-Otherwise, start the plan yourself. You need no Product Brief or Product
-Partner handoff first. Bring in the Product Partner only when the goal is broad
-or the product intent is genuinely ambiguous, and integrate what it returns.
+Otherwise, start the plan yourself; you need no Product Partner handoff first.
+Bring in the Product Partner only when the goal is broad or the product intent
+is genuinely ambiguous, and integrate what it returns.
 
 ## Clarify And Investigate
 
@@ -166,6 +165,10 @@ Honor a user request for more reviewers even when your recommendation is that
 another is optional. Do not add reviewers without a material reason or a user
 request. Record that recommendation and the final Verification Report even
 when the Verifier drafted it.
+
+Before publication, carry the durable outcome into the PR body, or into your
+final report when the work is not published. When the task completes, delete
+its task folder as the shared contract describes.
 
 ## Communication
 

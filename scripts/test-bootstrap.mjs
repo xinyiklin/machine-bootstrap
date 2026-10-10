@@ -3065,14 +3065,14 @@ await test("one living Implementation Plan replaces the brief and plan gates", (
   assert.match(workflow, /Pause dependent work; continue independent work that remains authorized/);
   assert.match(workflow, /keep the prior criterion wording readable/);
   assert.match(workflow, /Silence, an artifact status, a checked box, or an agent's assertion is never user approval/);
-  assert.match(workflow, /an approved legacy Product Brief alone, never authorizes implementation/);
+  assert.match(workflow, /A plan-only request never authorizes implementation/);
 
   // Delivery Lead is the default owner; Product Partner is optional.
   assert.match(workflow, /\*\*Delivery Lead\*\* \| The default entry point and accountable owner/);
   assert.match(workflow, /\*\*Product Partner\*\* \| Optional specialist/);
   assert.match(workflow, /exactly one active owner/);
   assert.match(deliveryLead, /Ask the user directly/);
-  assert.match(deliveryLead, /You need no Product Brief or Product Partner handoff first/);
+  assert.match(deliveryLead, /you need no Product Partner handoff first/);
   assert.match(productPartner, /create `implementation-plan\.md` and own it/);
   assert.match(productPartner, /Hand ownership to the Delivery Lead/);
   assert.match(productPartner, /Alignment review does not replace the independent Verifier/);
@@ -3122,11 +3122,35 @@ await test("one living Implementation Plan replaces the brief and plan gates", (
   assert.match(starter, /continues an active Implementation Plan/);
   assert.match(starter, /Additional material-change triggers/);
 
-  // Legacy tasks consolidate rather than continuing two artifacts.
-  assert.match(workflow, /## Legacy 1\.x Tasks/);
-  assert.match(workflow, /still in force — not superseded and not invalidated/);
-  assert.match(workflow, /consolidates the existing intent, authorization, questions, decisions, and evidence into a new `implementation-plan\.md`/);
-  assert.match(workflow, /Completed 1\.x artifacts are historical records; leave them unchanged/);
+  // Workflow 3.0.0 retired 1.x support: no live source keeps the old
+  // artifacts, their activation clause, or consolidation rules.
+  assert.match(workflow, /3\. The task continues an active Implementation Plan\. 4\./);
+  for (const [label, source] of [...liveGuidance, ["verifier", readWorkflowSource("roles/verifier.md")]]) {
+    assert.doesNotMatch(source, /\b1\.x\b|Product Brief|Delivery Plan/, `${label} legacy support`);
+  }
+});
+
+await test("task artifacts are local working records deleted on completion", () => {
+  const workflow = readWorkflowSource("WORKFLOW.md");
+  const deliveryLead = readWorkflowSource("roles/delivery-lead.md");
+  assert.match(workflow, /They are working records, never committed/);
+  assert.match(workflow, /carry the durable outcome .* into the PR body/);
+  assert.match(workflow, /delete the task folder, preferring a recoverable trash/);
+  assert.match(workflow, /cite the PR or commit, never a task folder/);
+  assert.match(deliveryLead, /delete its task folder/);
+  for (const relativePath of [
+    "README.md",
+    "project-templates/AGENTS.md",
+    "project-templates/TEMPLATE-USAGE.md"
+  ]) {
+    const source = readNormalized(bootstrapRoot, relativePath);
+    assert.doesNotMatch(source, /\[TASK |tracks? (each )?completed/, `${relativePath} artifact tracking`);
+  }
+  const starterIgnore = readFileSync(
+    join(bootstrapRoot, "project-templates", ".gitignore"),
+    "utf8"
+  );
+  assert.match(starterIgnore, /^\.agent-work\/$/m);
 });
 
 await test("independent review semantics survive the consolidation", () => {
@@ -3213,16 +3237,8 @@ await test("workflow package versions, names, and templates stay consistent", ()
     );
   }
 
-  // Legacy paths are short redirects, never competing requirement sources.
-  for (const legacy of ["product-brief", "delivery-plan"]) {
-    const redirect = readFileSync(
-      join(workflowSourceRoot, "templates", `${legacy}.md`),
-      "utf8"
-    );
-    assert.ok(Buffer.byteLength(redirect) < 600, `${legacy}.md stays a short redirect`);
-    assert.match(redirect, /— deprecated/);
-    assert.match(redirect, /Use `implementation-plan\.md`/);
-    assert.doesNotMatch(redirect, /Acceptance Criteria|Approving this exact version/);
+  for (const retired of ["product-brief", "delivery-plan"]) {
+    assert.equal(templateIds.includes(retired), false, `${retired} is retired`);
   }
   for (const optional of ["implementation-report", "alignment-review", "decision-log", "change-request"]) {
     const template = readWorkflowSource(`templates/${optional}.md`);
@@ -3976,7 +3992,7 @@ await test("reviewed workflow replacement preserves recoverable backups", () => 
   }
 });
 
-await test("a legacy workflow installation upgrades only through reviewed replacement", () => {
+await test("an older workflow installation upgrades only through reviewed replacement", () => {
   const testHome = createTestHome("workflow-upgrade");
   try {
     assert.equal(runScript("install-workflows.mjs", [], testHome).status, 0);
@@ -3984,29 +4000,28 @@ await test("a legacy workflow installation upgrades only through reviewed replac
     const planTemplate = join(installedRoot, "templates", "implementation-plan.md");
     const leadAdapter = join(testHome, ".claude", "agents", "mb-delivery-lead.md");
 
-    // Model a complete 1.x installation: every bootstrap-owned file differs,
-    // the manifest declares the old version and templates, and the
-    // Implementation Plan template does not exist yet.
+    // Model an older installation: every bootstrap-owned file differs, the
+    // manifest declares the old version, and the Implementation Plan template
+    // does not exist yet. A template the new version no longer declares is
+    // left untouched, because the installer never deletes undeclared files.
     const legacy = new Map();
     for (const relativePath of workflowRelativePaths(workflowManifest)) {
       if (relativePath === "templates/implementation-plan.md") continue;
       legacy.set(
         join(installedRoot, ...relativePath.split("/")),
-        `legacy 1.x ${relativePath}\n`
+        `older ${relativePath}\n`
       );
     }
     legacy.set(
       join(installedRoot, "manifest.json"),
-      `${JSON.stringify({ ...workflowManifest, workflowVersion: "1.3.0" }, null, 2)}\n`
+      `${JSON.stringify({ ...workflowManifest, workflowVersion: "2.1.0" }, null, 2)}\n`
     );
-    legacy.set(
-      join(installedRoot, "templates", "product-brief.md"),
-      "# Product Brief\n\n> Approving this exact version means: legacy.\n"
-    );
+    const undeclared = join(installedRoot, "templates", "product-brief.md");
+    const undeclaredContents = "# Product Brief — deprecated\n";
     for (const role of workflowManifest.roles) {
       legacy.set(
         join(testHome, ".claude", "agents", `${role.claude.name}.md`),
-        `---\nname: ${role.claude.name}\n---\n\nlegacy 1.x ${role.id}\n`
+        `---\nname: ${role.claude.name}\n---\n\nolder ${role.id}\n`
       );
       legacy.set(
         join(testHome, ".codex", "agents", `${role.codex.name}.toml`),
@@ -4020,6 +4035,7 @@ await test("a legacy workflow installation upgrades only through reviewed replac
       }
     }
     for (const [path, contents] of legacy) writeFileSync(path, contents);
+    writeFileSync(undeclared, undeclaredContents);
     rmSync(planTemplate);
     const legacySnapshot = snapshotTree(testHome);
 
@@ -4032,6 +4048,7 @@ await test("a legacy workflow installation upgrades only through reviewed replac
       assert.ok(refused.stderr.includes(path), `${path} is reported for review`);
     }
     assert.deepEqual(snapshotTree(testHome), legacySnapshot);
+    assert.equal(refused.stderr.includes(undeclared), false);
 
     const replaced = runScript("install-workflows.mjs", ["--replace"], testHome);
     assert.equal(replaced.status, 0, replaced.stderr);
@@ -4062,6 +4079,8 @@ await test("a legacy workflow installation upgrades only through reviewed replac
       assert.equal(backups.length, 1, `${path} has one backup`);
       assert.equal(readFileSync(join(dirname(path), backups[0]), "utf8"), contents);
     }
+
+    assert.equal(readFileSync(undeclared, "utf8"), undeclaredContents);
 
     // Repeating the reviewed replacement is idempotent: no writes, no backups.
     const upgradedSnapshot = snapshotTree(testHome);

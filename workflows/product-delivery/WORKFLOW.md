@@ -1,6 +1,6 @@
 # Product Delivery Workflow
 
-Workflow id: `product-delivery` · version `2.1.0` · schema `1`
+Workflow id: `product-delivery` · version `3.0.0` · schema `1`
 
 Portable, provider-neutral contract for taking work from a request to accepted
 delivery through one living Implementation Plan. Installed from the
@@ -17,8 +17,7 @@ true:
 1. The user launches or selects the Delivery Lead or Product Partner role or
    profile.
 2. The user explicitly asks to use the complete `product-delivery` workflow.
-3. The task continues an active Implementation Plan, or a legacy Product Brief
-   or Delivery Plan from workflow 1.x.
+3. The task continues an active Implementation Plan.
 4. Project guidance requires this workflow for a named class of work.
 
 An ordinary bug fix, documentation edit, review, or maintenance task does not
@@ -133,8 +132,7 @@ observed repository facts (`repo`), reversible working assumptions
 
 1. Implementation requires the user's authorization of its scope.
 2. An agent's statement that the user approved something is not approval.
-3. A plan-only request, or an approved legacy Product Brief alone, never
-   authorizes implementation.
+3. A plan-only request never authorizes implementation.
 4. Routine execution-record updates never invalidate authorization.
 5. A material change requires the user's decision before the affected action.
 6. The plan owner may make internal technical decisions within the authorized
@@ -238,32 +236,14 @@ requirements. Never create empty placeholder artifacts. Ordinary work outside
 this workflow creates none of these artifacts by default. Keep the plan
 proportional; link detailed evidence rather than copying it.
 
-`product-brief.md` and `delivery-plan.md` remain only as deprecated redirects
-for installations upgraded from 1.x.
-
-The default location for task artifacts is `.agent-work/tasks/<task-id>/`
-inside the project. Keep active artifacts local by default; the starter project
-`.gitignore` excludes `.agent-work/`.
-
-When a project tracks its agent guidance/configuration and `CONTINUITY.md`, it
-removes that ignore rule and also tracks each completed
-`.agent-work/tasks/<task-id>/` directory referenced by that continuity ledger.
-Use `[TASK <task-id>]` in the continuity entry. Never commit a continuity link
-to an unavailable local artifact; if task artifacts remain local, make the
-durable continuity summary self-contained.
-
-## Legacy 1.x Tasks
-
-Completed 1.x artifacts are historical records; leave them unchanged. When an
-active 1.x task resumes, the plan owner consolidates the existing intent,
-authorization, questions, decisions, and evidence into a new
-`implementation-plan.md` and links the originals as historical references.
-Resolve material conflicts between them with the user before dependent work.
-A Delivery Plan version the user approved under 1.x that was still in force —
-not superseded and not invalidated by a later change to it or its brief —
-carries forward as authorization for exactly that scope; if the record is
-ambiguous, ask the user. An approved Product Brief alone never authorizes
-implementation.
+Task artifacts live in `.agent-work/tasks/<task-id>/` inside the project,
+which the starter `.gitignore` excludes. They are working records, never
+committed. Before publication, carry the durable outcome — scope, verification,
+review result, skipped evidence, and risks — into the PR body, or into the
+final report when the work is not published. When the task completes (its
+final PR merges, the user accepts unpublished work, or the user abandons it),
+delete the task folder, preferring a recoverable trash. Continuity and other
+tracked documents cite the PR or commit, never a task folder.
 
 ## Provider Notes
 

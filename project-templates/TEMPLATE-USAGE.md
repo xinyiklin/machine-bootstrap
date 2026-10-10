@@ -19,8 +19,7 @@ are not changed when this starter is updated.
 
 The starter `.gitignore` keeps shared `.claude/` and `.codex/` configuration
 trackable. It excludes `CLAUDE.local.md`, `.claude/settings.local.json`, and
-active `.agent-work/` artifacts. Remove the last exclusion only when the
-project intentionally tracks completed task artifacts referenced by continuity.
+`.agent-work/` task artifacts, which are deleted when their task completes.
 
 ## Initialize a project
 
@@ -110,11 +109,11 @@ instructions.
 
 The installed workflow is inactive during ordinary work. Its complete flow
 activates only when Delivery Lead or Product Partner is selected, the user
-explicitly requests the complete workflow, an active Implementation Plan (or a
-legacy 1.x Product Brief or Delivery Plan) is continued, or project guidance
-requires it for named work. Selecting the Verifier activates only independent
-verification for the supplied change. When active, the Delivery Lead keeps one
-living Implementation Plan; routine progress never requires re-approval.
+explicitly requests the complete workflow, an active Implementation Plan is
+continued, or project guidance requires it for named work. Selecting the
+Verifier activates only independent verification for the supplied change.
+When active, the Delivery Lead keeps one living Implementation Plan; routine
+progress never requires re-approval.
 
 Fill the project's activating conditions with checkable facts — paths,
 contracts, or artifact kinds — and name the reviewer that satisfies independent
