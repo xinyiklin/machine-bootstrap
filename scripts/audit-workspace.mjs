@@ -172,7 +172,7 @@ function auditProject(name) {
       findings.push(
         `CONTINUITY.md is ${row.continuity} (${kib(continuity.size)}), over the ` +
           `default ${continuityLineCap}-line cap; rotate resolved entries to ` +
-          "docs/continuity/YYYY-MM.md"
+          "docs/continuity/YYYY-MM.md (the shared continuity skill does this)"
       );
     }
   }

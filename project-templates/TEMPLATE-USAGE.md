@@ -97,9 +97,13 @@ as written.
 
 `CONTINUITY.md` is read on demand rather than imported, but reading it every
 task still costs context. Keep current state within the project cap and rotate
-resolved history to append-only `docs/continuity/YYYY-MM.md` files. A ledger of
-thousands of lines costs tens of thousands of tokens per task, and Claude's
-default file read returns only its first 2,000 lines.
+resolved history to append-only `docs/continuity/YYYY-MM.md` files; the shared
+`continuity` skill compacts automatically near the cap and on request
+(`/continuity` in Claude Code, `$continuity` in Codex). Decisions may stay in
+the ledger; when they crowd it, move them to an optional `docs/decisions.md`,
+which the skill creates on demand rather than the starter seeding it empty. A
+ledger of thousands of lines costs tens of thousands of tokens per task, and
+Claude's default file read returns only its first 2,000 lines.
 
 Shorter guides are followed more reliably: unnecessary requirements make agent
 tasks harder and more expensive, so state only what an agent cannot infer from

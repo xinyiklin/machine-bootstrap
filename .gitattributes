@@ -1,0 +1,2 @@
+# First-party skill content is hashed byte-for-byte; keep text line endings stable.
+skills/** text=auto eol=lf

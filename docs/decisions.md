@@ -93,3 +93,11 @@ number.
   only; active decisions live in `docs/decisions.md`; resolved entries rotate
   verbatim to archives named for the rotation month, beside dated task
   receipts. The CI line cap remains the backstop (extends D018).
+- 2026-10-09 [USER-DELEGATED] D032 ACTIVE: first-party skills ship from
+  `skills/` with a `localPath` and pinned content hash, installed missing-only
+  like reviewed upstream skills without running anything. As the user asked,
+  the `continuity` skill compacts the ledger both ways: agents invoke it near
+  the cap and users at any time (extends D031).
+- 2026-10-09 [USER] D033 ACTIVE: project starters offer an optional
+  `docs/decisions.md`, created on demand by the `continuity` skill or by hand,
+  never seeded empty; entries keep their numbers and change status in place.
