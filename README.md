@@ -502,8 +502,10 @@ To run the suite before every push from
 this checkout, opt in once with `git config core.hooksPath scripts/hooks`;
 that setting replaces the checkout's `.git/hooks` directory.
 
-Manual provider loading checks live in
-`docs/guidance-loading-smoke.md`. Static tests are not runtime loading evidence.
+Static tests are not runtime loading evidence. `node scripts/smoke-providers.mjs`
+is an opt-in check that runs the real Claude Code and Codex CLIs against a
+disposable fixture and costs a few model calls; the remaining manual checks live
+in `docs/guidance-loading-smoke.md`.
 
 Provider contracts checked against official documentation on 2026-10-09:
 [Codex instructions](https://learn.chatgpt.com/docs/agent-configuration/agents-md),

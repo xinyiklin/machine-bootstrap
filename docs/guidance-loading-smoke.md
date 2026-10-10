@@ -1,7 +1,17 @@
 # Provider Guidance Loading Smoke Checks
 
-These manual checks establish runtime loading behavior. The deterministic Node
-suite validates only static topology and modeled contracts.
+These checks establish runtime loading behavior. The deterministic Node suite
+validates only static topology and modeled contracts.
+
+`node scripts/smoke-providers.mjs` automates the core scenarios against the
+real, signed-in Claude Code and Codex CLIs: the adapter import, Claude's native
+`AGENTS.md`, `CLAUDE.local.md` turning native reading off, Claude-only files in
+Codex, folders with no guidance, and discovery of installed skills and roles.
+It is opt-in because it makes model calls, uses random markers in a deleted
+fixture, and counts a reply after any tool use as unverified. Use
+`--claude-only` or `--codex-only` for one provider. The manual checks below
+remain for nested guides, overrides, custom configuration roots, and the Codex
+desktop app.
 
 Use a disposable directory with non-secret markers:
 
