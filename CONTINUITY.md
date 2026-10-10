@@ -17,10 +17,10 @@ project.
 
 ## Current state
 
-- 2026-10-09 Product Delivery 3.0.0 in source (D029, D030): 1.x support
-  removed; task artifacts are local and deleted on completion. A machine with
-  2.x installed upgrades through the reviewed `install-workflows.mjs --replace`,
-  then removes the two retired templates by hand.
+- 2026-10-09 Product Delivery 3.0.0 (D029, D030): 1.x support removed; task
+  artifacts are local and deleted on completion. A machine with 2.x installed
+  upgrades through the reviewed `install-workflows.mjs --replace`, then removes
+  the two retired templates by hand.
 - 2026-10-09 Ledger restructured (D031): decisions moved to
   `docs/decisions.md`; snapshot and working set rotated to
   `docs/continuity/2026-10.md`; receipts moved under `docs/continuity/`.
@@ -41,18 +41,16 @@ project.
 - 2026-10-10 Product Delivery 3.1.0: the Delivery Lead briefs the Verifier
   once with a complete checklist; this repository's full-workflow triggers
   narrow (D037); README's workflow detail moved to `docs/product-delivery.md`.
-- 2026-10-10 Product Delivery 3.2.0 in source (D038): the plan owner tells the
-  user which assumptions the plan added, at the start and in the PR body or final
-  report. This machine still has 1.2.0 installed; upgrading is a separate,
-  user-authorized `install-workflows.mjs --replace`.
+- 2026-10-10 Product Delivery 3.2.0 (D038): the plan owner tells the user which
+  assumptions the plan added, at the start and in the PR body or final report.
 - 2026-10-10 `archify` pinned at upstream 10722002 (2.17.0-dev.1). It has no
   install scripts; at runtime it makes a throttled update-check GET to its
   GitHub Pages manifest (opt out: `ARCHIFY_UPDATE_CHECK_DISABLED=1`) and
   fetches brand URLs the user supplies, refusing private addresses.
 - Bootstrap CI runs the full disposable suite on Linux, Windows, and macOS;
   a separate PR size check enforces the 1,000-line gate (D035).
-- Impeccable stays pinned at 4.0.2 with a recoverable 4.0.4 backup until a
-  freshly reviewed upgrade recommendation.
+- Impeccable stays pinned at 4.0.2 until a freshly reviewed upgrade
+  recommendation.
 
 ## Next
 
