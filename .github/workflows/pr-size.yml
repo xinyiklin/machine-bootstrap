@@ -1,0 +1,51 @@
+name: PR size
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  size:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      # An exception holds only for the exact head the fresh reviewer accepted:
+      # the PR body records `size-exception: <head SHA>`, so any new commit
+      # needs a renewed exception. The base branch's script measures the PR, so
+      # a PR cannot loosen its own gate. An exception never waives review or tests.
+      - name: Count changed lines against the PR base
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          script=scripts/pr-size.mjs
+          if git cat-file -e "origin/$BASE_REF:scripts/pr-size.mjs" 2>/dev/null; then
+            git show "origin/$BASE_REF:scripts/pr-size.mjs" > "$RUNNER_TEMP/pr-size.mjs"
+            script="$RUNNER_TEMP/pr-size.mjs"
+          fi
+          recorded=$(printf '%s\n' "$PR_BODY" | sed -n 's/.*size-exception: *\([0-9a-f]\{7,40\}\).*/\1/p' | head -n 1)
+          case "$HEAD_SHA" in
+            "$recorded"*)
+              if [ -n "$recorded" ]; then
+                echo "Size exception recorded for head $recorded."
+                node "$script" "origin/$BASE_REF"
+                exit 0
+              fi
+              ;;
+          esac
+          node "$script" "origin/$BASE_REF" --fail-over 1000

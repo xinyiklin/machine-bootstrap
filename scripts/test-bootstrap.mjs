@@ -15,7 +15,9 @@ import {
   readdirSync,
   readFileSync,
   readlinkSync,
+  renameSync,
   rmSync,
+  statSync,
   symlinkSync,
   writeFileSync
 } from "node:fs";
@@ -1679,6 +1681,89 @@ await test("continuity stays bounded and preserves archived history", () => {
   ].map((match) => Number(match[1]));
   assert.equal(numbers.length, (decisions.match(/^- \d{4}-/gm) ?? []).length);
   assert.deepEqual(numbers, numbers.map((_, index) => index + 1));
+});
+
+await test("PR size counts the Git contract's lines and enforces its gate", () => {
+  const repo = mkdtempSync(join(tmpdir(), "machine-bootstrap-pr-size-"));
+  try {
+    const run = (gitArgs) => {
+      const result = spawnSync("git", ["-C", repo, ...gitArgs], { encoding: "utf8", shell: false });
+      assert.equal(result.status, 0, result.stderr);
+    };
+    const lines = (count, word) => Array.from({ length: count }, (_, i) => `${word} ${i}\n`).join("");
+    const commit = (message) => {
+      run(["add", "-A"]);
+      run(["-c", "user.name=Fixture", "-c", "user.email=fixture@example.com", "commit", "-q", "-m", message]);
+    };
+    run(["init", "-q"]);
+    writeFileSync(join(repo, "app.js"), lines(10, "app"));
+    writeFileSync(join(repo, "gone.md"), lines(5, "gone"));
+    writeFileSync(join(repo, "package-lock.json"), lines(10, "lock"));
+    writeFileSync(join(repo, "image.bin"), Buffer.from([0, 1, 2, 3, 0, 255]));
+    writeFileSync(join(repo, "moved.md"), lines(20, "moved"));
+    writeFileSync(join(repo, "renamed.md"), lines(20, "renamed"));
+    commit("base");
+    run(["branch", "base"]);
+    // 3 added + 2 removed in app.js, 5 removed with gone.md, and 1 changed line
+    // in a renamed file count; the lockfile, binary, pure rename, and excluded
+    // generated output do not.
+    writeFileSync(join(repo, "app.js"), lines(8, "app") + lines(3, "new"));
+    rmSync(join(repo, "gone.md"));
+    writeFileSync(join(repo, "package-lock.json"), lines(60, "lock"));
+    writeFileSync(join(repo, "image.bin"), Buffer.from([0, 9, 9, 9, 0, 255]));
+    renameSync(join(repo, "moved.md"), join(repo, "moved-to.md"));
+    renameSync(join(repo, "renamed.md"), join(repo, "renamed-to.md"));
+    writeFileSync(join(repo, "renamed-to.md"), lines(19, "renamed") + "renamed edited\n");
+    mkdirSync(join(repo, "gen"));
+    writeFileSync(join(repo, "gen", "out.js"), lines(7, "generated"));
+    commit("change");
+
+    const size = (args) =>
+      spawnSync(process.execPath, [join(scriptDir, "pr-size.mjs"), "base", ...args], {
+        cwd: repo,
+        encoding: "utf8",
+        shell: false
+      });
+    const report = size(["--exclude", "gen/"]);
+    assert.equal(report.status, 0, report.stderr);
+    assert.match(report.stdout, /: 12 counted \(\+4 −8 in 3 files\)/);
+    assert.match(report.stdout, /Band: up to 500/);
+    for (const reason of [
+      /package-lock\.json \(lockfile\)/,
+      /image\.bin \(binary\)/,
+      /moved\.md → moved-to\.md \(pure rename\)/,
+      /gen\/out\.js \(excluded by --exclude\)/
+    ]) {
+      assert.match(report.stdout, reason);
+    }
+    assert.match(size([]).stdout, /: 19 counted/, "unexcluded generated output counts");
+    assert.equal(size(["--exclude", "gen/", "--fail-over", "12"]).status, 0);
+    const over = size(["--exclude", "gen/", "--fail-over", "11"]);
+    assert.equal(over.status, 1);
+    assert.match(over.stderr, /12 counted lines exceed 11/);
+    assert.equal(size(["--bogus"]).status, 2);
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
+await test("CI enforces the PR size gate and the push hook runs the suite", () => {
+  const workflow = readFileSync(join(bootstrapRoot, ".github", "workflows", "pr-size.yml"), "utf8");
+  assert.match(workflow, /types: \[opened, synchronize, reopened, edited\]/);
+  assert.match(workflow, /fetch-depth: 0/);
+  assert.match(workflow, /permissions:\s*\n\s*contents: read/);
+  // Event data reaches the shell only through environment variables.
+  assert.match(workflow, /PR_BODY: \$\{\{ github\.event\.pull_request\.body \}\}/);
+  assert.doesNotMatch(workflow.slice(workflow.indexOf("run: |")), /\$\{\{/);
+  // The base branch's script measures the PR, and an exception names the head.
+  assert.match(workflow, /git show "origin\/\$BASE_REF:scripts\/pr-size\.mjs"/);
+  assert.match(workflow, /size-exception: \*\\\(\[0-9a-f\]\\\{7,40\\\}\\\)/);
+  assert.match(workflow, /node "\$script" "origin\/\$BASE_REF" --fail-over 1000/);
+  const hook = join(scriptDir, "hooks", "pre-push");
+  assert.match(readFileSync(hook, "utf8"), /^#!\/bin\/sh\n[^]*exec node scripts\/test-bootstrap\.mjs/);
+  if (process.platform !== "win32") {
+    assert.ok(statSync(hook).mode & 0o111, "pre-push is executable");
+  }
 });
 
 await test("CI covers the full bootstrap suite on Linux, Windows, and macOS", () => {

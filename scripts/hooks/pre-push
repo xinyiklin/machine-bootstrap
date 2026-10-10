@@ -1,0 +1,4 @@
+#!/bin/sh
+# Opt-in: git config core.hooksPath scripts/hooks
+# Runs the disposable regression suite before every push from this checkout.
+exec node scripts/test-bootstrap.mjs
