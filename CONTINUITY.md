@@ -34,7 +34,8 @@ project.
 - 2026-10-10 Agent-facing skills `workspace-setup`, `project-init`,
   `project-sync`, and `guidance-audit` drive the scripts; `starter-diff.mjs`
   compares a project's starters read-only (D034).
-- Bootstrap CI runs the full disposable suite on Linux, Windows, and macOS.
+- Bootstrap CI runs the full disposable suite on Linux, Windows, and macOS;
+  a separate PR size check enforces the 1,000-line gate (D035).
 - Impeccable stays pinned at 4.0.2 with a recoverable 4.0.4 backup until a
   freshly reviewed upgrade recommendation.
 

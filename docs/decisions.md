@@ -108,3 +108,9 @@ number.
   through reviewed edits in a session in that project; `INIT.md` stays the
   first-run entry; and seeded projects adopt starter changes only through
   `project-sync`, never automatic synchronization.
+- 2026-10-10 [USER] D035 ACTIVE: `scripts/pr-size.mjs` counts PR size per the
+  Git contract; CI fails a PR above 1,000 counted lines unless its body
+  records `size-exception: <head SHA>` for the current head, added only with
+  the reviewer's documented exception for that head; CI runs the base
+  branch's script. The suite can run as an opt-in pre-push hook
+  (`core.hooksPath`).

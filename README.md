@@ -235,8 +235,8 @@ The Git contracts and PR templates use a 500-line target and a 1,000-line
 review gate, measured as additions plus deletions. Changes over 1,000 require a
 split or an explicit reviewer exception; generated/lockfile/rename/binary
 changes are reported separately. See `docs/engineering/git-workflow.md` for
-counting, exceptions, and review requirements. These gates are guidance for
-both providers, not an automated CI size limit.
+counting, exceptions, and review requirements. CI's PR size check enforces
+the 1,000-line gate.
 
 ### The three roles
 
@@ -494,6 +494,13 @@ skill integrity, workflow validation, deterministic adapter generation,
 check-only behavior, and Linux/Windows/macOS CI contracts. It makes no model or
 API calls and never points setup scripts at the live parent workspace or
 provider roots.
+
+`node scripts/pr-size.mjs <base>` counts a branch the way the Git contract
+does, and the PR size check in CI enforces its 1,000-line gate unless the PR
+body records the reviewer's `size-exception: <head SHA>` for the current head.
+To run the suite before every push from
+this checkout, opt in once with `git config core.hooksPath scripts/hooks`;
+that setting replaces the checkout's `.git/hooks` directory.
 
 Manual provider loading checks live in
 `docs/guidance-loading-smoke.md`. Static tests are not runtime loading evidence.

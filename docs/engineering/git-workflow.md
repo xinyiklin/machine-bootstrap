@@ -49,6 +49,14 @@ new head needs renewed confirmation, and the exception waives nothing else. If
 review was user-waived, only the user can grant a size exception. Adjust these
 defaults only in this contract, with rationale.
 
+`node scripts/pr-size.mjs <base>` counts a branch this way; pass
+`--exclude <path>` for generated output. The PR size check in CI fails above
+1,000 unless the PR body records `size-exception: <head SHA>` for the current
+head, added only with the reviewer's documented exception for that head. A
+new commit changes the head, so the check fails again until the reviewer
+confirms the exception for it. CI runs the base branch's copy of the script,
+so a PR cannot loosen its own gate.
+
 ## Pull requests and review
 
 Use `.github/pull_request_template.md`; the PR title matches the intended

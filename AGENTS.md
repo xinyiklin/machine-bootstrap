@@ -23,8 +23,9 @@ machine-local facts; it is not an agent-policy source.
   deterministic adapter generation.
 - `scripts/init-workspace.mjs` (machine registry and shared capabilities),
   `init-project.mjs` (missing-only seeding of one target),
-  `audit-workspace.mjs` (read-only sibling guidance report), and
-  `starter-diff.mjs` (read-only starter comparison for one project).
+  `audit-workspace.mjs` (read-only sibling guidance report),
+  `starter-diff.mjs` (read-only starter comparison for one project), and
+  `pr-size.mjs` (PR size count that CI enforces).
 - `scripts/test-bootstrap.mjs` — isolated regression suite for every layer.
 - `CONTINUITY.md` — current state; `docs/decisions.md` — active decisions;
   `docs/continuity/` — history and receipts, read only when needed.
