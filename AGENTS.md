@@ -30,7 +30,9 @@ machine-local facts; it is not an agent-policy source.
   `audit-workspace.mjs` (read-only sibling guidance report),
   `starter-diff.mjs` (read-only starter comparison for one project), and
   `pr-size.mjs` (PR size count that CI enforces).
-- `scripts/test-bootstrap.mjs` — isolated regression suite for every layer.
+- `scripts/test-bootstrap.mjs` — isolated regression suite; it runs the layer
+  files in `scripts/test/` (skills, guidance, workspace, project, workflows)
+  over the shared `harness.mjs`.
 - `CONTINUITY.md` — current state; `docs/decisions.md` — active decisions;
   `docs/continuity/` — history and receipts, read only when needed.
 
