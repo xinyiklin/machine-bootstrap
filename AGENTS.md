@@ -23,6 +23,7 @@ facts. It is not an agent-policy source.
   and deterministic adapter generation.
 - `scripts/init-workspace.mjs` — machine registry plus shared capabilities.
 - `scripts/init-project.mjs` — explicit missing-only seeding for one target.
+- `scripts/audit-workspace.mjs` — read-only sibling guidance budget report.
 - `scripts/test-bootstrap.mjs` — isolated regression suite for all owned layers.
 - `CONTINUITY.md` — bounded current state; `docs/continuity/` is history read
   only when the task needs it.

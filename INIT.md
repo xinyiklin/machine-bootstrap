@@ -56,11 +56,12 @@ use the same initializer and safety rules above; do not copy template files by
 hand.
 
 Report the initialized paths, shared capability state, remaining placeholders,
-and review-required conditions. Offer the recommended Claude permission rules
-from `README.md`; apply them only with the user's approval and without
-replacing existing settings. Do not initialize Git at the workspace root or
-stage, commit, publish, overwrite, or migrate anything without the user's
-authority for that action.
+and review-required conditions. `node scripts/audit-workspace.mjs` reports each
+sibling's guide budgets read-only; route its findings to sessions in those
+projects. Offer the recommended Claude permission rules from `README.md`; apply
+them only with the user's approval and without replacing existing settings.
+Do not initialize Git at the workspace root or stage, commit, publish,
+overwrite, or migrate anything without the user's authority for that action.
 
 After project initialization, start a new Codex or Claude session in that
 project root or relevant scoped directory. A bootstrap session may administer

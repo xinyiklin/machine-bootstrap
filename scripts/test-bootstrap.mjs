@@ -1868,6 +1868,85 @@ function directoryByteHash(root) {
   return hash.digest("hex");
 }
 
+await test("workspace audit reports sibling guidance budgets without writing", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const oversized = join(workspaceRoot, "project-a");
+    mkdirSync(join(oversized, ".git"), { recursive: true });
+    writeFileSync(join(oversized, "AGENTS.md"), `# A\n${"x".repeat(9 * 1024)}\nTODO\n`);
+    writeFileSync(join(oversized, "CLAUDE.md"), "# A\n\nRead AGENTS.md first.\n");
+    writeFileSync(
+      join(oversized, "CONTINUITY.md"),
+      Array.from({ length: 200 }, (_, index) => `- entry ${index}`).join("\n") + "\n"
+    );
+    const agentsOnly = join(workspaceRoot, "project-b");
+    mkdirSync(agentsOnly);
+    writeFileSync(join(agentsOnly, "AGENTS.md"), "# B\n");
+    const healthy = join(workspaceRoot, "project-c");
+    mkdirSync(healthy);
+    writeFileSync(join(healthy, "AGENTS.md"), "# C\n");
+    writeFileSync(join(healthy, "CLAUDE.md"), "# C\n\n@AGENTS.md\n");
+    writeFileSync(join(healthy, "CONTINUITY.md"), "- current\n");
+    mkdirSync(join(workspaceRoot, "scratch"));
+    writeFileSync(join(workspaceRoot, "scratch", "AGENTS.md"), "scratch\n");
+    mkdirSync(join(workspaceRoot, ".hidden"));
+    writeFileSync(join(workspaceRoot, "MACHINE.md"), "TODO private registry\n");
+    if (capabilities.symlinks) {
+      symlinkSync(healthy, join(workspaceRoot, "linked-project"),
+        process.platform === "win32" ? "junction" : "dir");
+    }
+    const linkedGuide = join(workspaceRoot, "project-d");
+    mkdirSync(linkedGuide);
+    writeFileSync(join(linkedGuide, "AGENTS.md"), "# D\n");
+    if (capabilities.symlinks) {
+      symlinkSync(join(healthy, "CLAUDE.md"), join(linkedGuide, "CLAUDE.md"));
+    }
+    if (capabilities.posixPermissions) {
+      writeFileSync(join(linkedGuide, "CONTINUITY.md"), "- private\n");
+      chmodSync(join(linkedGuide, "CONTINUITY.md"), 0o000);
+    }
+    const before = [oversized, agentsOnly, healthy].map(directoryByteHash);
+    const machineBefore = readFileSync(join(workspaceRoot, "MACHINE.md"));
+
+    const result = spawnSync(
+      process.execPath,
+      [join(checkoutRoot, "scripts", "audit-workspace.mjs")],
+      { encoding: "utf8", env: isolatedEnvironment(testRoot), shell: false }
+    );
+    assert.equal(result.status, 0, result.stderr);
+    const out = result.stdout;
+    assert.match(out, /project-a: AGENTS\.md is 9\.\d KiB, over the 8\.0 KiB target/);
+    assert.match(out, /project-a: CLAUDE\.md imports AGENTS\.md 0 time\(s\)/);
+    assert.match(out, /project-a: 1 TODO marker\(s\)/);
+    assert.match(out, /project-a: CONTINUITY\.md is 200 lines .* over the default 160-line cap/);
+    assert.match(out, /project-b: no CLAUDE\.md: Claude Code 2\.1\.277\+ reads AGENTS\.md natively/);
+    assert.doesNotMatch(out, /project-c:/);
+    assert.match(out, /^project-c\s+no\s+0\.0 KiB\s+0\.0 KiB\s+1\s+1 lines$/m);
+    assert.doesNotMatch(out, /scratch|\.hidden|linked-project|machine-bootstrap\s/);
+    if (capabilities.symlinks) {
+      assert.match(out, /project-d: CLAUDE\.md is a symbolic link; not followed/);
+      assert.doesNotMatch(out, /project-d: no CLAUDE\.md/);
+    }
+    if (capabilities.posixPermissions) {
+      assert.match(out, /project-d: CONTINUITY\.md could not be read \(EACCES\)/);
+      chmodSync(join(linkedGuide, "CONTINUITY.md"), 0o644);
+    }
+    assert.doesNotMatch(out, /private registry/);
+    assert.deepEqual([oversized, agentsOnly, healthy].map(directoryByteHash), before);
+    assert.deepEqual(readFileSync(join(workspaceRoot, "MACHINE.md")), machineBefore);
+
+    const bad = spawnSync(
+      process.execPath,
+      [join(checkoutRoot, "scripts", "audit-workspace.mjs"), "--fix"],
+      { encoding: "utf8", env: isolatedEnvironment(testRoot), shell: false }
+    );
+    assert.notEqual(bad.status, 0);
+    assert.match(bad.stderr, /Unknown argument\(s\): --fix/);
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
 await test("project initialization changes only its explicit target", () => {
   const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
   try {

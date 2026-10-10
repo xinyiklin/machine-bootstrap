@@ -48,8 +48,8 @@ is read only when a task needs it.
   Accounting and review: `docs/workflow-consolidation-2026-10-06.md`.
 - 2026-10-09 [USER+CODE] Guidance review fixes (D027), workflow 2.1.0:
   boundary checks cover every root/ancestor instruction file Claude loads; the
-  Claude Verifier adapter drops file-editing tools; unmanaged skills
-  reported. Receipt: `docs/guidance-review-2026-10-09.md`.
+  Claude Verifier adapter drops file-editing tools; sibling audit script;
+  unmanaged skills reported. Receipt: `docs/guidance-review-2026-10-09.md`.
 - 2026-08-13 [USER] Every implementation defaults to implementer verification
   plus one fresh independent review; only the user may waive it per change.
 - 2026-08-19 [USER+CODE] Workflow activation must be stated as checkable
@@ -144,7 +144,7 @@ Milestones — detail in `docs/continuity/2026-07.md`:
 - `.github/{pull_request_template.md,workflows/bootstrap.yml}`
 - `machine-templates/`, `project-templates/`
 - `docs/{engineering/git-workflow.md,guidance-loading-smoke.md,continuity/}`
-- `scripts/{init-workspace,init-project,test-bootstrap,install-skills,install-workflows}.mjs`
+- `scripts/{init-workspace,init-project,audit-workspace,test-bootstrap,install-skills,install-workflows}.mjs`
 - `scripts/lib/{fs-safety,portable-path,skill-*,workflow-*}.mjs`
 - `skills.json`, `workflows/`
 
@@ -154,3 +154,5 @@ Milestones — detail in `docs/continuity/2026-07.md`:
   sibling repository with project guidance.
 - Impeccable 4.0.2 restored with explicit user authorization and a recoverable
   4.0.4 backup; retain the pin until a freshly reviewed upgrade recommendation.
+- Sibling guidance findings from `scripts/audit-workspace.mjs` (oversized
+  continuity and guides) belong to sessions in those projects, not here.

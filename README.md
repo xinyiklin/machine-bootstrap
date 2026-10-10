@@ -50,6 +50,8 @@ the current session.
   packages and deterministic adapters.
 - `scripts/init-workspace.mjs` — parent registry plus shared capabilities.
 - `scripts/init-project.mjs` — explicit, target-scoped, one-time project seeding.
+- `scripts/audit-workspace.mjs` — read-only report of every sibling's guide
+  sizes, Claude import, and continuity length.
 - `scripts/test-bootstrap.mjs` — disposable regression suite.
 - `CONTINUITY.md` — bounded current state; `docs/continuity/` is on-demand,
   append-only history.
@@ -158,6 +160,16 @@ Choose either setup style:
    directory cleanup is reported for manual review.
 6. Replace project placeholders with verified project facts. Start a new Codex
    or Claude session in that project root or relevant scoped directory.
+7. Audit sibling guidance whenever useful; it reads guide sizes and continuity
+   length and changes nothing:
+
+   ```bash
+   node scripts/audit-workspace.mjs
+   ```
+
+   Fix findings in a session started in that project. In Claude Code 2.1.283
+   and later, `/doctor prompt-audit` also finds stale or conflicting
+   instructions.
 
 To initialize only one project through an agent, specify its exact path:
 **“Initialize `../project-a` using machine-bootstrap. Preserve existing files,

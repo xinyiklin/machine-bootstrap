@@ -1,7 +1,7 @@
 # Guidance and setup review fixes
 
 Date: 2026-10-09. Scope: machine-bootstrap boundary checks, generated adapters,
-skill reporting, and starter/operator guidance. This receipt
+skill reporting, sibling audit, and starter/operator guidance. This receipt
 contains portable source facts only, not machine inventory.
 
 ## Authorization and workflow accounting
@@ -30,7 +30,7 @@ a waiver. No review waiver was requested.
 | Claude subagents support `disallowedTools` | The generated Claude Verifier removes `Edit`, `Write`, `NotebookEdit`; workflow 2.1.0 |
 | Codex custom agents support `sandbox_mode`, but read-only blocks writing test fixtures | Codex Verifier keeps the inherited sandbox |
 | Codex discovers every skill in the shared root; Claude sees only bootstrap links | Skill install and check report unmanaged entries without failing |
-| Shorter context files are followed more reliably and cost less (arXiv 2602.11988; Claude memory guidance) | Starter `AGENTS.md` trimmed and reordered |
+| Shorter context files are followed more reliably and cost less (arXiv 2602.11988; Claude memory guidance) | Starter `AGENTS.md` trimmed and reordered; read-only `scripts/audit-workspace.mjs` reports sibling budgets |
 | Claude reads outside the working directory only with approval; deny rules cover its file tools | README documents recommended user permission rules; installers still never edit `settings.json` |
 
 ## Decision: keep `CLAUDE.md`
@@ -49,13 +49,15 @@ every Codex context. `AGENTS.md` therefore stays the only shared policy and
   none skipped. New tests cover root and ancestor guidance (both modes, home
   `CLAUDE.md` and `CLAUDE_CONFIG_DIR` exemptions, uninspectable paths),
   tool-restriction validation and generation, unmanaged skill reporting, the
-  native-loading model, and guidance wording.
+  read-only audit (links and unreadable files), the native-loading model, and
+  guidance wording.
 - `git diff --check`: clean.
+- Live read-only run of the audit against the real workspace: exit 0, no writes.
 - Runtime provider behavior (Claude native loading, Verifier tool removal) is
   documented but unverified by the static suite; see
   `docs/guidance-loading-smoke.md`.
 - Independent review and publication evidence are recorded in the pull request
   and the local task plan, because this receipt is part of the diff they cover.
 
-Existing project-owned starters are not synchronized. Sibling-owned guidance
-findings are routed to sessions in those projects.
+Existing project-owned starters are not synchronized. Sibling findings from the
+audit are routed to sessions in those projects.
