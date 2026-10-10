@@ -29,10 +29,12 @@ secret filenames. Then run:
 node scripts/init-workspace.mjs --check
 ```
 
-If the parent contains a legacy `AGENTS.md`, `CLAUDE.md`, or `_templates/`, stop
-and report it. Automatic migration is not currently supported. Review the
-entries and move them manually outside the workspace root before rerunning;
-never move sibling projects or `MACHINE.md` as part of that cleanup.
+If the parent contains a legacy `AGENTS.md`, `CLAUDE.md`, or `_templates/`, or
+another root or ancestor instruction file listed in README setup step 4, stop
+and report it. Automatic
+migration is not currently supported. Review the entries and move them manually
+before rerunning; never move sibling projects or `MACHINE.md` as part of that
+cleanup.
 
 Initialize one project explicitly:
 
@@ -54,7 +56,9 @@ use the same initializer and safety rules above; do not copy template files by
 hand.
 
 Report the initialized paths, shared capability state, remaining placeholders,
-and review-required conditions. Do not initialize Git at the workspace root or
+and review-required conditions. Offer the recommended Claude permission rules
+from `README.md`; apply them only with the user's approval and without
+replacing existing settings. Do not initialize Git at the workspace root or
 stage, commit, publish, overwrite, or migrate anything without the user's
 authority for that action.
 

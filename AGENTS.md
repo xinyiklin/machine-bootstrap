@@ -32,7 +32,8 @@ facts. It is not an agent-policy source.
 - The checkout's direct parent is the intended non-Git workspace root.
   Initialization rejects a filesystem root, user home, or Git-owned parent.
 - The workspace root never owns live `AGENTS.md`, `CLAUDE.md`, or `_templates/`.
-  Legacy entries stop initialization for explicit manual review and cleanup;
+  Those and the other root and ancestor instruction files listed in README
+  setup step 4 stop initialization for explicit manual review and cleanup;
   automatic migration is not supported.
 - Project initialization targets exactly one path inside the workspace, never
   this repository or an arbitrary subdirectory of an existing Git repository.

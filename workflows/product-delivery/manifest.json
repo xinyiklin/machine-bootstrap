@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "workflowId": "product-delivery",
-  "workflowVersion": "2.0.0",
+  "workflowVersion": "2.1.0",
   "title": "Product Delivery",
   "summary": "Explicitly activated provider-neutral delivery workflow with one living Implementation Plan, implementer self-review, and fresh independent verification.",
   "workflowDocument": "WORKFLOW.md",
@@ -42,7 +42,8 @@
       "summary": "Fresh independent evidence-oriented reviewer. Use proactively after implementation to check the actual change against the Implementation Plan's authorized criteria and decisions, and to report passed, failed, unverified, and skipped checks with evidence.",
       "claude": {
         "name": "mb-verifier",
-        "primarySession": false
+        "primarySession": false,
+        "disallowedTools": ["Edit", "Write", "NotebookEdit"]
       },
       "codex": {
         "name": "mb_verifier"

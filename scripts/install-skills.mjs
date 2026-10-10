@@ -416,3 +416,26 @@ if (failures.length) {
 }
 
 console.log(`\nVerified ${manifest.skills.length} shared skills for Claude Code and Codex.`);
+
+// Codex discovers every skill in the canonical root, while Claude sees only the
+// links this installer creates. Report the difference without owning it.
+const managedNames = new Set(manifest.skills.map((skill) => skill.name));
+let canonicalEntries = [];
+try {
+  canonicalEntries = readdirSync(canonicalRoot, { withFileTypes: true });
+} catch {
+  canonicalEntries = [];
+}
+const unmanaged = canonicalEntries
+  .filter((entry) => entry.isDirectory() || entry.isSymbolicLink())
+  .map((entry) => entry.name)
+  .filter((name) => !name.startsWith(".") && !managedNames.has(name))
+  .sort();
+if (unmanaged.length) {
+  console.log(
+    `Note: ${unmanaged.length} shared skill(s) in ${canonicalRoot} are not in ` +
+      `skills.json: ${unmanaged.join(", ")}. Codex discovers them; Claude ` +
+      "has no bootstrap link. Review and add them to skills.json, or move them " +
+      "out of the shared root."
+  );
+}

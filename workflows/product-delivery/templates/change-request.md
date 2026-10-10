@@ -1,6 +1,6 @@
 # Change Request — <task title>
 
-Raised by: plan owner · Product assessment: Product Partner, when involved · Decided by: the user · Workflow: `product-delivery` 2.0.0
+Raised by: plan owner · Product assessment: Product Partner, when involved · Decided by: the user · Workflow: `product-delivery` 2.1.0
 
 Optional. A material change is normally recorded as a proposal in the
 Implementation Plan. Use this template only when the choice needs more room,

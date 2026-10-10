@@ -58,9 +58,19 @@ the template paths by hand.
 - With no detected project root, Codex checks only the starting directory. It
   does not walk upward to an arbitrary workspace guide or rebuild its chain
   after navigating elsewhere. Start or restart at the intended root or scope.
-- Claude expands the project's explicit `@AGENTS.md` import. Do not depend on a
-  workspace parent for project policy or create intentional contradictions.
-- Use `/context` to inspect live context composition. Use an
+- Claude loads `CLAUDE.md` and `CLAUDE.local.md` from its starting directory and
+  every directory above it, and expands the project's explicit `@AGENTS.md`
+  import. Do not depend on a workspace parent for project policy or create
+  intentional contradictions.
+- Claude Code 2.1.277 and later can also read `AGENTS.md` natively, but only
+  when no `CLAUDE.md`, `.claude/CLAUDE.md`, or `CLAUDE.local.md` exists on the
+  path. Keep the starter `CLAUDE.md` adapter anyway: a personal
+  `CLAUDE.local.md` would otherwise silently turn native reading off, some
+  sessions and versions cannot read `AGENTS.md` directly, and
+  `InstructionsLoaded` hooks fire only for imported files. The import never
+  loads `AGENTS.md` twice. `AGENTS.md` stays the single shared policy; put only
+  Claude-specific mechanics in `CLAUDE.md`, because Codex never reads it.
+- Use `/memory` or `/context` to inspect loaded instruction files. Use an
   `InstructionsLoaded` hook when exact Claude file-level events are required.
   Use a Codex instruction-summary or session-log smoke check for Codex.
 
@@ -68,9 +78,13 @@ the template paths by hand.
 
 Use nested `AGENTS.md` only for genuine subtree differences. Tell both agents
 in the root guide to inspect the nearest shared guide before scoped work. Start
-Codex in that subtree for automatic inclusion. Add a nested `CLAUDE.md`
-containing only `@AGENTS.md` when lazy Claude loading is useful. Use
-`.claude/rules/*.md` for Claude-only path mechanics, not shared policy.
+Codex in that subtree for automatic inclusion. Because the project root has a
+`CLAUDE.md`, Claude does not load a nested `AGENTS.md` by itself; add a nested
+`CLAUDE.md` containing only `@AGENTS.md` when lazy Claude loading is useful.
+A user who sets Claude's **Project instructions** to `claude-md-and-agents-md`
+also gets nested `AGENTS.md` files lazily, but project guidance must not depend
+on that machine setting. Use `.claude/rules/*.md` for Claude-only path
+mechanics, not shared policy.
 
 ## Context and continuity budgets
 
@@ -81,7 +95,14 @@ is retained.
 
 `CONTINUITY.md` is read on demand rather than imported, but reading it every
 task still costs context. Keep current state within the project cap and rotate
-resolved history to append-only `docs/continuity/YYYY-MM.md` files.
+resolved history to append-only `docs/continuity/YYYY-MM.md` files. A ledger of
+thousands of lines costs tens of thousands of tokens per task, and Claude's
+default file read returns only its first 2,000 lines.
+
+Shorter guides are followed more reliably: unnecessary requirements make agent
+tasks harder and more expensive, so state only what an agent cannot infer from
+the repository. In Claude Code 2.1.283 and later, `/doctor prompt-audit` finds
+stale or conflicting instructions.
 
 ## Optional product-delivery workflow
 

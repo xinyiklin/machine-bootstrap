@@ -1,6 +1,6 @@
 # Delivery Plan — deprecated
 
-Workflow: `product-delivery` 2.0.0
+Workflow: `product-delivery` 2.1.0
 
 Since workflow 2.0.0 the Delivery Plan is merged into the living Implementation
 Plan. Use `implementation-plan.md` in this directory; do not create new
