@@ -1760,6 +1760,8 @@ await test("CI enforces the PR size gate and the push hook runs the suite", () =
   assert.match(workflow, /size-exception: \*\\\(\[0-9a-f\]\\\{7,40\\\}\\\)/);
   assert.match(workflow, /node "\$script" "origin\/\$BASE_REF" --fail-over 1000/);
   const hook = join(scriptDir, "hooks", "pre-push");
+  // A CRLF checkout would break the shebang under Git for Windows' sh.
+  assert.match(readFileSync(join(bootstrapRoot, ".gitattributes"), "utf8"), /^scripts\/hooks\/\* text eol=lf$/m);
   assert.match(readFileSync(hook, "utf8"), /^#!\/bin\/sh\n[^]*exec node scripts\/test-bootstrap\.mjs/);
   if (process.platform !== "win32") {
     assert.ok(statSync(hook).mode & 0o111, "pre-push is executable");
