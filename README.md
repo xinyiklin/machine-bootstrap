@@ -53,6 +53,8 @@ the current session.
 - `scripts/init-project.mjs` — explicit, target-scoped, one-time project seeding.
 - `scripts/audit-workspace.mjs` — read-only report of every sibling's guide
   sizes, Claude import, and continuity length.
+- `scripts/starter-diff.mjs` — read-only comparison of one project's seeded
+  starter files with the current starters.
 - `scripts/test-bootstrap.mjs` — disposable regression suite.
 - `CONTINUITY.md` — bounded current state; `docs/decisions.md` — active
   decisions; `docs/continuity/` — on-demand, append-only history and receipts.
@@ -163,6 +165,9 @@ To initialize only one project through an agent, specify its exact path:
 **“Initialize `../project-a` using machine-bootstrap. Preserve existing files,
 stop for review-required conditions, verify the result, and do not commit or
 publish anything.”**
+
+After the first setup, the installed first-party skills below cover these
+requests in ordinary language from any session.
 
 ### Recommended Claude permissions
 
@@ -443,9 +448,22 @@ copies it from this checkout without running anything. An installed copy that
 no longer matches fails verification like any reviewed skill: move it out of
 the shared root, then rerun installation.
 
-The `continuity` skill updates and compacts a project's `CONTINUITY.md`.
-Agents invoke it on their own when a ledger nears its cap; users can run it at
-any time with `/continuity` in Claude Code or `$continuity` in Codex.
+First-party skills put an agent procedure in front of the audited scripts.
+Only the scripts install shared capabilities or seed starters; project-owned
+files change only through reviewed edits in a session in that project. Every
+skill names the scripts it runs. Agents pick a skill from its description; users can also run
+one by name (`/<name>` in Claude Code, `$<name>` in Codex).
+
+| Skill | Use it to | Scripts it drives |
+| :--- | :--- | :--- |
+| `workspace-setup` | Check or update this machine after pulling machine-bootstrap changes | `init-workspace`, `install-skills`, `install-workflows` |
+| `project-init` | Seed a project and fill its placeholders from the real repository | `init-project`, `audit-workspace` |
+| `project-sync` | Adopt starter updates in an existing project, change by change | `starter-diff`, `init-project`, `audit-workspace` |
+| `guidance-audit` | Trim and recalibrate a repository's agent guidance | `audit-workspace` |
+| `continuity` | Update and compact `CONTINUITY.md`, near its cap or on request | none |
+
+`INIT.md` stays the first-run entry point, because no skill exists before the
+first installation.
 
 Installation and `--check` also list any skill in `~/.agents/skills/` that is
 not in `skills.json`. Codex discovers such a skill while Claude has no link to

@@ -334,6 +334,156 @@ await test("the continuity skill is portable and invocable both ways", () => {
   );
 });
 
+await test("first-party skills are listed, portable, and call real scripts", () => {
+  const manifest = JSON.parse(readFileSync(join(bootstrapRoot, "skills.json"), "utf8"));
+  const local = manifest.skills.filter((skill) => skill.localPath !== undefined);
+  // Every skills/ directory is pinned, so none ships unreviewed.
+  assert.deepEqual(
+    readdirSync(join(bootstrapRoot, "skills")).sort(),
+    local.map((skill) => skill.name).sort()
+  );
+  for (const skill of local) {
+    const text = readFileSync(join(bootstrapRoot, "skills", skill.name, "SKILL.md"), "utf8");
+    const frontmatter = text.match(/^---\n([^]*?)\n---\n/)?.[1] ?? "";
+    assert.match(frontmatter, new RegExp(`^name: ${skill.name}$`, "m"), skill.name);
+    const description = frontmatter.match(/^description: (.+)$/m)?.[1] ?? "";
+    assert.ok(description.length >= 80 && description.length <= 1024, `${skill.name} description length`);
+    assert.match(description, /Use when/, `${skill.name} says when to use it`);
+    assert.doesNotMatch(frontmatter, /disable-model-invocation|allow_implicit_invocation/, skill.name);
+    assert.ok(text.split("\n").length <= 120, `${skill.name} stays short`);
+    assert.equal(readdirSync(join(bootstrapRoot, "skills", skill.name)).join(), "SKILL.md");
+    // Skills drive the audited scripts; each one they name must exist.
+    for (const match of text.matchAll(/scripts\/([a-z-]+\.mjs)/g)) {
+      assert.equal(existsSync(join(scriptDir, match[1])), true, `${skill.name}: ${match[0]}`);
+    }
+  }
+
+  const read = (name) =>
+    readFileSync(join(bootstrapRoot, "skills", name, "SKILL.md"), "utf8").replace(/\s+/g, " ");
+  const setup = read("workspace-setup");
+  assert.match(setup, /follow the checkout's `INIT\.md` instead/);
+  assert.match(setup, /With the user's approval, run `node scripts\/install-workflows\.mjs --replace`/);
+  assert.match(setup, /never overwrite/);
+  const init = read("project-init");
+  assert.match(init, /never guess/);
+  assert.match(init, /A machine-bootstrap session never becomes a project's coding session/);
+  const sync = read("project-sync");
+  assert.match(sync, /it never replaces a customized file/);
+  assert.match(sync, /Never weaken a project rule to match the starter/);
+  // Ignore rules go through the initializer's ordered, fail-closed handling.
+  assert.match(sync, /never reorder `\.env`, `\.env\.\*`, and `!\.env\.example` by hand/);
+  assert.match(sync, /`git check-ignore -v \.env\.example` must report none/);
+  assert.doesNotMatch(sync, /starter can replace it|Missing `\.gitignore` rules:\*\* add them/);
+  assert.match(setup, /with the user's go-ahead, unless they asked for the update/);
+  const audit = read("guidance-audit");
+  assert.match(audit, /Never drop a hard invariant or an authorization, review, or safety rule silently/);
+  assert.match(audit, /Edit a repository's guidance only in a session started in that repository/);
+});
+
+await test("starter diff reports upstream changes without writing", () => {
+  const testRoot = mkdtempSync(join(tmpdir(), "machine-bootstrap-starter-diff-"));
+  try {
+    const workspace = join(testRoot, "Workspace");
+    const checkout = join(workspace, "machine-bootstrap");
+    const project = join(workspace, "project-a");
+    mkdirSync(join(checkout, "scripts"), { recursive: true });
+    copyFileSync(join(scriptDir, "starter-diff.mjs"), join(checkout, "scripts", "starter-diff.mjs"));
+    const starter = {
+      "AGENTS.md": "# Guide\n\n- rule one\n",
+      "CLAUDE.md": "# Adapter\n\n@AGENTS.md\n",
+      "docs/engineering/git-workflow.md": "# Git\n",
+      ".github/pull_request_template.md": "## Summary\n",
+      ".gitignore": ".env\nCLAUDE.local.md\n"
+    };
+    const write = (root, files) => {
+      for (const [path, text] of Object.entries(files)) {
+        mkdirSync(dirname(join(root, ...path.split("/"))), { recursive: true });
+        writeFileSync(join(root, ...path.split("/")), text);
+      }
+    };
+    const commitAt = (root, date, message) => {
+      const env = { ...process.env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date };
+      for (const gitArgs of [
+        ["add", "-A"],
+        ["-c", "user.name=Fixture", "-c", "user.email=fixture@example.com", "commit", "-q", "-m", message]
+      ]) {
+        const result = spawnSync("git", ["-C", root, ...gitArgs], { encoding: "utf8", env, shell: false });
+        assert.equal(result.status, 0, result.stderr);
+      }
+      return spawnSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).stdout.trim();
+    };
+    for (const root of [checkout, project]) {
+      mkdirSync(root, { recursive: true });
+      assert.equal(spawnSync("git", ["init", "-q", root]).status, 0);
+    }
+    write(join(checkout, "project-templates"), starter);
+    const first = commitAt(checkout, "2026-01-01T00:00:00Z", "starters v1");
+    // The project seeds v1, customizes AGENTS.md, and skips the Git contract.
+    write(project, {
+      "AGENTS.md": "# Guide\n\n- rule one\n- project fact\n",
+      "CLAUDE.md": starter["CLAUDE.md"],
+      ".github/pull_request_template.md": starter[".github/pull_request_template.md"],
+      ".gitignore": ".env\n"
+    });
+    commitAt(project, "2026-02-01T00:00:00Z", "seed");
+    write(join(checkout, "project-templates"), {
+      "AGENTS.md": "# Guide\n\n- rule one\n- upstream rule two\n",
+      ".github/pull_request_template.md": "## Summary\n\n## Verification\n"
+    });
+    const second = commitAt(checkout, "2026-03-01T00:00:00Z", "starters v2");
+
+    const before = snapshotTree(project);
+    const run = (args) =>
+      spawnSync(process.execPath, [join(checkout, "scripts", "starter-diff.mjs"), ...args], {
+        encoding: "utf8",
+        shell: false
+      });
+    const report = run([project]);
+    assert.equal(report.status, 0, report.stderr);
+    assert.match(report.stdout, new RegExp(`Base starters: ${first.slice(0, 12)}, estimated`));
+    assert.match(report.stdout, /## AGENTS\.md: customized/);
+    assert.match(report.stdout, /\+- upstream rule two/);
+    assert.doesNotMatch(report.stdout, /\+- project fact/);
+    assert.match(report.stdout, /## CLAUDE\.md: matches the current starter/);
+    assert.match(report.stdout, /## docs\/engineering\/git-workflow\.md: missing/);
+    assert.match(report.stdout, /pull_request_template\.md: unchanged since its base/);
+    assert.match(report.stdout, /## \.gitignore: missing starter rules: CLAUDE\.local\.md/);
+    assert.deepEqual(snapshotTree(project), before, "the report writes nothing");
+    // Comparisons are commit to commit, so no working-tree diff can refresh
+    // the checkout's index; uncommitted starter edits are named, not reported.
+    const source = readFileSync(join(scriptDir, "starter-diff.mjs"), "utf8");
+    assert.match(source, /"diff", "--no-color", "--no-ext-diff", base, "HEAD", "--", templatePath/);
+    assert.match(source, /\["show", `HEAD:\$\{templatePath\}`\]/);
+    writeFileSync(join(checkout, "project-templates", "CLAUDE.md"), "# Edited locally\n");
+    const dirty = run([project]);
+    assert.match(dirty.stdout, /uncommitted edits to project-templates\/CLAUDE\.md are not part of this report/);
+    assert.match(dirty.stdout, /## CLAUDE\.md: matches the current starter/);
+
+    const synced = run([project, "--since", second]);
+    assert.equal(synced.status, 0, synced.stderr);
+    assert.match(synced.stdout, /No upstream starter changes since the base/);
+
+    for (const args of [[checkout], [testRoot], [project, "--since", "no-such-revision"], []]) {
+      const refused = run(args);
+      assert.notEqual(refused.status, 0, args.join(" "));
+      assert.match(refused.stderr, /Starter diff failed:/);
+    }
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
+await test("starter diff and project initialization seed the same files", () => {
+  const listed = (path, name) => {
+    const source = readFileSync(join(scriptDir, path), "utf8");
+    const block = source.match(new RegExp(`const ${name} = \\[([^\\]]*)\\]`))?.[1] ?? "";
+    return [...block.matchAll(/"([^"]+)"/g)].map((match) => match[1]);
+  };
+  const seeded = listed("init-project.mjs", "seedFiles");
+  assert.ok(seeded.length > 0);
+  assert.deepEqual(listed("starter-diff.mjs", "starterFiles"), seeded);
+});
+
 await test("first-party skills install from the checkout with their reviewed hash", async () => {
   const fixture = await createSkillInstallerFixture();
   const { hashDirectory } = await import("./lib/skill-integrity.mjs");
