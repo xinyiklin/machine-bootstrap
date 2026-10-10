@@ -27,6 +27,13 @@
       "contentSha256": "d34206a04541be8b71e8cfc4701ae982d3ea87b19e7e7012179825574e73c23b"
     },
     {
+      "name": "archify",
+      "repository": "https://github.com/tt-a1i/archify.git",
+      "sourcePath": "archify",
+      "sourceRevision": "10722002bb8777ecb639d93c49586fae4adf3ae4",
+      "contentSha256": "086dd10fe7fe2d66e20b867aeddfee5cc2ceb5285413490bfe57d0d2a2cf667c"
+    },
+    {
       "name": "find-skills",
       "repository": "https://github.com/vercel-labs/skills.git",
       "sourcePath": "skills/find-skills",
