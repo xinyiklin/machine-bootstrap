@@ -2,26 +2,23 @@
 
 @AGENTS.md
 
-> Template: copy beside `AGENTS.md`, replace `<Project>` and the TODO below,
-> then delete this note. Keep the import exactly once, and keep this file even
-> though Claude can read `AGENTS.md` natively: any `CLAUDE.md` or
-> `CLAUDE.local.md` on the path turns native reading off, while the import
-> loads `AGENTS.md` once in every Claude version and session.
+<!-- Template: copy beside AGENTS.md and replace <Project> and the TODO below.
+Keep the import exactly once, and keep this file even though Claude can read
+AGENTS.md natively: any CLAUDE.md or CLAUDE.local.md on the path turns native
+reading off, while the import loads AGENTS.md once in every Claude version and
+session. Claude strips this comment before loading it. -->
 
-`AGENTS.md` is the canonical shared policy. This adapter adds only Claude-specific
-mechanics and must not duplicate or contradict it. Follow applicable instruction
-precedence, including higher-priority harness and session requirements. Explain
-any resulting project-process limitation and continue authorized independent
-work. Ask only for unresolved user decisions or new scope; an already resolved
-precedence conflict does not require another approval. Do not silently skip a
-required project process for convenience.
+`AGENTS.md` is the canonical shared policy; this adapter adds only
+Claude-specific mechanics. When a higher-priority harness or session
+requirement limits a project process, explain the limitation and continue
+authorized work; never skip a required process silently for convenience.
 
 ## Claude-specific mechanics
 
-- TODO: name only real Claude-specific launch, browser, MCP, or harness facts;
-  delete this section when there are none.
-- Use `/memory` or `/context` for loaded instruction files and an
-  `InstructionsLoaded` hook when exact file-level loading evidence is required.
-- Put path-scoped Claude-only mechanics in `.claude/rules/*.md`. For shared
-  subtree policy, use nested `AGENTS.md` and optionally pair it with a nested
+- TODO: real Claude-specific launch, browser, MCP, or harness facts; delete
+  this section when there are none.
+- `/context` shows loaded instruction files; an `InstructionsLoaded` hook gives
+  exact file-level evidence.
+- Path-scoped Claude-only mechanics go in `.claude/rules/*.md`. Shared subtree
+  policy goes in a nested `AGENTS.md`, optionally paired with a nested
   `CLAUDE.md` containing only `@AGENTS.md`.

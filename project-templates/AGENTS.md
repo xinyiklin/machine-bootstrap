@@ -21,15 +21,13 @@ contradictions between guides or rely on load order to resolve them.
 - External services and deployment: TODO, or `none; local-only`.
 - Product/design/architecture/testing owners: TODO paths, or delete.
 - `docs/engineering/git-workflow.md`: branch through publication contract.
-- Nested `AGENTS.md`: TODO locations, or `none`.
+- Nested `AGENTS.md`: TODO locations, or `none`. Read the nearest one yourself
+  before scoped work.
 - `CONTINUITY.md`: bounded current handoff state, or `none`.
 
-Codex loads guides from the project root down to its starting directory, once
-per run. Claude loads this file through `CLAUDE.md`, and a nested guide only
-through a paired nested `CLAUDE.md` containing `@AGENTS.md`. Read the nearest
-nested guide yourself before scoped work. Keep this guide under 8 KiB and any
-active guide chain under 28 KiB (Codex's default limit is 32 KiB); move
-inventories, examples, and matrices to owning documents read on demand.
+Keep this guide under 8 KiB and any active guide chain under 28 KiB (Codex's
+default limit is 32 KiB). State only what an agent cannot infer from the
+repository; move inventories, examples, and matrices to owning documents.
 
 ## Commands
 
@@ -52,19 +50,18 @@ or required compatibility. -->
 
 ## Product-delivery hook
 
-The installed `~/.agents/workflows/product-delivery/` contract is inactive for ordinary work.
-Its complete flow activates when the user selects Delivery Lead or Product Partner,
-explicitly requests the complete workflow, continues an active Implementation Plan,
-or project guidance names required work.
-Selecting the Verifier activates independent verification only and never creates
-a missing plan or authorization.
+The installed `~/.agents/workflows/product-delivery/` contract is inactive for
+ordinary work. Its complete flow activates when the user selects Delivery Lead
+or Product Partner, explicitly requests the complete workflow, continues an
+active Implementation Plan, or project guidance names required work. Selecting
+the Verifier activates independent verification only.
 
-When active, follow the installed contract without copying its authorization
-rules or artifacts here. Project-specific additions only:
+When active, follow the installed contract without copying its rules or
+artifacts here. Project-specific additions only:
 
 - Named work that activates the workflow: TODO as checkable conditions — paths,
-  contracts, or artifact kinds a reader can evaluate — never a self-assessed
-  size or importance test; or `none`.
+  contracts, or artifact kinds a reader can evaluate, not a self-assessed size
+  or importance test; or `none`.
 - Maintenance outside those conditions: typo/link corrections, reflow, tests
   of unchanged behavior, and internal refactors preserving the named contracts.
   A change to a named contract still activates the flow; record the classification.
@@ -74,24 +71,21 @@ rules or artifacts here. Project-specific additions only:
   or `the installed Verifier`; resolve any project agent that shares its name.
 
 When a listed condition matches and the workflow or its review is not run, say
-so in the response with the reason. An unrecorded skip is a process failure,
-not a judgment call.
+so in the response and record the reason.
 
 ## Working method and safety
 
 - Read current continuity and applicable guides; inspect the dirty tree and
   preserve unrelated work before editing.
-- Identify the outcome, acceptance evidence, and affected callers, state, and
-  consumers; plan only in proportion to complexity.
 - Make the smallest maintainable change that satisfies the request; no
   speculative features, abstractions, configuration, or drive-by cleanup.
 - Ask before changing dependencies, schemas, authentication, deployment,
   destructive storage behavior, paid services, or public network exposure
   when the user's current request or prior authorization does not cover it.
   Continue authorized work; ask only for an unresolved decision or new scope.
-- For dependencies, inspect compatibility and version policy, verify the latest
-  compatible stable or maintainer-recommended release from official sources,
-  preserve the package manager/range policy, and update a tracked lockfile.
+- For dependencies, verify the latest compatible stable or
+  maintainer-recommended release from official sources, preserve the package
+  manager and range policy, and update a tracked lockfile.
 - Never expose or commit secrets, private documents, `.env` files, provider
   bodies, broad environments, or generated private artifacts.
 - Resolve exact targets before destructive actions and prefer recovery. Remote
@@ -100,34 +94,34 @@ not a judgment call.
 
 ## Continuity
 
-Keep `CONTINUITY.md` at or below the project-defined total cap (about 160 lines
-by default), counting every section. It holds only current snapshot, compact
-active decisions, working set, next actions, and open questions. Put detailed
-rationale in its owning document. Rotate resolved entries verbatim to
-`docs/continuity/YYYY-MM.md`; archives are append-only and read only on demand.
+Keep `CONTINUITY.md` within its cap (160 lines by default) and limited to
+current state, compact active decisions, next actions, and open questions;
+detailed rationale belongs in its owning document. Rotate resolved entries
+verbatim to `docs/continuity/YYYY-MM.md`; archives are append-only and read
+only on demand.
 
 ## Verification and completion
 
 Run the narrowest owner check while iterating, then affected consumer checks in
-proportion to risk. Inspect the complete diff and surrounding code for
-correctness, regressions, unintended scope, stale paths, and unrelated changes.
-Verify UI, generated artifacts, file formats, migrations, and round trips when
-they are part of the changed contract. If no harness exists, run the strongest
-lightweight check and state the gap. Report passed, failed, unverified, and skipped evidence
-honestly; missing evidence is not a pass.
+proportion to risk. Inspect the complete diff for correctness, regressions,
+unintended scope, and stale paths. Verify UI, generated artifacts, file
+formats, migrations, and round trips when they are part of the changed
+contract; if no harness exists, run the strongest lightweight check and state
+the gap. Report passed, failed, unverified, and skipped evidence honestly;
+missing evidence is not a pass.
 
-Every implementation, including ordinary work outside the full workflow,
-requires implementer verification and one fresh independent review before
-local completion. Delegate to the reviewer named above; the installed Verifier
-is `mb_verifier` in Codex and `mb-verifier` in Claude. The reviewer must not have
-implemented the change. Only the user may waive review for a specific change;
-record the waiver and reason, never a pass. If that reviewer is unavailable,
-report the gap and request a replacement or waiver. This review alone does not
-activate the full workflow or require its upstream artifacts.
+After your own verification and before local completion, every change gets one
+fresh independent review by the reviewer named above (the installed Verifier is
+`mb_verifier` in Codex and `mb-verifier` in Claude), which must not have
+implemented it. The exception is a change confined to typos, broken links,
+formatting, or comments with no change in meaning, behavior, or configuration;
+it needs only your own verification, and you state that classification. Only
+the user may waive a required review; record the waiver, never a pass. If the
+reviewer is unavailable, report the gap and ask for a replacement or waiver.
+This review alone does not activate the full workflow.
 
 ## Git and existing work
 
 Read `docs/engineering/git-workflow.md` before any branch, commit, push, PR,
-merge, release, deployment, or cleanup action. Preserve unrelated work and do
-not stage, publish, rewrite history, or deploy without the user's explicit
-authority for that action.
+merge, release, deployment, or cleanup action. Do not stage, publish, rewrite
+history, or deploy without the user's explicit authority for that action.

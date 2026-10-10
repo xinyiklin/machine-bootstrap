@@ -50,9 +50,9 @@ real-installation check cannot pass before the user's reviewed upgrade, and
 live provider behavior is untested. No pass found a failed criterion or a
 regression, and none recommended an additional reviewer. The third pass's
 findings were then fixed and that final diff re-checked independently (suite,
-`git diff --check`, and an authorization-guard probe). That last record lives
-in the local task plan rather than here, because this receipt is part of the
-diff it covers.
+`git diff --check`, and an authorization-guard probe). That last record is in
+[PR #6](https://github.com/xinyiklin/machine-bootstrap/pull/6) rather than here,
+because this receipt is part of the diff it covers.
 
 The repository's `.gitignore` now excludes `.agent-work/`, matching project
 starters, so the local task plan cannot be committed by accident. The user may

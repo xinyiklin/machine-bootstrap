@@ -53,8 +53,8 @@ the current session.
 - `scripts/audit-workspace.mjs` — read-only report of every sibling's guide
   sizes, Claude import, and continuity length.
 - `scripts/test-bootstrap.mjs` — disposable regression suite.
-- `CONTINUITY.md` — bounded current state; `docs/continuity/` is on-demand,
-  append-only history.
+- `CONTINUITY.md` — bounded current state; `docs/decisions.md` — active
+  decisions; `docs/continuity/` — on-demand, append-only history and receipts.
 
 `project-templates/TEMPLATE-USAGE.md` documents the starter set but is never
 copied into a project or renamed as its README. Once starter files are copied,
@@ -135,29 +135,16 @@ Choose either setup style:
    ```
 
    For a missing directory, add `--create`. The initializer does not initialize
-   Git. It creates only missing project-owned files and preserves existing
-   files. Git boundary probes clear inherited repository/worktree path
-   overrides before evaluating their explicit `-C` targets. For an existing
-   `.gitignore` with no environment rules, it appends
-   the complete ordered `.env`, `.env.*`, `!.env.example` policy plus missing
-   independent safety rules. An existing canonical environment block is
-   preserved only when Git confirms the resulting rules still ignore local
-   environment files and expose `.env.example`; ineffective, incomplete, or
-   ambiguous rules stop for manual review before any project writes. The
-   initializer never copies `TEMPLATE-USAGE.md` and never creates or replaces a
-   README. Canonical template sources must remain real files inside this
-   checkout and are snapshotted with no-follow reads before project writes.
-   Newly created parents use an atomic no-replace directory claim and are
-   identity-snapshotted before use. Managed reads, writes, and
-   rollback recovery are anchored to real parent-directory identities pinned
-   for the full run; symbolic-link, parent, leaf, or backup replacement stops
-   safely instead of being followed or deleted. Every seeded file is
-   identity-and-byte checked again before success; a preflighted starter that
-   disappears stops before replacement. On failure, rollback moves
-   run-owned files to named recovery paths
-   instead of deleting them, and leaves identity-changed concurrent entries at
-   their original paths. It never deletes directories by pathname; file and
-   directory cleanup is reported for manual review.
+   Git, copies only missing starter files, preserves existing files, and never
+   copies `TEMPLATE-USAGE.md` or creates a README. For an existing `.gitignore`
+   with no environment rules it appends the ordered `.env`, `.env.*`,
+   `!.env.example` policy plus missing safety rules. Git must confirm that the
+   result ignores local environment files and exposes `.env.example`;
+   ineffective, incomplete, or ambiguous rules stop for manual review before
+   any write. Template sources, target parents, and seeded files are
+   identity-checked for the whole run: a symbolic link, replacement, or
+   concurrent change stops safely, and rollback moves run-owned files to named
+   recovery paths instead of deleting them.
 6. Replace project placeholders with verified project facts. Start a new Codex
    or Claude session in that project root or relevant scoped directory.
 7. Audit sibling guidance whenever useful; it reads guide sizes and continuity
@@ -232,9 +219,10 @@ For this repository, `AGENTS.md` names the activating contracts: installation
 ownership and recovery, acquisition integrity, provider formats/discovery,
 workflow policy, hard invariants, and propagation to siblings. Mechanical
 maintenance that preserves those contracts stays outside the full flow. Every
-implementation still receives self-verification and fresh independent review
-before local completion. Record the classification rather than judging a task
-by its apparent size. Existing project-owned starters are never synchronized
+implementation still receives self-verification and, unless it is typo, link,
+formatting, or comment-only, one fresh independent review before local
+completion. Record the classification rather than judging a task by its
+apparent size. Existing project-owned starters are never synchronized
 when these defaults change.
 
 The Git contracts and PR templates use a 500-line target and a 1,000-line
@@ -266,25 +254,11 @@ and decisions with their sources, and keeps a compact checkpoint so an
 interrupted or reset session can resume from the plan and the actual repository
 state. Other agents return findings for the owner to integrate.
 
-The plan separates its **authorized scope** — goal, required behavior,
-constraints, acceptance criteria, and choices the user has settled — from its
-evolving **execution record**. Authorization comes only from the user, and one
-authorization covers the plan's scope; an implementation request in the
-conversation already counts, while a request to plan first does not. Routine
-findings, progress, and evidence never invalidate it. A discovery that would
-change agreed behavior, weaken a criterion, expand scope, risk destructive
-migration, or add a security or privacy implication is presented as a concrete
-choice, and the user decides before the affected work continues.
-
-These are process and authority rules, not authentication. No file or command
-here proves that a human approved anything.
-
-Every implementation is self-verified by the Delivery Lead and then reviewed by
-at least one fresh independent Verifier by default. Only the user may waive that
-review for a specific change. Product Partner alignment never replaces it. The
-user may request more reviewers; after the first review, the Delivery Lead
-states firmly whether another review is warranted and why, then honors the
-request.
+The plan separates its **authorized scope**, which only the user settles, from
+its evolving **execution record**; routine progress never needs re-approval,
+and a material change waits for the user's decision. Every implementation is
+self-verified and then reviewed by at least one fresh independent Verifier
+unless the user waives it. The installed `WORKFLOW.md` is the full contract.
 
 ### Installed paths
 
