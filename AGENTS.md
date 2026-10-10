@@ -17,8 +17,8 @@ machine-local facts; it is not an agent-policy source.
   files become project-owned and are not synchronized afterward.
 - `docs/engineering/git-workflow.md` — this repository's Git/publication
   contract.
-- `skills.json`, `scripts/lib/skill-*` — reviewed skill acquisition and
-  content-integrity contract.
+- `skills.json`, `skills/`, `scripts/lib/skill-*` — reviewed skill roster,
+  first-party skills, and the content-integrity contract.
 - `workflows/`, `scripts/lib/workflow-*` — provider-neutral workflow source and
   deterministic adapter generation.
 - `scripts/init-workspace.mjs` (machine registry and shared capabilities),

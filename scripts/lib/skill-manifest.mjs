@@ -15,20 +15,32 @@ export function loadSkillManifest(manifestPath) {
     throw new Error(`${manifestPath} must be a readable regular file`);
   }
 
-  if (manifest?.schemaVersion !== 3 || !Array.isArray(manifest.skills)) {
+  if (manifest?.schemaVersion !== 4 || !Array.isArray(manifest.skills)) {
     throw new Error(`Unsupported skills manifest: ${manifestPath}`);
   }
 
   const skillNames = new Set();
   for (const skill of manifest.skills) {
+    // A skill comes from exactly one source: a reviewed Git revision, or its
+    // first-party directory `skills/<name>` in this checkout. Both pin the
+    // content hash.
+    const gitSource =
+      isReviewedGitHubRepository(skill?.repository) &&
+      isPortableSkillPath(skill.sourcePath) &&
+      typeof skill.sourceRevision === "string" &&
+      /^[a-f0-9]{40}$/.test(skill.sourceRevision) &&
+      skill.localPath === undefined;
+    const localSource =
+      isPortableSkillPath(skill?.localPath) &&
+      skill.localPath === `skills/${skill.name}` &&
+      skill.repository === undefined &&
+      skill.sourcePath === undefined &&
+      skill.sourceRevision === undefined;
     if (
       !skill ||
       typeof skill.name !== "string" ||
       !/^[a-z0-9][a-z0-9-]*$/.test(skill.name) ||
-      !isReviewedGitHubRepository(skill.repository) ||
-      !isPortableSkillPath(skill.sourcePath) ||
-      typeof skill.sourceRevision !== "string" ||
-      !/^[a-f0-9]{40}$/.test(skill.sourceRevision) ||
+      gitSource === localSource ||
       typeof skill.contentSha256 !== "string" ||
       !/^[a-f0-9]{64}$/.test(skill.contentSha256) ||
       (skill.expectedVersion !== undefined &&

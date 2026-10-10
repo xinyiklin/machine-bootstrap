@@ -1,6 +1,11 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "skills": [
+    {
+      "name": "continuity",
+      "localPath": "skills/continuity",
+      "contentSha256": "247dcd6f7d1983c13db75cdba44c66f96daaf1035ae0c059079b378bb219afe2"
+    },
     {
       "name": "find-skills",
       "repository": "https://github.com/vercel-labs/skills.git",

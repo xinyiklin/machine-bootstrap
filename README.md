@@ -45,7 +45,8 @@ the current session.
   contract; the project starter has its own project-owned contract.
 - `.github/workflows/bootstrap.yml` — Linux, Windows, and macOS verification.
 - `skills.json` and `scripts/install-skills.mjs` — reviewed shared skill roster
-  and missing-only installer.
+  and missing-only installer; `skills/` holds first-party skills such as
+  `continuity`.
 - `workflows/` and `scripts/install-workflows.mjs` — provider-neutral workflow
   packages and deterministic adapters.
 - `scripts/init-workspace.mjs` — parent registry plus shared capabilities.
@@ -433,6 +434,18 @@ version when applicable, and `contentSha256` together. A changed skill must not
 pass bootstrap verification until that portable manifest is updated
 intentionally. Generated global lockfiles from other skill managers remain
 machine state and are not authoritative for this bootstrap.
+
+First-party skills live in `skills/<name>/` and appear in `skills.json` with a
+`localPath` instead of a Git source, under the same `contentSha256` pin. Edit
+the skill, then update its hash in the same change; the regression suite
+reports the new value, and review happens in the pull request. The installer
+copies it from this checkout without running anything. An installed copy that
+no longer matches fails verification like any reviewed skill: move it out of
+the shared root, then rerun installation.
+
+The `continuity` skill updates and compacts a project's `CONTINUITY.md`.
+Agents invoke it on their own when a ledger nears its cap; users can run it at
+any time with `/continuity` in Claude Code or `$continuity` in Codex.
 
 Installation and `--check` also list any skill in `~/.agents/skills/` that is
 not in `skills.json`. Codex discovers such a skill while Claude has no link to

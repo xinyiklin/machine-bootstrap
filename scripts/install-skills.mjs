@@ -25,7 +25,8 @@ import {
 } from "./lib/skill-source.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
-const manifestPath = resolve(scriptDir, "..", "skills.json");
+const checkoutRoot = resolve(scriptDir, "..");
+const manifestPath = join(checkoutRoot, "skills.json");
 const args = new Set(process.argv.slice(2));
 const allowedArgs = new Set(["--check", "--preflight", "--print-hashes"]);
 const unknownArgs = [...args].filter((arg) => !allowedArgs.has(arg));
@@ -252,6 +253,60 @@ function verifySkill(skill) {
   return true;
 }
 
+// First-party skills ship inside this checkout. Read one only from a real
+// directory at its declared path, so a link cannot substitute other content.
+function firstPartySource(skill) {
+  const segments = skill.localPath.split("/");
+  const source = join(checkoutRoot, ...segments);
+  let isRealDirectory = false;
+  try {
+    isRealDirectory =
+      lstatSync(source).isDirectory() &&
+      comparablePath(realpathSync(source)) ===
+        comparablePath(join(realpathSync(checkoutRoot), ...segments));
+  } catch (error) {
+    if (error?.code !== "ENOENT" && error?.code !== "ENOTDIR") throw error;
+  }
+  if (!isRealDirectory) {
+    throw new Error(
+      `${skill.name}: first-party source must be a real directory inside ` +
+      `this checkout: ${skill.localPath}`
+    );
+  }
+  return source;
+}
+
+// Checked before any write, so drift stops preflight rather than installation.
+function verifyFirstPartySource(skill) {
+  try {
+    const source = firstPartySource(skill);
+    const sourceHash = hashDirectory(source);
+    if (sourceHash !== skill.contentSha256) {
+      // Ignored OS metadata never shows in `git status`, so name it.
+      const metadata = findOsMetadata(source);
+      failures.push(
+        `${skill.name}: first-party content hash ${sourceHash} does not match ` +
+        `reviewed ${skill.contentSha256}` +
+        (metadata.length
+          ? `; remove stray OS metadata from ${skill.localPath} first ` +
+            `(${metadata.join(", ")})`
+          : "")
+      );
+    }
+  } catch (error) {
+    failures.push(error.message);
+  }
+}
+
+function stageFirstPartySkill(skill, stagedPath) {
+  cpSync(firstPartySource(skill), stagedPath, {
+    recursive: true,
+    errorOnExist: true,
+    force: false,
+    verbatimSymlinks: true
+  });
+}
+
 function installMissingSkills(skills) {
   const stagingRoot = mkdtempSync(join(tmpdir(), "machine-bootstrap-skills-"));
   const fetchedSources = new Map();
@@ -259,28 +314,31 @@ function installMissingSkills(skills) {
 
   try {
     for (const skill of skills) {
-      const sourceKey = `${skill.repository}@${skill.sourceRevision}`;
-      if (!fetchedSources.has(sourceKey)) {
-        console.log(`Fetching reviewed source for ${skill.name}...`);
-        fetchedSources.set(
-          sourceKey,
-          fetchReviewedSource(skill.repository, skill.sourceRevision)
+      const stagedPath = join(stagingRoot, skill.name);
+      if (skill.localPath) {
+        console.log(`Staging first-party skill ${skill.name}...`);
+        stageFirstPartySkill(skill, stagedPath);
+      } else {
+        const sourceKey = `${skill.repository}@${skill.sourceRevision}`;
+        if (!fetchedSources.has(sourceKey)) {
+          console.log(`Fetching reviewed source for ${skill.name}...`);
+          fetchedSources.set(
+            sourceKey,
+            fetchReviewedSource(skill.repository, skill.sourceRevision)
+          );
+        }
+        materializeReviewedSkill(
+          fetchedSources.get(sourceKey).repositoryRoot,
+          skill.sourceRevision,
+          skill.sourcePath,
+          stagedPath
         );
       }
-
-      const fetched = fetchedSources.get(sourceKey);
-      const stagedPath = join(stagingRoot, skill.name);
-      materializeReviewedSkill(
-        fetched.repositoryRoot,
-        skill.sourceRevision,
-        skill.sourcePath,
-        stagedPath
-      );
       const stagedHash = hashDirectory(stagedPath);
       if (stagedHash !== skill.contentSha256) {
         throw new Error(
-          `${skill.name}: fetched content hash ${stagedHash} does not match ` +
-          `reviewed ${skill.contentSha256}`
+          `${skill.name}: ${skill.localPath ? "first-party" : "fetched"} ` +
+          `content hash ${stagedHash} does not match reviewed ${skill.contentSha256}`
         );
       }
     }
@@ -376,6 +434,7 @@ for (const skill of manifest.skills) {
   } else if (!hasSkill(skill.name)) {
     missingSkills.push(skill);
     if (checkOnly) failures.push(`${skill.name}: canonical skill is missing`);
+    if (skill.localPath) verifyFirstPartySource(skill);
   } else {
     verifySkill(skill);
   }

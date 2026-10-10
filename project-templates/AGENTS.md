@@ -23,7 +23,8 @@ contradictions between guides or rely on load order to resolve them.
 - `docs/engineering/git-workflow.md`: branch through publication contract.
 - Nested `AGENTS.md`: TODO locations, or `none`. Read the nearest one yourself
   before scoped work.
-- `CONTINUITY.md`: bounded current handoff state, or `none`.
+- `CONTINUITY.md`: bounded current handoff state, or `none`; optional
+  `docs/decisions.md`: active decisions, read before changing a rule.
 
 Keep this guide under 8 KiB and any active guide chain under 28 KiB (Codex's
 default limit is 32 KiB). State only what an agent cannot infer from the
@@ -98,7 +99,9 @@ Keep `CONTINUITY.md` within its cap (160 lines by default) and limited to
 current state, compact active decisions, next actions, and open questions;
 detailed rationale belongs in its owning document. Rotate resolved entries
 verbatim to `docs/continuity/YYYY-MM.md`; archives are append-only and read
-only on demand.
+only on demand. Once decisions crowd the ledger, move them verbatim to an
+optional `docs/decisions.md`. The shared `continuity` skill, when installed,
+does all of this.
 
 ## Verification and completion
 

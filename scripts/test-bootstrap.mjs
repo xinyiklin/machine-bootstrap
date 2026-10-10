@@ -194,7 +194,7 @@ async function createSkillInstallerFixture() {
   writeFileSync(join(canonical, "SKILL.md"), "# Disposable test skill\n");
   const { hashDirectory } = await import("./lib/skill-integrity.mjs");
   writeFileSync(join(checkout, "skills.json"), JSON.stringify({
-    schemaVersion: 3,
+    schemaVersion: 4,
     skills: [{
       name,
       repository: "https://github.com/example/fixture.git",
@@ -252,15 +252,30 @@ async function test(
   }
 }
 
-await test("manifest pins direct Git sources and skill content", () => {
+await test("manifest pins direct Git sources and skill content", async () => {
   const manifest = JSON.parse(
     readFileSync(join(bootstrapRoot, "skills.json"), "utf8")
   );
+  const { hashDirectory } = await import("./lib/skill-integrity.mjs");
 
-  assert.equal(manifest.schemaVersion, 3);
+  assert.equal(manifest.schemaVersion, 4);
   assert.equal(manifest.installers, undefined);
 
   for (const skill of manifest.skills) {
+    if (skill.localPath !== undefined) {
+      // First-party skills live in this checkout and pin their exact bytes, so
+      // an edit must update the manifest in the same reviewed change.
+      assert.match(skill.localPath, /^skills\/[a-z0-9-]+$/);
+      assert.equal(skill.repository, undefined);
+      const sourceHash = hashDirectory(join(bootstrapRoot, ...skill.localPath.split("/")));
+      assert.equal(
+        sourceHash,
+        skill.contentSha256,
+        `${skill.name}: after editing ${skill.localPath}, set its skills.json ` +
+          `contentSha256 to ${sourceHash}`
+      );
+      continue;
+    }
     assert.match(
       skill.repository ?? "",
       /^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\.git$/
@@ -286,6 +301,125 @@ await test("skill acquisition does not execute package runners", () => {
   assert.match(skillSource, /delete gitEnvironment\.SSH_ASKPASS/);
   assert.match(skillSource, /credential\.helper=/);
 });
+
+await test("the continuity skill is portable and invocable both ways", () => {
+  const skill = readFileSync(join(bootstrapRoot, "skills", "continuity", "SKILL.md"), "utf8");
+  const frontmatter = skill.match(/^---\n([^]*?)\n---\n/)?.[1] ?? "";
+  assert.match(frontmatter, /^name: continuity$/m);
+  const description = frontmatter.match(/^description: (.+)$/m)?.[1] ?? "";
+  // The description is what lets either provider invoke the skill by itself.
+  assert.match(description, /cap/);
+  assert.match(description, /user asks to update, compact, or rotate/);
+  assert.ok(description.length <= 1024, "description stays within listing budgets");
+  assert.doesNotMatch(frontmatter, /disable-model-invocation|allow_implicit_invocation/);
+  const body = skill.replace(/\s+/g, " ");
+  assert.match(body, /Move resolved entries verbatim/);
+  assert.match(body, /When the user invokes this skill, compact even below that threshold/);
+  assert.match(body, /never an ignored local file/);
+  // The optional decisions log is created on demand, never seeded empty.
+  assert.match(body, /## Decisions log \(optional\)/);
+  assert.match(body, /numbered in order and never renumbered/);
+  assert.match(body, /Do not create an empty log/);
+  const starterAgents = readNormalized(bootstrapRoot, "project-templates/AGENTS.md");
+  assert.match(starterAgents, /optional `docs\/decisions\.md`/);
+  assert.equal(
+    existsSync(join(bootstrapRoot, "project-templates", "docs", "decisions.md")),
+    false
+  );
+  assert.ok(skill.split("\n").length <= 120, "SKILL.md stays short");
+  assert.equal(readdirSync(join(bootstrapRoot, "skills", "continuity")).join(), "SKILL.md");
+  assert.match(
+    readFileSync(join(bootstrapRoot, ".gitattributes"), "utf8"),
+    /^skills\/\*\* text=auto eol=lf$/m
+  );
+});
+
+await test("first-party skills install from the checkout with their reviewed hash", async () => {
+  const fixture = await createSkillInstallerFixture();
+  const { hashDirectory } = await import("./lib/skill-integrity.mjs");
+  try {
+    const checkout = join(fixture.testHome, "installer");
+    const source = join(checkout, "skills", "local-skill");
+    mkdirSync(source, { recursive: true });
+    writeFileSync(join(source, "SKILL.md"), "---\nname: local-skill\n---\n");
+    const manifest = JSON.parse(readFileSync(join(checkout, "skills.json"), "utf8"));
+    const local = {
+      name: "local-skill",
+      localPath: "skills/local-skill",
+      contentSha256: hashDirectory(source)
+    };
+    manifest.skills.push(local);
+    writeFileSync(join(checkout, "skills.json"), JSON.stringify(manifest));
+
+    const installed = fixture.run();
+    assert.equal(installed.status, 0, installed.stderr);
+    assert.match(installed.stdout, /Staging first-party skill local-skill/);
+    const canonical = join(fixture.testHome, ".agents", "skills", "local-skill");
+    assert.equal(hashDirectory(canonical), local.contentSha256);
+    assert.equal(fixture.run(["--check"]).status, 0);
+
+    // A source that no longer matches its pin installs nothing.
+    rmSync(canonical, { recursive: true, force: true });
+    rmSync(join(fixture.testHome, ".claude", "skills", "local-skill"), { force: true });
+    writeFileSync(join(source, "SKILL.md"), "---\nname: local-skill\n---\nchanged\n");
+    for (const args of [["--preflight"], []]) {
+      const drifted = fixture.run(args);
+      assert.notEqual(drifted.status, 0, args.join(" "));
+      assert.match(drifted.stderr, /local-skill: first-party content hash [a-f0-9]{64} does not match reviewed/);
+      assert.equal(existsSync(canonical), false);
+    }
+    // Ignored OS metadata is invisible to `git status`, so the failure names it.
+    writeFileSync(join(source, ".DS_Store"), "finder\n");
+    const withMetadata = fixture.run(["--preflight"]);
+    assert.notEqual(withMetadata.status, 0);
+    assert.match(
+      withMetadata.stderr,
+      /remove stray OS metadata from skills\/local-skill first \(\.DS_Store\)/
+    );
+
+    // One entry names exactly one source, and a first-party source is always
+    // the skill's own `skills/<name>` directory.
+    for (const invalid of [
+      { ...local, repository: "https://github.com/example/fixture.git" },
+      { ...local, localPath: "skills/other-skill" },
+      { ...local, localPath: ".git" }
+    ]) {
+      manifest.skills[manifest.skills.length - 1] = invalid;
+      writeFileSync(join(checkout, "skills.json"), JSON.stringify(manifest));
+      const rejected = fixture.run(["--check"]);
+      assert.notEqual(rejected.status, 0, JSON.stringify(invalid));
+      assert.match(rejected.stderr, /Invalid skill entry/);
+    }
+  } finally {
+    rmSync(fixture.testHome, { recursive: true, force: true });
+  }
+}, { needsSymlinks: true });
+
+await test("a linked first-party skill source is refused", async () => {
+  const fixture = await createSkillInstallerFixture();
+  const { hashDirectory } = await import("./lib/skill-integrity.mjs");
+  try {
+    const checkout = join(fixture.testHome, "installer");
+    const outside = join(fixture.testHome, "outside-skill");
+    mkdirSync(outside);
+    writeFileSync(join(outside, "SKILL.md"), "outside\n");
+    mkdirSync(join(checkout, "skills"));
+    symlinkSync(outside, join(checkout, "skills", "local-skill"), "junction");
+    const manifest = JSON.parse(readFileSync(join(checkout, "skills.json"), "utf8"));
+    manifest.skills.push({
+      name: "local-skill",
+      localPath: "skills/local-skill",
+      contentSha256: hashDirectory(outside)
+    });
+    writeFileSync(join(checkout, "skills.json"), JSON.stringify(manifest));
+    const refused = fixture.run();
+    assert.notEqual(refused.status, 0);
+    assert.match(refused.stderr, /first-party source must be a real directory inside this checkout/);
+    assert.equal(existsSync(join(fixture.testHome, ".agents", "skills", "local-skill")), false);
+  } finally {
+    rmSync(fixture.testHome, { recursive: true, force: true });
+  }
+}, { needsSymlinks: true });
 
 await test("skill hashes are byte-ordered and cover OS metadata", async () => {
   const testRoot = mkdtempSync(join(tmpdir(), "machine-bootstrap-hash-test-"));
@@ -968,7 +1102,8 @@ await test("skill acquisition failures are concise and leave no partial install"
     );
 
     assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /Skill setup failed:/);
+    // A drifted first-party source stops in verification, before acquisition.
+    assert.match(result.stderr, /Skill (setup|verification) failed:/);
     assert.doesNotMatch(result.stderr, /file:\/\/|node:internal/);
     assert.equal(existsSync(join(testHome, ".agents", "skills")), false);
   } finally {

@@ -12,6 +12,8 @@ project.
   the month of rotation (`2026-07.md` holds the first rotation, made
   2026-08-14). Dated task receipts sit beside them. Read history only when a
   task needs it.
+- Update and compact with the shared `continuity` skill: agents run it near
+  the cap, and the user can run it at any time.
 
 ## Current state
 
@@ -24,6 +26,11 @@ project.
   `docs/continuity/2026-10.md`; receipts moved under `docs/continuity/`.
 - 2026-10-09 Review tiering (D028): typo, link, formatting, and comment-only
   changes need implementer verification only.
+- 2026-10-09 First-party `continuity` skill (D032) pinned in `skills.json`;
+  an existing machine adds it with `install-skills.mjs`, and roster-dependent
+  tests skip until it does.
+- 2026-10-09 Project starters offer an optional `docs/decisions.md`, created
+  on demand rather than seeded (D033).
 - Bootstrap CI runs the full disposable suite on Linux, Windows, and macOS.
 - Impeccable stays pinned at 4.0.2 with a recoverable 4.0.4 backup until a
   freshly reviewed upgrade recommendation.
