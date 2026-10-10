@@ -1,12 +1,12 @@
 # Product Delivery Workflow
 
-Workflow id: `product-delivery` · version `1.3.0` · schema `1`
+Workflow id: `product-delivery` · version `2.0.0` · schema `1`
 
-Portable, provider-neutral contract for taking work from a broad idea to
-accepted delivery. Installed from the `machine-bootstrap` repository to
-`~/.agents/workflows/product-delivery/`. Provider agent definitions are
-generated from the role contracts in `roles/`; edit the contracts, never the
-generated adapters.
+Portable, provider-neutral contract for taking work from a request to accepted
+delivery through one living Implementation Plan. Installed from the
+`machine-bootstrap` repository to `~/.agents/workflows/product-delivery/`.
+Provider agent definitions are generated from the role contracts in `roles/`;
+edit the contracts, never the generated adapters.
 
 ## Activation
 
@@ -14,41 +14,42 @@ Installation makes this workflow available; it does not make the workflow
 active for every project task. The workflow activates when any one condition is
 true:
 
-1. The user launches or selects the Product Partner or Delivery Lead role or
+1. The user launches or selects the Delivery Lead or Product Partner role or
    profile.
 2. The user explicitly asks to use the complete `product-delivery` workflow.
-3. The task continues an active Product Brief or Delivery Plan.
+3. The task continues an active Implementation Plan, or a legacy Product Brief
+   or Delivery Plan from workflow 1.x.
 4. Project guidance requires this workflow for a named class of work.
 
 An ordinary bug fix, documentation edit, review, or maintenance task does not
 activate the workflow merely because the package is installed or mentioned by
 project guidance. Once activated, the complete contract applies to that task;
-do not cherry-pick its artifacts, approvals, change control, or verification
-rules. If required entry artifacts are missing, the selected role reports that
-state and follows its documented entry condition rather than inventing them.
+do not cherry-pick its authorization, scope-change, resumption, or
+verification rules. If no plan exists, the plan owner creates one; never
+backfill records as evidence of work or authorization that did not happen.
 
 Selecting the Verifier is the one role-specific exception: it activates only
 the independent verification portion for the supplied change. It does not
-retroactively create missing discovery, approval, execution, or implementation
-artifacts. Missing or ambiguous upstream artifacts remain explicit verification
-limitations, while all evidence-honesty and outcome rules still apply.
+retroactively create a missing plan or authorization. Missing or ambiguous
+required upstream records remain explicit verification limitations, while all
+evidence-honesty and outcome rules still apply.
 
 ## Ownership Boundary
 
-This workflow foundation owns the **process**: role contracts, stages,
-approval and invalidation rules, handoffs, artifact shapes, and verification
-honesty.
+This workflow foundation owns the **process**: role contracts, authorization
+and scope-change rules, the Implementation Plan shape, resumption, handoffs,
+and verification honesty.
 
 Each project owns its **substance**: product behavior, architecture,
 engineering rules, commands, security and privacy requirements, required
 project verification, and its own specialist roles. The nearest project
 `AGENTS.md` and its owning documentation govern work inside that project.
 
-A project may **strengthen** this workflow — additional high-risk triggers,
-mandatory Delivery Plan sections, required project verification, required
-specialist reviews. A project must not **weaken** the foundational rules
-below: exact user approval, scope-change escalation, and honest verification
-reporting are not negotiable locally.
+A project may **strengthen** this workflow — additional activating work,
+material-change triggers, required plan sections, project verification, or
+specialist reviews. A project must not **weaken** the foundational rules below:
+user authorization of scope, material-change escalation, independent review,
+and honest verification reporting are not negotiable locally.
 
 This workflow never rewrites a project's architecture or guidance.
 
@@ -56,153 +57,189 @@ This workflow never rewrites a project's architecture or guidance.
 
 | Role | Owns | Does not own |
 | :--- | :--- | :--- |
-| **Product Partner** | Why and what: problem, workflow, requirements, constraints, non-goals, acceptance criteria, Product Brief, Decision Log, alignment review | Technical architecture, implementation, approving scope on the user's behalf |
-| **Delivery Lead** | How and delivery: repository investigation, technical design, Delivery Plan, execution, delegation, integration, Implementation Report | Redefining product scope, self-approving its own plan |
-| **Verifier** | Independent evidence: acceptance-criteria validation, regression inspection, honest pass/fail/unverified/skipped reporting | Redesigning the feature, editing application source |
+| **Delivery Lead** | The default entry point and accountable owner: clarification, repository investigation, the Implementation Plan, implementation, delegation, integration, self-verification | Authorizing scope on the user's behalf, independently verifying its own change |
+| **Product Partner** | Optional specialist for broad discovery, ambiguous product goals, or product-alignment review; contributes to the same plan | Technical architecture, implementation, technical verification, approving on the user's behalf |
+| **Verifier** | Independent evidence: criterion validation, regression inspection, honest passed/failed/unverified/skipped reporting | Redesigning the feature, editing application source |
 
-"Consultant" and "orchestrator" describe how these roles feel in use. They are
-not the role names. Use Product Partner, Delivery Lead, and Verifier.
+The plan has exactly one active owner, normally the Delivery Lead. Other agents
+return findings for the owner to integrate rather than writing competing
+requirements. When the Product Partner starts a discovery task it may create
+the plan and own it until it hands ownership to the Delivery Lead; record the
+handoff in the plan.
 
-## Stages
+## Flow
 
-When the complete discovery-to-delivery flow is active, the stages are:
+1. **Clarify and investigate** — the plan owner asks questions whose answers
+   materially affect the work and inspects the repository, in whatever order
+   helps. A complete interview is not a prerequisite for investigation.
+2. **Plan** — write the Implementation Plan in proportion to the task.
+3. **Confirm authorization** — identify the authorization that covers the
+   plan's scope, or present the plan and ask for it.
+4. **Implement** — execute phases, delegate where it helps, and keep the plan's
+   execution record and checkpoint current.
+5. **Self-review** — the implementer reviews the complete diff and runs the
+   appropriate checks.
+6. **Independent verification** — at least one fresh Verifier reviews the
+   actual change unless the user explicitly waives it for this change.
+7. **User acceptance** — the user accepts, or returns the work.
 
-1. **Product discovery** — Product Partner explores the real problem with the
-   user.
-2. **Product Brief drafting** — Product Partner writes the brief.
-3. **Product Brief approval** — the user approves an exact brief version.
-4. **Repository investigation** — Delivery Lead inspects the actual code.
-5. **Delivery Plan creation** — Delivery Lead writes an implementation-ready
-   plan.
-6. **Alignment review** — Product Partner checks the plan against the approved
-   brief.
-7. **Delivery Plan approval** — the user approves an exact plan version.
-8. **Execution** — Delivery Lead implements, delegating where it helps.
-9. **Verification** — after self-verification, Delivery Lead delegates at least
-   one independent review unless the user explicitly waives it for this change.
-10. **User acceptance** — the user accepts, or returns the work.
+Small work may compress these steps into a short plan and a short report, but no
+step is skipped silently. If one is compressed, say so.
 
-Small work may move quickly through these stages, but no stage is skipped
-silently. If a stage is compressed, say so.
+## Authorization And Scope
 
-## The Two Approval Gates
+The plan separates two things:
 
-They are different approvals and are never merged.
+- **Authorized scope** — the goal, required behavior, constraints, preserved
+  behavior, non-goals, acceptance criteria, and material choices the user has
+  settled. It carries a lightweight scope revision (`r1`, `r2`, …) and the
+  source of the authorization that covers it.
+- **Execution record** — findings, approach, progress, internal technical
+  decisions, verification evidence, and the checkpoint. Routine updates to it
+  never invalidate authorization and never trigger another approval request.
 
-**Product Brief approval** means: *"This exact version accurately describes the
-problem, intended workflow, requirements, constraints, non-goals, and
-acceptance criteria."* It approves no technical design.
+Authorization comes only from the user. Honor authorization already present in
+the conversation: a request to implement a described change authorizes that
+scope, and writing it into the plan does not require the user to approve the
+same work again. Authorization covers what the user described and the
+non-material detail needed to deliver it. Record that detail — criteria or
+behavior the plan adds beyond the user's words — as `assumption` items; work
+may proceed on them, and they stay open to correction without blocking. An
+addition that would be a material change is a proposal, not part of the
+baseline, until the user decides. A request to plan first, or for a plan alone,
+does not authorize implementation; present the plan and wait. One
+authorization covers the plan's scope; never split it into separate approvals
+of different sections.
 
-**Delivery Plan approval** means: *"This exact version and its technical
-approach, phases, tradeoffs, risk treatment, and verification strategy are
-approved for execution."* It authorizes implementation only within the
-approved scope.
+A **material change** is a discovery or proposal that would change agreed
+behavior, weaken or reinterpret an acceptance criterion, expand scope, create
+destructive migration risk, or introduce a new security or privacy
+implication. For a material change:
 
-When requesting approval, present the artifact identity and version, then ask
-for approval of that exact version. A summary may help the user read it; the
-summary never replaces the artifact.
+1. Record it as a proposal, separate from the authorized baseline.
+2. Present the concrete choice — options, consequences, and a recommendation —
+   and obtain the user's decision before the affected action.
+3. Pause dependent work; continue independent work that remains authorized.
+4. After the decision, update the baseline, increment the scope revision, keep
+   the prior criterion wording readable, and record the decision and its
+   source.
+
+Silence, an artifact status, a checked box, or an agent's assertion is never
+user approval. In the plan, distinguish confirmed requirements (`user`),
+observed repository facts (`repo`), reversible working assumptions
+(`assumption`), and unresolved decisions (`open`).
 
 ## Foundational Invariants
 
-1. Approval applies only to the exact identified artifact version.
-2. An agent's statement that the user approved something is not itself user
-   approval.
-3. Approval of a Product Brief does not approve a Delivery Plan.
-4. Changing an approved Product Brief invalidates dependent Delivery Plans and
-   any execution authorization derived from them.
-5. Changing an approved Delivery Plan invalidates its previous execution
-   authorization.
-6. The Delivery Lead may make ordinary internal technical decisions that do not
-   alter approved product behavior or scope.
-7. A discovery that changes user-facing behavior, weakens an acceptance
-   criterion, materially expands scope, creates destructive migration risk, or
-   introduces a new security or privacy implication requires a structured
-   Change Request.
-8. Delegating work does not transfer accountability away from the Delivery
-   Lead.
-9. Verification distinguishes passed, failed, unverified, and skipped checks.
+1. Implementation requires the user's authorization of its scope.
+2. An agent's statement that the user approved something is not approval.
+3. A plan-only request, or an approved legacy Product Brief alone, never
+   authorizes implementation.
+4. Routine execution-record updates never invalidate authorization.
+5. A material change requires the user's decision before the affected action.
+6. The plan owner may make internal technical decisions within the authorized
+   scope.
+7. Delegation never transfers accountability away from the plan owner.
+8. Verification distinguishes passed, failed, unverified, and skipped checks.
    Missing evidence is never reported as a successful result.
-10. The full Product Brief and Delivery Plan remain authoritative. Summaries
-    may assist the user but never replace the source artifact.
-11. Every implementation receives the implementer's own verification and one
-    independent review by default. Only the user may waive that review for a
-    specific change.
+9. The Implementation Plan is the authoritative task record. Summaries and
+   optional artifacts may assist but never replace it or compete with it.
+10. Every implementation receives the implementer's own verification and one
+    fresh independent review by default. Only the user may waive that review
+    for a specific change.
 
 These are process and authority rules, not authentication. No local file, CLI
 command, or artifact field proves that a human supplied an approval. Recording
-an approval is bookkeeping for humans reading the artifact later; it is not
+an authorization is bookkeeping for humans reading the plan later; it is not
 evidence, and no agent should treat it as such.
 
-## Change Requests
+## Clarification
 
-When invariant 7 triggers, stop and write a Change Request rather than
-absorbing the change quietly. It states the discovery, the affected acceptance
-criteria, why the approved approach is insufficient, the available options and
-their tradeoffs, the Delivery Lead's recommendation, the Product Partner's
-assessment, and the exact decision required from the user.
+Ask when the answer materially affects the work — during planning or during
+implementation. Do not repeat a question the user already answered or reliable
+repository evidence settles. Record answers and working assumptions in the
+plan with their sources so later phases and resumed sessions do not ask again.
 
-After the user decides, update the affected artifact, bump its version, and
-re-request approval of the exact new version. Invariants 4 and 5 apply.
+## Resumption And Checkpoints
+
+Consult the plan before starting a new phase, before delegating, when resuming
+interrupted work, and before final self-review and independent verification.
+
+Update the checkpoint after a meaningful discovery or milestone and before a
+handoff or a known context reset. It names completed work with its evidence,
+current work, blockers, open questions, the next concrete action, repository
+state (branch, commit, working-diff summary), and pending review findings.
+
+To resume, read the plan and applicable project guidance, then inspect the
+actual branch, commit, and working diff. Reconcile them with the checkpoint and
+continue the next unfinished action. Do not restart discovery automatically.
+A checked box is a claim, not proof of completion; confirm it against the
+repository and its evidence.
 
 ## Delegation
 
-Specialist agents are an optional inner mechanism. The Delivery Lead decides
-whether delegation materially helps, gives each specialist a bounded
-assignment with clear ownership and required evidence, avoids overlapping file
-ownership where practical, inspects what comes back, and integrates it.
+Specialist agents are an optional inner mechanism. The plan owner decides
+whether delegation materially helps, consults the plan first, gives each
+specialist a bounded assignment with clear ownership and required evidence,
+avoids overlapping file ownership where practical, inspects what comes back,
+and integrates it into the plan and the change.
 
-A specialist saying "done" is not evidence. The Delivery Lead inspects the
-actual result.
-
-The outer handoff between roles is the shared versioned artifacts, not
-automatic inter-agent messaging.
+A specialist saying "done" is not evidence. The plan owner inspects the actual
+result. The handoff between roles is the shared plan, not automatic
+inter-agent messaging.
 
 ## Verification Expectations
 
-Every implementation receives the Delivery Lead's own verification and at least
+Every implementation receives the implementer's own verification and at least
 one independent Verifier review before it is called merge-ready or complete.
-The Delivery Lead's verification includes inspecting the complete diff for
+The implementer's verification includes inspecting the complete diff for
 correctness, regressions, maintainability, unintended scope, and unrelated
-changes. The independent reviewer must not have implemented the change and must
-inspect the actual diff and verification evidence rather than accept the
-implementation report at face value.
+changes. The independent reviewer must not have implemented the change. It
+inspects the actual change, the authorized criteria, the decision history, and
+the evidence rather than accepting implementer claims, which never establish an
+independent pass.
+
+Record the repository state each review covered. A later implementation change
+needs appropriate follow-up checks and review; an earlier pass does not cover a
+new diff. Product Partner alignment review never replaces technical
+verification.
 
 The user may explicitly waive independent review for a specific change. Record
 the waiver and its reason; missing independent evidence remains waived, not
 passed.
 
-The user may request additional independent reviewers. After the mandatory
-review, the Delivery Lead gives a firm recommendation on whether another review
-is warranted, based on risk, changed surfaces, unresolved uncertainty, and the
-coverage already obtained. Honor the user's request even when the recommendation
-is that another review is optional. Record the recommendation in the Verification
-Report. Do not add reviewers without a material reason or a user request.
+The user may request additional independent reviewers. After the first
+independent review, the plan owner gives a firm recommendation on whether
+another reviewer is warranted, naming the remaining risk or coverage gap, and
+records it in the Verification Report. Honor the user's request even when the
+recommendation is that another review is optional. Do not add reviewers
+without a material reason or a user request.
 
 The Verifier normally does not edit application source. It returns its report
-to the Delivery Lead, which remains responsible for recording the final
-Verification Report.
+to the plan owner, which records the final Verification Report.
 
 ## Artifacts
 
 Templates live in `~/.agents/workflows/product-delivery/templates/`.
 
-| Artifact | Owner | Template |
-| :--- | :--- | :--- |
-| Product Brief | Product Partner | `product-brief.md` |
-| Decision Log | Product Partner | `decision-log.md` |
-| Delivery Plan | Delivery Lead | `delivery-plan.md` |
-| Alignment Review | Product Partner | `alignment-review.md` |
-| Change Request | Delivery Lead drafts, Product Partner assesses | `change-request.md` |
-| Implementation Report | Delivery Lead | `implementation-report.md` |
-| Verification Report | Verifier drafts, Delivery Lead records | `verification-report.md` |
+| Artifact | Owner | Template | Use |
+| :--- | :--- | :--- | :--- |
+| Implementation Plan | Plan owner | `implementation-plan.md` | Normal |
+| Verification Report | Verifier drafts, plan owner records | `verification-report.md` | Normal |
+| Implementation Report | Plan owner | `implementation-report.md` | Optional |
+| Alignment Review | Product Partner | `alignment-review.md` | Optional |
+| Decision Log | Plan owner | `decision-log.md` | Optional |
+| Change Request | Plan owner | `change-request.md` | Optional |
 
-The seven templates are a library, not a requirement to create seven files.
-An activated task that runs the full discovery-to-delivery sequence normally
-uses Product Brief, Delivery Plan, Alignment Review, Implementation Report, and
-Verification Report. Create a Decision Log only for material product decisions
-and a Change Request only when its trigger occurs. Never create empty
-placeholder artifacts. Ordinary work outside this workflow creates none of
-these artifacts by default.
+A full-workflow task normally creates only the Implementation Plan and the
+Verification Report. Create an optional artifact only when it adds useful
+detail, and link it from the plan; it never restates or overrides the plan's
+requirements. Never create empty placeholder artifacts. Ordinary work outside
+this workflow creates none of these artifacts by default. Keep the plan
+proportional; link detailed evidence rather than copying it.
+
+`product-brief.md` and `delivery-plan.md` remain only as deprecated redirects
+for installations upgraded from 1.x.
 
 The default location for task artifacts is `.agent-work/tasks/<task-id>/`
 inside the project. Keep active artifacts local by default; the starter project
@@ -215,8 +252,18 @@ Use `[TASK <task-id>]` in the continuity entry. Never commit a continuity link
 to an unavailable local artifact; if task artifacts remain local, make the
 durable continuity summary self-contained.
 
-Artifact versions are simple and monotonic: `v1`, `v2`, `v3`. Status is one of
-`draft`, `awaiting approval`, `approved`, or `superseded`.
+## Legacy 1.x Tasks
+
+Completed 1.x artifacts are historical records; leave them unchanged. When an
+active 1.x task resumes, the plan owner consolidates the existing intent,
+authorization, questions, decisions, and evidence into a new
+`implementation-plan.md` and links the originals as historical references.
+Resolve material conflicts between them with the user before dependent work.
+A Delivery Plan version the user approved under 1.x that was still in force —
+not superseded and not invalidated by a later change to it or its brief —
+carries forward as authorization for exactly that scope; if the record is
+ambiguous, ask the user. An approved Product Brief alone never authorizes
+implementation.
 
 ## Provider Notes
 

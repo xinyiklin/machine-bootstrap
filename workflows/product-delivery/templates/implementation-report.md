@@ -1,19 +1,19 @@
 # Implementation Report — <task title>
 
-Owner: Delivery Lead · Workflow: `product-delivery` 1.3.0
+Owner: plan owner · Workflow: `product-delivery` 2.0.0
+
+Optional. The Implementation Plan already records coverage, evidence, and the
+checkpoint; use this report only when a handoff or review needs more detail
+than the plan should hold, and link it from the plan. It never restates or
+changes the plan's requirements or acceptance criteria.
 
 | Field | Value |
 | :--- | :--- |
 | Task id | `<task-id>` |
 | Date | `<YYYY-MM-DD>` |
-| Product Brief | v1 (approved `<YYYY-MM-DD>`) |
-| Delivery Plan | v1 (approved `<YYYY-MM-DD>`) |
+| Implementation Plan | scope revision `r<n>` |
 | Repository / branch | `<repo>` / `<branch>` |
-| Commit range | `<base sha>..<head sha>` |
-
-## Implemented Scope
-
-What was actually built, in the terms the approved brief used.
+| Change | `<base sha>..<head sha>` / working tree on `<sha>` |
 
 ## Significant Files And Components Changed
 
@@ -23,39 +23,27 @@ Not an exhaustive diff: list what an independent reviewer needs to understand.
 | :--- | :--- |
 | `<path>` | ... |
 
-## Implementation Coverage By Acceptance Criterion
+## Implementation Coverage Detail
 
 This is the implementer's coverage statement, not the final independent
 judgment. Status is one of `implemented`, `not implemented`, `deferred`, or
 `self-unverified`.
 
-| # | Criterion | Implementation status | Implementer evidence |
-| :--- | :--- | :--- | :--- |
-| 1 | ... | implemented | `<path / command / observation>` |
-| 2 | ... | self-unverified | why the implementer could not establish it |
+| ID | Implementation status | Implementer evidence |
+| :--- | :--- | :--- |
+| AC1 | implemented | `<path / command / observation>` |
+| AC2 | self-unverified | why the implementer could not establish it |
 
-## Implementer Self-Verification
+## Implementer Self-Verification Detail
 
-Commands and observations performed by the implementer. A result here remains
-self-evidence until the Verifier independently evaluates the exact change.
+A result here remains self-evidence until the Verifier independently evaluates
+the exact change.
 
 | Check | Command or observation | Result | Evidence |
 | :--- | :--- | :--- | :--- |
 | ... | `<command>` | passed / failed / self-unverified / skipped | ... |
 
-## Deviations From The Approved Plan
-
-| Deviation | Kind | Reference |
-| :--- | :--- | :--- |
-| ... | internal decision / change request | CR001 |
-
-Write `none` when execution followed the plan.
-
-## Known Limitations
-
-- ...
-
-## Explicitly Deferred
+## Known Limitations And Deferred Work
 
 - ...
 

@@ -10,6 +10,9 @@ MACHINE.md
 CLAUDE.local.md
 .claude/
 
+# Active product-delivery task artifacts stay local
+.agent-work/
+
 # Dependencies, caches, and generated output
 node_modules/
 .cache/

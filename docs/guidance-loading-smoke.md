@@ -119,8 +119,10 @@ runtime skill discovery.
 In a fresh desktop task for the disposable project, follow the README's
 ordinary-review prompt. Confirm `mb_verifier` actually runs as a separate
 reviewer and returns evidence without requesting an unrelated full workflow.
-Check the full-workflow prompt separately: the brief and plan remain separate
-approval gates. A CLI profile command is not proof of desktop role activation.
+Check the full-workflow prompt separately: the Delivery Lead keeps one
+Implementation Plan, asks only material questions, does not re-request
+approval for routine progress, and still delegates independent review. A CLI
+profile command is not proof of desktop role activation.
 
 Where the app supports a separate worktree, repeat root/scoped discovery there
 and verify the effective repository and instruction sources. Record the app

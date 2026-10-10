@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "workflowId": "product-delivery",
-  "workflowVersion": "1.3.0",
+  "workflowVersion": "2.0.0",
   "title": "Product Delivery",
-  "summary": "Explicitly activated provider-neutral product-to-delivery workflow with two exact user approval gates.",
+  "summary": "Explicitly activated provider-neutral delivery workflow with one living Implementation Plan, implementer self-review, and fresh independent verification.",
   "workflowDocument": "WORKFLOW.md",
   "taskArtifactPath": ".agent-work/tasks/<task-id>/",
   "roles": [
@@ -11,7 +11,7 @@
       "id": "product-partner",
       "title": "Product Partner",
       "source": "roles/product-partner.md",
-      "summary": "Discovery and product alignment partner. Use to turn a broad idea into a testable Product Brief, to review a Delivery Plan against an approved brief, and to request exact user approval of either artifact.",
+      "summary": "Optional discovery and product-alignment specialist. Use for broad or ambiguous product goals or a product-alignment review; contributes to the shared Implementation Plan and hands ownership to the Delivery Lead.",
       "claude": {
         "name": "mb-product-partner",
         "primarySession": true
@@ -25,7 +25,7 @@
       "id": "delivery-lead",
       "title": "Delivery Lead",
       "source": "roles/delivery-lead.md",
-      "summary": "Repository-aware technical owner and execution lead. Use to investigate the real codebase, produce an implementation-ready Delivery Plan from an approved Product Brief, execute approved work, and report implementation results.",
+      "summary": "Default entry point and accountable task owner. Use to clarify the request, investigate the real codebase, own the living Implementation Plan, implement authorized work, delegate, integrate, and self-verify.",
       "claude": {
         "name": "mb-delivery-lead",
         "primarySession": true
@@ -39,7 +39,7 @@
       "id": "verifier",
       "title": "Verifier",
       "source": "roles/verifier.md",
-      "summary": "Independent evidence-oriented reviewer. Use proactively after execution to check the actual changes against the approved Product Brief and Delivery Plan, and to report passed, failed, unverified, and skipped checks with evidence.",
+      "summary": "Fresh independent evidence-oriented reviewer. Use proactively after implementation to check the actual change against the Implementation Plan's authorized criteria and decisions, and to report passed, failed, unverified, and skipped checks with evidence.",
       "claude": {
         "name": "mb-verifier",
         "primarySession": false
@@ -50,12 +50,13 @@
     }
   ],
   "templates": [
-    { "id": "product-brief", "source": "templates/product-brief.md" },
-    { "id": "decision-log", "source": "templates/decision-log.md" },
-    { "id": "delivery-plan", "source": "templates/delivery-plan.md" },
-    { "id": "alignment-review", "source": "templates/alignment-review.md" },
-    { "id": "change-request", "source": "templates/change-request.md" },
+    { "id": "implementation-plan", "source": "templates/implementation-plan.md" },
+    { "id": "verification-report", "source": "templates/verification-report.md" },
     { "id": "implementation-report", "source": "templates/implementation-report.md" },
-    { "id": "verification-report", "source": "templates/verification-report.md" }
+    { "id": "alignment-review", "source": "templates/alignment-review.md" },
+    { "id": "decision-log", "source": "templates/decision-log.md" },
+    { "id": "change-request", "source": "templates/change-request.md" },
+    { "id": "product-brief", "source": "templates/product-brief.md" },
+    { "id": "delivery-plan", "source": "templates/delivery-plan.md" }
   ]
 }

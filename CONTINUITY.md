@@ -53,9 +53,9 @@ is read only when a task needs it.
   verification receipts, and explicit publication state.
 - 2026-08-15 [USER+CODE] Bootstrap CI runs the full disposable regression suite
   on Linux, Windows, and macOS; local macOS evidence is not a CI substitute.
-- 2026-08-14 [USER+CODE] Product Delivery workflow 1.3.0 activates its complete
-  flow only for a primary role, explicit request, active artifacts, or named
-  project work. Standalone Verifier selection activates only independent review.
+- 2026-10-06 [USER+CODE] Product Delivery 2.0.0 (D026): one living
+  Implementation Plan owned by the Delivery Lead replaces brief/plan gates.
+  Accounting and review: `docs/workflow-consolidation-2026-10-06.md`.
 - 2026-08-13 [USER] Every implementation defaults to implementer verification
   plus one fresh independent review; only the user may waive it per change.
 - 2026-08-19 [USER+CODE] Workflow activation must be stated as checkable
@@ -99,8 +99,8 @@ Milestones — detail in `docs/continuity/2026-07.md`:
   commands, and required verification remain project-owned.
 - 2026-07-31 [CODE] D010 ACTIVE: provider-neutral role contracts generate Claude
   and Codex adapters; adapters carry provenance and pin no model.
-- 2026-07-31 [USER] D011 ACTIVE: projects may strengthen workflow triggers,
-  checks, or review but not weaken approval, escalation, or honest verification.
+- 2026-07-31 [USER] D011 ACTIVE: projects may strengthen triggers, checks, or
+  review but not weaken authorization, escalation, review, or honest evidence.
 - 2026-07-31 [CODE] D012 ACTIVE: workflow installation validates before writes,
   rejects drift, and preserves timestamped backups on reviewed replacement.
 - 2026-07-31 [CODE] D013 ACTIVE: approval records are bookkeeping, not proof of
@@ -137,6 +137,9 @@ Milestones — detail in `docs/continuity/2026-07.md`:
 - 2026-09-07 [USER+CODE] D025 ACTIVE: Codex desktop is the primary documented
   entry; Claude retains native loading. Workflow triggers name changed contracts;
   maintenance keeps fresh review and existing user authorization carries forward.
+- 2026-10-06 [USER+CODE] D026 ACTIVE: authorized scope is separate from the
+  plan's execution record; routine updates never re-trigger approval; material
+  changes need a user decision. Legacy brief/plan templates are redirects.
 
 ## Working Set
 

@@ -1,82 +1,57 @@
 # Change Request — <task title>
 
-Raised by: Delivery Lead · Assessed by: Product Partner · Decided by: the user · Workflow: `product-delivery` 1.3.0
+Raised by: plan owner · Product assessment: Product Partner, when involved · Decided by: the user · Workflow: `product-delivery` 2.0.0
+
+Optional. A material change is normally recorded as a proposal in the
+Implementation Plan. Use this template only when the choice needs more room,
+and link it from that proposal. It proposes; it never changes the authorized
+scope by itself.
 
 | Field | Value |
 | :--- | :--- |
 | Task id | `<task-id>` |
-| Change request | CR001 |
+| Change request | CR001 (plan proposal `P<n>`) |
 | Date | `<YYYY-MM-DD>` |
-| Product Brief in force | v1 (approved `<YYYY-MM-DD>`) |
-| Delivery Plan in force | v1 (approved `<YYYY-MM-DD>`) |
-| Trigger | user-facing behavior / weakened criterion / scope expansion / destructive migration risk / security or privacy implication |
+| Scope revision in force | `r<n>` |
+| Trigger | changed agreed behavior / weakened criterion / expanded scope / destructive migration risk / security or privacy implication |
 
 ## Discovery
 
-What was found during investigation or execution, with evidence: files, lines,
-commands, output. State the fact before the interpretation.
+What was found, with evidence: files, lines, commands, output. State the fact
+before the interpretation.
 
 ## Affected Acceptance Criteria
 
-| # | Criterion | Effect |
-| :--- | :--- | :--- |
-| … | … | cannot be met as written / would be weakened / needs reinterpretation |
+| ID | Effect |
+| :--- | :--- |
+| AC… | cannot be met as written / would be weakened / needs reinterpretation |
 
-## Why The Approved Approach Is Insufficient
+## Work Paused And Work Continuing
 
-Why this cannot be handled as an ordinary internal technical decision inside
-the approved scope.
+Which dependent work waits for the decision, and which independent authorized
+work continues.
 
 ## Options
 
-Real options, including doing nothing. Each with its consequence for the user,
-not only for the code.
+Real options, including deferring. Each with its consequence for the user, not
+only for the code.
 
-### Option A — <name>
+| Option | What it does | User-visible effect | Cost / risk |
+| :--- | :--- | :--- | :--- |
+| A | … | … | … |
+| B | … | … | … |
+| Defer | ship the authorized scope without this | … | … |
 
-- **What it does:** …
-- **User-visible effect:** …
-- **Cost / risk:** …
+## Recommendation
 
-### Option B — <name>
-
-- **What it does:** …
-- **User-visible effect:** …
-- **Cost / risk:** …
-
-### Option C — Defer
-
-- **What it does:** ship the approved scope without this; …
-- **User-visible effect:** …
-- **Cost / risk:** …
-
-## Tradeoffs
-
-The comparison in one place: what each option buys and what it costs.
-
-| Option | Buys | Costs |
-| :--- | :--- | :--- |
-| A | … | … |
-| B | … | … |
-| C | … | … |
-
-## Delivery Lead Recommendation
-
-Which option and why, in technical terms.
-
-## Product Partner Assessment
-
-Product impact: which criteria change, what the user gains or loses, and
-whether this changes the brief or only the plan.
+Which option and why. Add the Product Partner's product assessment when it is
+involved.
 
 ## Decision Required From The User
 
-State the exact question, with the options named. Then wait.
-
 > **Decision needed:** …
 
-After the decision: update the affected artifact, bump its version, mark the
-previous version superseded, and re-request approval of the exact new version.
-Changing an approved Product Brief invalidates dependent Delivery Plans and
-execution authorization; changing an approved Delivery Plan invalidates its
-previous execution authorization.
+After the decision, the plan owner updates the plan's authorized scope,
+increments its scope revision, keeps the prior criterion wording readable, and
+records the decision with its source. Routine execution updates never require
+this process.

@@ -2678,27 +2678,249 @@ const workflowManifest = JSON.parse(
   readFileSync(join(workflowSourceRoot, "manifest.json"), "utf8")
 );
 
+// Guidance assertions match prose regardless of line wrapping.
+function readNormalized(root, relativePath) {
+  return readFileSync(join(root, ...relativePath.split("/")), "utf8")
+    .replace(/\s+/g, " ");
+}
+
+function readWorkflowSource(relativePath) {
+  return readNormalized(workflowSourceRoot, relativePath);
+}
+
 await test("implementation reporting preserves waiver and status ownership", () => {
-  const template = readFileSync(
-    join(workflowSourceRoot, "templates", "implementation-report.md"),
-    "utf8"
-  );
-  const deliveryLead = readFileSync(
-    join(workflowSourceRoot, "roles", "delivery-lead.md"),
-    "utf8"
-  );
-  assert.match(template, /Independent review status.*pending.*waived/i);
-  assert.match(template, /Waiver reason/i);
-  assert.match(template, /pending unless.*waived/i);
+  const report = readWorkflowSource("templates/implementation-report.md");
+  const plan = readWorkflowSource("templates/implementation-plan.md");
+  const deliveryLead = readWorkflowSource("roles/delivery-lead.md");
+  assert.match(report, /Independent review status.*pending.*waived/i);
+  assert.match(report, /Waiver reason/i);
+  assert.match(report, /pending unless.*waived/i);
+  for (const source of [plan, deliveryLead]) {
+    assert.match(
+      source,
+      /`implemented`, `not implemented`, `deferred`, or `self-unverified`|implemented \/ not implemented \/ deferred \/ self-unverified/
+    );
+  }
   assert.match(
     deliveryLead,
-    /implemented`, `not implemented`, `deferred`, or\s+`self-unverified`/
+    /Verifier and Verification Report alone use final `passed`, `failed`, `unverified`, and `skipped`/
   );
+  assert.match(plan, /Independent results belong only in the Verification Report/);
+  assert.doesNotMatch(deliveryLead, /check you did not run is `unverified`/);
+});
+
+await test("one living Implementation Plan replaces the brief and plan gates", () => {
+  const workflow = readWorkflowSource("WORKFLOW.md");
+  const deliveryLead = readWorkflowSource("roles/delivery-lead.md");
+  const productPartner = readWorkflowSource("roles/product-partner.md");
+  const plan = readWorkflowSource("templates/implementation-plan.md");
+
+  // The plan carries every section the consolidated contract requires.
+  for (const heading of [
+    "Request And Outcome",
+    "Authorized Scope",
+    "Proposed Changes Awaiting Decision",
+    "Findings And Approach",
+    "Phases",
+    "Deferred Work And Deviations",
+    "Questions, Assumptions, And Decisions",
+    "Verification",
+    "Checkpoint"
+  ]) {
+    assert.match(plan, new RegExp(`## ${heading}`), `plan section ${heading}`);
+  }
+  assert.match(plan, /\| AC1 \|/);
+  assert.match(plan, /Scope revision \| r1/);
+  assert.match(plan, /Status is bookkeeping, never approval/);
+  assert.match(plan, /plan-only request does not authorize implementation/i);
+  for (const item of [
+    "Done",
+    "Current",
+    "Blockers \\/ open questions",
+    "Next action",
+    "Repository state",
+    "Pending review findings"
+  ]) {
+    assert.match(plan, new RegExp(`\\*\\*${item}:\\*\\*`), `checkpoint ${item}`);
+  }
+
+  // The retired gates and plan-change invalidation are gone.
+  for (const source of [workflow, deliveryLead, productPartner]) {
+    assert.doesNotMatch(source, /Two Approval Gates|never merged/);
+    assert.doesNotMatch(source, /invalidates (its previous|dependent)/);
+    assert.doesNotMatch(source, /re-request approval/);
+    assert.doesNotMatch(source, /need an approved Product Brief/);
+  }
+
+  // Authorized scope is separate from routine progress.
+  assert.match(workflow, /\*\*Authorized scope\*\*/);
+  assert.match(workflow, /\*\*Execution record\*\*/);
+  assert.match(workflow, /Routine updates to it never invalidate authorization and never trigger another approval request/);
+  assert.match(workflow, /Honor authorization already present in the conversation/);
+  assert.match(workflow, /does not require the user to approve the same work again/);
+  assert.match(workflow, /A request to plan first, or for a plan alone, does not authorize implementation/);
+  assert.match(workflow, /never split it into separate approvals of different sections/);
+  assert.match(workflow, /obtain the user's decision before the affected action/);
+  assert.match(workflow, /Pause dependent work; continue independent work that remains authorized/);
+  assert.match(workflow, /keep the prior criterion wording readable/);
+  assert.match(workflow, /Silence, an artifact status, a checked box, or an agent's assertion is never user approval/);
+  assert.match(workflow, /an approved legacy Product Brief alone, never authorizes implementation/);
+
+  // Delivery Lead is the default owner; Product Partner is optional.
+  assert.match(workflow, /\*\*Delivery Lead\*\* \| The default entry point and accountable owner/);
+  assert.match(workflow, /\*\*Product Partner\*\* \| Optional specialist/);
+  assert.match(workflow, /exactly one active owner/);
+  assert.match(deliveryLead, /Ask the user directly/);
+  assert.match(deliveryLead, /You need no Product Brief or Product Partner handoff first/);
+  assert.match(productPartner, /create `implementation-plan\.md` and own it/);
+  assert.match(productPartner, /Hand ownership to the Delivery Lead/);
+  assert.match(productPartner, /Alignment review does not replace the independent Verifier/);
+
+  // Clarification and resumption are explicit.
+  assert.match(workflow, /Do not repeat a question the user already answered or reliable repository evidence settles/);
+  assert.match(workflow, /Consult the plan before starting a new phase, before delegating, when resuming interrupted work, and before final self-review and independent verification/);
+  assert.match(workflow, /inspect the actual branch, commit, and working diff/);
+  assert.match(workflow, /Do not restart discovery automatically/);
+  assert.match(workflow, /A checked box is a claim, not proof of completion/);
+  assert.match(deliveryLead, /Consult the plan before each new phase, before delegating, when resuming/);
+
+  // Authorization covers what the user described, nothing the agent adds.
+  assert.match(workflow, /Authorization covers what the user described and the non-material detail needed to deliver it/);
+  assert.match(workflow, /work may proceed on them/);
+  assert.match(deliveryLead, /proceed, without asking the user to confirm each one/);
+  // The guard half: material additions never ride in as assumptions.
+  assert.match(workflow, /material change is a proposal, not part of the baseline, until the user decides/);
+  assert.match(deliveryLead, /A material addition is a proposal until the user decides/);
+  assert.match(plan, /Change user-confirmed items only through a recorded user decision/);
+  assert.match(plan, /Material additions belong under Proposed Changes/);
+
+  // No live guidance or template reintroduces the retired gates.
+  const liveGuidance = [
+    "README.md",
+    "INIT.md",
+    "docs/guidance-loading-smoke.md",
+    "project-templates/AGENTS.md",
+    "project-templates/TEMPLATE-USAGE.md"
+  ].map((relativePath) => [relativePath, readNormalized(bootstrapRoot, relativePath)]);
+  for (const template of workflowManifest.templates) {
+    liveGuidance.push([template.source, readWorkflowSource(template.source)]);
+  }
+  liveGuidance.push(["WORKFLOW.md", workflow], ["delivery-lead", deliveryLead], ["product-partner", productPartner]);
+  for (const [label, source] of liveGuidance) {
+    assert.doesNotMatch(source, /approval gates?|separate (brief|plan) approval/i, `${label} gate wording`);
+    assert.doesNotMatch(source, /(product brief|delivery plan|brief|plan) approval/i, `${label} artifact approval`);
+    assert.doesNotMatch(source, /approv\w* (of )?(the|an?|this) exact\b/i, `${label} exact-version approval`);
+    assert.doesNotMatch(
+      source,
+      /(approval|sign-?off) (of|on|for) (it|(the|this|that) (plan|brief|version))\b|approve (the |this |that )?(plan|brief|it)\b|(before|until) (the user|you) (approves?|signs? off)/i,
+      `${label} rephrased plan approval`
+    );
+    assert.doesNotMatch(source, /begin Product Partner discovery/i, `${label} mandatory discovery`);
+  }
+  const starter = readNormalized(bootstrapRoot, "project-templates/AGENTS.md");
+  assert.match(starter, /continues an active Implementation Plan/);
+  assert.match(starter, /Additional material-change triggers/);
+
+  // Legacy tasks consolidate rather than continuing two artifacts.
+  assert.match(workflow, /## Legacy 1\.x Tasks/);
+  assert.match(workflow, /still in force — not superseded and not invalidated/);
+  assert.match(workflow, /consolidates the existing intent, authorization, questions, decisions, and evidence into a new `implementation-plan\.md`/);
+  assert.match(workflow, /Completed 1\.x artifacts are historical records; leave them unchanged/);
+});
+
+await test("independent review semantics survive the consolidation", () => {
+  const workflow = readWorkflowSource("WORKFLOW.md");
+  const deliveryLead = readWorkflowSource("roles/delivery-lead.md");
+  const verifier = readWorkflowSource("roles/verifier.md");
+  const report = readWorkflowSource("templates/verification-report.md");
+
+  assert.match(workflow, /Only the user may waive that review for a specific change/);
+  assert.match(deliveryLead, /Only the user may waive independent review for a specific change/);
+  assert.match(workflow, /The independent reviewer must not have implemented the change/);
+  assert.match(workflow, /implementer claims, which never establish an independent pass/);
+  assert.match(workflow, /an earlier pass does not cover a new diff/);
+  assert.match(workflow, /Product Partner alignment review never replaces technical verification/);
+  assert.match(workflow, /After the first independent review, the plan owner gives a firm recommendation/);
+  assert.match(workflow, /Honor the user's request/);
+  assert.match(workflow, /records it in the Verification Report/);
+  assert.match(deliveryLead, /fresh independent Verifier that did not implement the change/);
+  assert.match(deliveryLead, /an earlier pass does not cover it/);
+  assert.match(verifier, /You did not implement the change you review/);
+  assert.match(verifier, /never count them as an independent pass/);
+  assert.match(verifier, /Record the repository state you reviewed/);
+  assert.match(verifier, /decision history/);
+  for (const outcome of ["Passed", "Failed", "Unverified", "Skipped"]) {
+    assert.match(verifier, new RegExp(`\\*\\*${outcome}\\*\\* —`));
+  }
+  assert.match(verifier, /Missing evidence is never a pass/);
+  assert.match(report, /## Repository State Reviewed/);
+  assert.match(report, /covers only this state/);
+  assert.match(report, /Additional review recommendation/);
+  assert.match(report, /sole owner of final independent passed, failed, unverified, and skipped judgments/);
+});
+
+await test("workflow package versions, names, and templates stay consistent", () => {
+  const version = workflowManifest.workflowVersion;
   assert.match(
-    deliveryLead,
-    /Verifier and\s+Verification Report alone use final `passed`, `failed`, `unverified`/
+    readFileSync(join(workflowSourceRoot, "WORKFLOW.md"), "utf8"),
+    new RegExp(`version \`${version.replaceAll(".", "\\.")}\``)
   );
-  assert.doesNotMatch(deliveryLead, /check you did not\s+run is `unverified`/);
+
+  // Existing role ids, provider agent names, and profiles remain supported.
+  assert.deepEqual(
+    workflowManifest.roles.map((role) => [
+      role.id,
+      role.claude.name,
+      role.claude.primarySession,
+      role.codex.name,
+      role.codex.profile ?? null
+    ]),
+    [
+      ["product-partner", "mb-product-partner", true, "mb_product_partner", "mb-product-partner"],
+      ["delivery-lead", "mb-delivery-lead", true, "mb_delivery_lead", "mb-delivery-lead"],
+      ["verifier", "mb-verifier", false, "mb_verifier", null]
+    ]
+  );
+
+  // Every template file is declared, so none can be left unowned.
+  const declared = workflowManifest.templates.map((template) => template.source).sort();
+  const present = readdirSync(join(workflowSourceRoot, "templates"))
+    .map((name) => `templates/${name}`)
+    .sort();
+  assert.deepEqual(declared, present);
+  const templateIds = workflowManifest.templates.map((template) => template.id);
+  for (const id of ["implementation-plan", "verification-report"]) {
+    assert.ok(templateIds.includes(id), `normal artifact ${id} is declared`);
+  }
+
+  for (const source of declared) {
+    const template = readFileSync(join(workflowSourceRoot, ...source.split("/")), "utf8");
+    assert.match(
+      template,
+      new RegExp(`Workflow: \`product-delivery\` ${version.replaceAll(".", "\\.")}`),
+      `${source} names the current workflow version`
+    );
+  }
+
+  // Legacy paths are short redirects, never competing requirement sources.
+  for (const legacy of ["product-brief", "delivery-plan"]) {
+    const redirect = readFileSync(
+      join(workflowSourceRoot, "templates", `${legacy}.md`),
+      "utf8"
+    );
+    assert.ok(Buffer.byteLength(redirect) < 600, `${legacy}.md stays a short redirect`);
+    assert.match(redirect, /— deprecated/);
+    assert.match(redirect, /Use `implementation-plan\.md`/);
+    assert.doesNotMatch(redirect, /Acceptance Criteria|Approving this exact version/);
+  }
+  for (const optional of ["implementation-report", "alignment-review", "decision-log", "change-request"]) {
+    const template = readWorkflowSource(`templates/${optional}.md`);
+    assert.match(template, /Optional\./, `${optional} is marked optional`);
+    assert.match(template, /plan/i);
+  }
+  const workflow = readWorkflowSource("WORKFLOW.md");
+  assert.match(workflow, /normally creates only the Implementation Plan and the Verification Report/);
+  assert.match(workflow, /never restates or overrides the plan's requirements/);
 });
 
 function workflowRelativePaths(manifest) {
@@ -3406,6 +3628,107 @@ await test("reviewed workflow replacement preserves recoverable backups", () => 
         contents
       );
     }
+
+    const verify = runScript("install-workflows.mjs", ["--check"], testHome);
+    assert.equal(verify.status, 0, verify.stderr);
+  } finally {
+    rmSync(testHome, { recursive: true, force: true });
+  }
+});
+
+await test("a legacy workflow installation upgrades only through reviewed replacement", () => {
+  const testHome = createTestHome("workflow-upgrade");
+  try {
+    assert.equal(runScript("install-workflows.mjs", [], testHome).status, 0);
+    const installedRoot = join(testHome, ".agents", "workflows", "product-delivery");
+    const planTemplate = join(installedRoot, "templates", "implementation-plan.md");
+    const leadAdapter = join(testHome, ".claude", "agents", "mb-delivery-lead.md");
+
+    // Model a complete 1.x installation: every bootstrap-owned file differs,
+    // the manifest declares the old version and templates, and the
+    // Implementation Plan template does not exist yet.
+    const legacy = new Map();
+    for (const relativePath of workflowRelativePaths(workflowManifest)) {
+      if (relativePath === "templates/implementation-plan.md") continue;
+      legacy.set(
+        join(installedRoot, ...relativePath.split("/")),
+        `legacy 1.x ${relativePath}\n`
+      );
+    }
+    legacy.set(
+      join(installedRoot, "manifest.json"),
+      `${JSON.stringify({ ...workflowManifest, workflowVersion: "1.3.0" }, null, 2)}\n`
+    );
+    legacy.set(
+      join(installedRoot, "templates", "product-brief.md"),
+      "# Product Brief\n\n> Approving this exact version means: legacy.\n"
+    );
+    for (const role of workflowManifest.roles) {
+      legacy.set(
+        join(testHome, ".claude", "agents", `${role.claude.name}.md`),
+        `---\nname: ${role.claude.name}\n---\n\nlegacy 1.x ${role.id}\n`
+      );
+      legacy.set(
+        join(testHome, ".codex", "agents", `${role.codex.name}.toml`),
+        `name = "${role.codex.name}"\ndeveloper_instructions = "legacy"\n`
+      );
+      if (role.codex.profile) {
+        legacy.set(
+          join(testHome, ".codex", `${role.codex.profile}.config.toml`),
+          'developer_instructions = "legacy"\n'
+        );
+      }
+    }
+    for (const [path, contents] of legacy) writeFileSync(path, contents);
+    rmSync(planTemplate);
+    const legacySnapshot = snapshotTree(testHome);
+
+    // Default installation names every conflict and writes nothing, including
+    // the missing Implementation Plan template.
+    const refused = runScript("install-workflows.mjs", [], testHome);
+    assert.notEqual(refused.status, 0);
+    assert.match(refused.stderr, /requires review before making changes/);
+    for (const path of legacy.keys()) {
+      assert.ok(refused.stderr.includes(path), `${path} is reported for review`);
+    }
+    assert.deepEqual(snapshotTree(testHome), legacySnapshot);
+
+    const replaced = runScript("install-workflows.mjs", ["--replace"], testHome);
+    assert.equal(replaced.status, 0, replaced.stderr);
+    assert.equal(
+      (replaced.stdout.match(/^Backed up /gm) ?? []).length,
+      legacy.size,
+      "every legacy file is backed up exactly once"
+    );
+    assert.match(replaced.stdout, /^Placed .*implementation-plan\.md$/m);
+    for (const relativePath of workflowRelativePaths(workflowManifest)) {
+      const segments = relativePath.split("/");
+      assert.deepEqual(
+        readFileSync(join(installedRoot, ...segments)),
+        readFileSync(join(workflowSourceRoot, ...segments)),
+        `${relativePath} upgraded byte-identically`
+      );
+    }
+    const upgradedLead = readFileSync(leadAdapter, "utf8");
+    const version = workflowManifest.workflowVersion.replaceAll(".", "\\.");
+    assert.match(upgradedLead, new RegExp(`workflow: product-delivery ${version} \\(schema 1\\)`));
+    assert.match(upgradedLead, /own the living Implementation Plan/);
+
+    // Each legacy file is recoverable from exactly one backup.
+    for (const [path, contents] of legacy) {
+      const backups = readdirSync(dirname(path)).filter((name) =>
+        name.startsWith(`${path.split(sep).pop()}.backup-`)
+      );
+      assert.equal(backups.length, 1, `${path} has one backup`);
+      assert.equal(readFileSync(join(dirname(path), backups[0]), "utf8"), contents);
+    }
+
+    // Repeating the reviewed replacement is idempotent: no writes, no backups.
+    const upgradedSnapshot = snapshotTree(testHome);
+    const repeated = runScript("install-workflows.mjs", ["--replace"], testHome);
+    assert.equal(repeated.status, 0, repeated.stderr);
+    assert.doesNotMatch(repeated.stdout, /^(Placed|Backed up) /m);
+    assert.deepEqual(snapshotTree(testHome), upgradedSnapshot);
 
     const verify = runScript("install-workflows.mjs", ["--check"], testHome);
     assert.equal(verify.status, 0, verify.stderr);

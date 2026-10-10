@@ -52,13 +52,14 @@ or required compatibility. -->
 ## Product-delivery hook
 
 The installed `~/.agents/workflows/product-delivery/` contract is inactive for ordinary work.
-Its complete flow activates when the user selects Product Partner or Delivery Lead,
-explicitly requests the complete workflow, continues an active Product Brief or
-Delivery Plan, or project guidance names required work. Selecting the Verifier
-activates independent verification only and never creates missing upstream artifacts.
+Its complete flow activates when the user selects Delivery Lead or Product Partner,
+explicitly requests the complete workflow, continues an active Implementation Plan
+(or legacy Product Brief/Delivery Plan), or project guidance names required work.
+Selecting the Verifier activates independent verification only and never creates
+a missing plan or authorization.
 
-When active, follow the installed contract without copying its gates or
-artifacts here. Project-specific additions only:
+When active, follow the installed contract without copying its authorization
+rules or artifacts here. Project-specific additions only:
 
 - Named work that activates the workflow: TODO as checkable conditions — paths,
   contracts, or artifact kinds a reader can evaluate — never a self-assessed
@@ -66,7 +67,7 @@ artifacts here. Project-specific additions only:
 - Maintenance outside those conditions: typo/link corrections, reflow, tests
   of unchanged behavior, and internal refactors preserving the named contracts.
   A change to a named contract still activates the flow; record the classification.
-- Additional Change Request triggers: TODO, or `none`.
+- Additional material-change triggers: TODO, or `none`.
 - Required project checks or specialist review: TODO, or `the commands below`.
 - Reviewer that satisfies independent review: TODO exact agent or command name,
   or `the installed Verifier`; resolve any project agent that shares its name.

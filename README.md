@@ -167,12 +167,13 @@ product behavior, architecture, engineering rules, and required verification.
 ### Activation
 
 Installation makes the workflow available, not universally active. The complete
-flow activates only when the user selects Product Partner or Delivery Lead,
-explicitly requests the complete workflow, continues an active Product Brief or
-Delivery Plan, or a project requires it for a named class of work. Selecting the
-Verifier activates only independent verification for the supplied change; it
-does not retroactively create missing upstream gates or artifacts. Ordinary
-work creates neither by default.
+flow activates only when the user selects Delivery Lead or Product Partner,
+explicitly requests the complete workflow, continues an active Implementation
+Plan (or a legacy 1.x Product Brief or Delivery Plan), or a project requires it
+for a named class of work. Selecting the Verifier activates only independent
+verification for the supplied change; it does not retroactively create a
+missing plan or authorization. Ordinary work creates no workflow artifacts by
+default.
 
 For this repository, `AGENTS.md` names the activating contracts: installation
 ownership and recovery, acquisition integrity, provider formats/discovery,
@@ -194,35 +195,43 @@ both providers, not an automated CI size limit.
 
 | Role | Owns | Claude agent | Codex agent |
 | :--- | :--- | :--- | :--- |
-| Product Partner | Why and what | `mb-product-partner` | `mb_product_partner` |
-| Delivery Lead | How and delivery | `mb-delivery-lead` | `mb_delivery_lead` |
-| Verifier | Independent evidence | `mb-verifier` | `mb_verifier` |
+| Delivery Lead | Default entry: clarification, investigation, the plan, implementation, self-verification | `mb-delivery-lead` | `mb_delivery_lead` |
+| Product Partner | Optional broad discovery and product-alignment review | `mb-product-partner` | `mb_product_partner` |
+| Verifier | Fresh independent evidence | `mb-verifier` | `mb_verifier` |
 
-### The standard handoff
+### The standard flow
 
 ```text
-User ⇄ Product Partner
-        └─ approved Product Brief ─▶ Delivery Lead
-                                      └─ approved Delivery Plan ─▶ execution
-                                                                     └─▶ Verifier ─▶ user acceptance
+User ⇄ Delivery Lead (optionally with Product Partner)
+        └─ one living Implementation Plan: clarify ⇄ investigate ⇄ plan ⇄ implement
+                                                   └─▶ self-review ─▶ Verifier ─▶ user acceptance
 ```
 
-There are two distinct gates, and each needs the user's explicit approval of an
-exact artifact version. A Product Brief approves the problem, workflow,
-constraints, and acceptance criteria — never a technical design. A Delivery Plan
-approves the technical approach and authorizes execution within that scope only.
-A discovery that changes user-facing behavior, weakens a criterion, materially
-expands scope, risks destructive migration, or adds a security or privacy
-implication requires a structured Change Request rather than a quiet widening.
+The Delivery Lead normally owns one Implementation Plan per task. It asks the
+user questions whenever answers materially affect the work, records findings
+and decisions with their sources, and keeps a compact checkpoint so an
+interrupted or reset session can resume from the plan and the actual repository
+state. Other agents return findings for the owner to integrate.
+
+The plan separates its **authorized scope** — goal, required behavior,
+constraints, acceptance criteria, and choices the user has settled — from its
+evolving **execution record**. Authorization comes only from the user, and one
+authorization covers the plan's scope; an implementation request in the
+conversation already counts, while a request to plan first does not. Routine
+findings, progress, and evidence never invalidate it. A discovery that would
+change agreed behavior, weaken a criterion, expand scope, risk destructive
+migration, or add a security or privacy implication is presented as a concrete
+choice, and the user decides before the affected work continues.
 
 These are process and authority rules, not authentication. No file or command
 here proves that a human approved anything.
 
 Every implementation is self-verified by the Delivery Lead and then reviewed by
 at least one fresh independent Verifier by default. Only the user may waive that
-review for a specific change. The user may request more reviewers; after the
-mandatory review, the Delivery Lead states firmly whether another review is
-warranted and why, then honors the request.
+review for a specific change. Product Partner alignment never replaces it. The
+user may request more reviewers; after the first review, the Delivery Lead
+states firmly whether another review is warranted and why, then honors the
+request.
 
 ### Installed paths
 
@@ -234,24 +243,25 @@ warranted and why, then honors the request.
 | Codex profiles | `$CODEX_HOME/mb-product-partner.config.toml` and `$CODEX_HOME/mb-delivery-lead.config.toml` when set; otherwise the same filenames under `~/.codex/` |
 
 The canonical package holds `manifest.json`, `WORKFLOW.md`, the three role
-contracts in `roles/`, and seven artifact templates in `templates/`. The
+contracts in `roles/`, and the artifact templates in `templates/`. The
 Markdown role contracts are the source of truth; every provider file is
 generated from them, carries a provenance comment naming its source contract,
 and pins no model, so each provider keeps its own default.
 
-The seven templates are available building blocks, not universally required
-files. An activated task using the full discovery-to-delivery sequence normally
-uses five: Product Brief, Delivery Plan, Alignment Review, Implementation
-Report, and Verification Report. Decision Logs and Change Requests are created
-only when needed; empty placeholder artifacts are not created. Active task
-artifacts stay local by default. If a project tracks agent
+An activated task normally creates two artifacts: the Implementation Plan and
+the Verification Report. Implementation Report, Alignment Review, Decision Log,
+and Change Request templates are optional detail linked from the plan, never
+competing requirement sources; empty placeholder artifacts are not created.
+`product-brief.md` and `delivery-plan.md` remain only as short deprecated
+redirects, because the installer never deletes files it no longer declares.
+Active task artifacts stay local by default. If a project tracks agent
 guidance/configuration and `CONTINUITY.md`, it removes the starter
 `.agent-work/` ignore rule and also tracks completed task folders referenced
 with `[TASK <task-id>]` so continuity never points to missing local files.
 
-Implementation Reports contain the implementer's scope, coverage, and
-self-verification. Verification Reports alone own final independent passed,
-failed, unverified, and skipped judgments or an explicit user waiver.
+The plan records the implementer's coverage and self-verification.
+Verification Reports alone own final independent passed, failed, unverified,
+and skipped judgments or an explicit user waiver.
 
 The installer owns exactly those namespaced paths. It never treats the whole
 `~/.agents`, Claude configuration root, or Codex home as bootstrap-owned, and
@@ -281,9 +291,10 @@ For a review without implementation:
 
 For the complete discovery-to-delivery workflow:
 
-> Use the complete `product-delivery` workflow for this task. Read its installed
-> contract, begin Product Partner discovery, and follow its separate brief and
-> plan approval gates. Keep the approved artifacts available for role handoffs.
+> Use the complete `product-delivery` workflow for this task as Delivery Lead.
+> Read its installed contract, clarify and investigate, and keep one
+> Implementation Plan with a current checkpoint. Ask me before any material
+> change, then self-review and delegate independent review to `mb_verifier`.
 
 These are task instructions, not an app profile selector. The CLI profile
 commands below configure a primary CLI session; do not assume they select the
@@ -299,18 +310,19 @@ when review is required. A new user-owned task is not needed for each subagent.
 
 #### Claude Code and Codex CLI
 
-Launching Product Partner or Delivery Lead activates the complete workflow.
+Launching Delivery Lead or Product Partner activates the complete workflow.
+Delivery Lead is the normal entry; launch Product Partner for broad discovery.
 Launching the Verifier activates only its independent verification portion for
 the supplied change.
 
 Claude Code runs an agent as the whole session with `--agent`:
 
 ```bash
-claude --agent mb-product-partner
+claude --agent mb-delivery-lead
 ```
 
 ```bash
-claude --agent mb-delivery-lead
+claude --agent mb-product-partner
 ```
 
 The Verifier is normally invoked through Claude Code's native subagent
@@ -321,11 +333,11 @@ installed `mb-verifier` agent. It can also be launched directly with
 Codex launches a primary session through the matching profile:
 
 ```bash
-codex --profile mb-product-partner
+codex --profile mb-delivery-lead
 ```
 
 ```bash
-codex --profile mb-delivery-lead
+codex --profile mb-product-partner
 ```
 
 The Codex Verifier is available as the custom agent `mb_verifier`; ask the
@@ -357,13 +369,20 @@ Reviewed replacement renames each existing entry to a timestamped backup before
 writing, so a customized adapter is recoverable and a symlinked destination is
 never written through.
 
+Upgrading an installed 1.x workflow to 2.0.0 is this same reviewed path: the
+default install reports every changed file and writes nothing, and `--replace`
+backs up the previous contract, adapters, and templates before writing. Active
+1.x task artifacts in projects are consolidated into an Implementation Plan
+when their task resumes; completed ones stay as history.
+
 ### Adding project-specific requirements
 
-A project may name work that activates the workflow and add Change Request
+A project may name work that activates the workflow and add material-change
 triggers, required checks, specialist review, or artifact-retention policy
 without copying the workflow into the repository. The starter project template
 contains only this conditional hook. Once active, a project may strengthen but
-not weaken exact user approval, scope-change escalation, or honest verification.
+not weaken user authorization of scope, material-change escalation, independent
+review, or honest verification.
 
 ## Updating
 
