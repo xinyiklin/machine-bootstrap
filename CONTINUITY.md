@@ -41,6 +41,10 @@ project.
 - 2026-10-10 Product Delivery 3.1.0: the Delivery Lead briefs the Verifier
   once with a complete checklist; this repository's full-workflow triggers
   narrow (D037); README's workflow detail moved to `docs/product-delivery.md`.
+- 2026-10-10 Product Delivery 3.2.0 in source (D038): the plan owner tells the
+  user which assumptions the plan added, at the start and in the PR body or final
+  report. This machine still has 1.2.0 installed; upgrading is a separate,
+  user-authorized `install-workflows.mjs --replace`.
 - 2026-10-10 `archify` pinned at upstream 10722002 (2.17.0-dev.1). It has no
   install scripts; at runtime it makes a throttled update-check GET to its
   GitHub Pages manifest (opt out: `ARCHIFY_UPDATE_CHECK_DISABLED=1`) and

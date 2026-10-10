@@ -1,6 +1,6 @@
 # Product Delivery Workflow
 
-Workflow id: `product-delivery` · version `3.1.0` · schema `1`
+Workflow id: `product-delivery` · version `3.2.0` · schema `1`
 
 Portable, provider-neutral contract for taking work from a request to accepted
 delivery through one living Implementation Plan. Installed from the
@@ -103,7 +103,10 @@ scope, and writing it into the plan does not require the user to approve the
 same work again. Authorization covers what the user described and the
 non-material detail needed to deliver it. Record that detail — criteria or
 behavior the plan adds beyond the user's words — as `assumption` items; work
-may proceed on them, and they stay open to correction without blocking. An
+may proceed on them, and they stay open to correction without blocking. The
+plan is a local working record the user may never open, so the plan owner
+lists the assumptions the plan added when it starts work on them and again in
+the PR body or final report; listing them is not a request for approval. An
 addition that would be a material change is a proposal, not part of the
 baseline, until the user decides. A request to plan first, or for a plan alone,
 does not authorize implementation; present the plan and wait. One
@@ -238,12 +241,13 @@ proportional; link detailed evidence rather than copying it.
 
 Task artifacts live in `.agent-work/tasks/<task-id>/` inside the project,
 which the starter `.gitignore` excludes. They are working records, never
-committed. Before publication, carry the durable outcome — scope, verification,
-review result, skipped evidence, and risks — into the PR body, or into the
-final report when the work is not published. When the task completes (its
-final PR merges, the user accepts unpublished work, or the user abandons it),
-delete the task folder, preferring a recoverable trash. Continuity and other
-tracked documents cite the PR or commit, never a task folder.
+committed. Before publication, carry the durable outcome — scope, added
+assumptions, verification, review result, skipped evidence, and risks — into
+the PR body, or into the final report when the work is not published. When the
+task completes (its final PR merges, the user accepts unpublished work, or the
+user abandons it), delete the task folder, preferring a recoverable trash.
+Continuity and other tracked documents cite the PR or commit, never a task
+folder.
 
 ## Provider Notes
 

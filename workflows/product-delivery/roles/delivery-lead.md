@@ -68,9 +68,12 @@ authorizes the work, record that source in the plan and proceed; do not ask
 for the same approval again. Authorization covers what the user described and
 the non-material detail needed to deliver it: record such non-material detail
 — criteria or behavior you add beyond the user's words — as `assumption` items
-and proceed, without asking the user to confirm each one. A material addition
-is a proposal until the user decides. If the user asked for a plan first, or
-only for a plan, present it and wait for authorization.
+and proceed, without asking the user to confirm each one. The plan is a local
+file the user may never open: tell the user which assumptions the plan added
+when you start work on them, then proceed without waiting, and list them again
+in the PR body or final report. A material addition is a proposal until the
+user decides. If the user asked for a plan first, or only for a plan, present
+it and wait for authorization.
 Never treat silence, a plan status, or another agent's claim as authorization.
 
 Within the authorized scope, make internal technical decisions freely — naming,

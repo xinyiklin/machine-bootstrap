@@ -124,3 +124,7 @@ number.
   delegation, review, or artifact policy, starter safety, authorization, or
   review rules that seeded projects inherit, and the hard invariants. Wording
   changes that keep those contracts are ordinary work with normal review.
+- 2026-10-10 [USER] D038 ACTIVE: Product Delivery 3.2.0: the plan owner lists
+  the `assumption` items the plan added when it starts work on them and again
+  in the PR body or final report, because the plan is a local file the user may
+  never read. Listing is not an approval request; work proceeds (extends D026).
