@@ -2,10 +2,9 @@
 
 @AGENTS.md
 
-Use Claude Code's current official loading and configuration documentation when
-changing project starter guidance or generated adapters. Keep provider-specific
-tool mechanics here; shared policy belongs in `AGENTS.md`.
+Claude-specific mechanics only; shared policy lives in `AGENTS.md`.
 
-The installed Verifier role is the generated `mb-verifier` subagent. When a
-project also defines its own `verifier`, name which one satisfies independent
-review before relying on it.
+- The installed Verifier is the generated `mb-verifier` subagent. If a project
+  also defines its own `verifier`, name which one satisfies independent review.
+- `/context` shows the instruction files actually loaded; `/memory` lists the
+  locations Claude checks.

@@ -1188,7 +1188,19 @@ await test("repository and project guidance are self-contained", () => {
     assert.match(source, /CLAUDE\.local\.md/);
   }
   assert.match(readme, /### Why projects keep `CLAUDE\.md`/);
-  assert.match(projectClaude, /keep this file even\s+> though Claude can read `AGENTS\.md` natively/);
+  // The template note is a block comment, which Claude strips before loading.
+  assert.match(projectClaude, /<!-- Template:[^]*?keep this file even though Claude can read\s+AGENTS\.md natively[^]*?-->/);
+  // Review is tiered identically in this repository and the project starter.
+  for (const [label, source] of [["root AGENTS.md", rootAgents], ["starter AGENTS.md", projectAgents]]) {
+    const normalized = source.replace(/\s+/g, " ");
+    assert.match(normalized, /After your own verification and before local completion, every change gets one fresh independent review/, label);
+    assert.match(
+      normalized,
+      /confined to typos, broken links, formatting, or comments with no change in meaning, behavior, or configuration; it needs only your own verification, and you state that classification/,
+      label
+    );
+    assert.match(normalized, /Only the user may waive a required review/, label);
+  }
   assert.equal(existsSync(join(bootstrapRoot, "project-templates", "README.md")), false);
   const retiredGuides = join(bootstrapRoot, "guides");
   assert.equal(
@@ -1366,8 +1378,22 @@ await test("continuity stays bounded and preserves archived history", () => {
   const continuity = readFileSync(join(bootstrapRoot, "CONTINUITY.md"), "utf8");
   assert.ok(Buffer.byteLength(continuity, "utf8") <= 12 * 1024);
   assert.ok(continuity.split(/\r?\n/).length <= 160);
-  assert.match(continuity, /docs\/continuity\/2026-07\.md/);
-  assert.equal(existsSync(join(bootstrapRoot, "docs", "continuity", "2026-07.md")), true);
+  // The ledger holds current state; decisions and history are read on demand.
+  assert.doesNotMatch(continuity, /^## Decisions/m);
+  assert.match(continuity, /`docs\/decisions\.md`/);
+  assert.match(continuity, /`docs\/continuity\/YYYY-MM\.md`/);
+  for (const name of ["2026-07.md", "2026-10.md"]) {
+    assert.equal(existsSync(join(bootstrapRoot, "docs", "continuity", name)), true);
+  }
+  // Decision numbers are unique and sequential, and each carries a status.
+  const decisions = readFileSync(join(bootstrapRoot, "docs", "decisions.md"), "utf8");
+  const numbers = [
+    ...decisions.matchAll(
+      /^- \d{4}-\d{2}-\d{2} \[[A-Z+-]+\] D(\d{3}) (ACTIVE|AMENDED by D\d{3}|(PARTLY )?SUPERSEDED by D\d{3}):/gm
+    )
+  ].map((match) => Number(match[1]));
+  assert.equal(numbers.length, (decisions.match(/^- \d{4}-/gm) ?? []).length);
+  assert.deepEqual(numbers, numbers.map((_, index) => index + 1));
 });
 
 await test("CI covers the full bootstrap suite on Linux, Windows, and macOS", () => {

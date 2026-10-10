@@ -69,8 +69,9 @@ the template paths by hand.
   `InstructionsLoaded` hooks fire only for imported files. The import never
   loads `AGENTS.md` twice. `AGENTS.md` stays the single shared policy; put only
   Claude-specific mechanics in `CLAUDE.md`, because Codex never reads it.
-- Use `/memory` or `/context` to inspect loaded instruction files. Use an
-  `InstructionsLoaded` hook when exact Claude file-level events are required.
+- Use `/context` to inspect loaded instruction files (`/memory` lists the
+  locations Claude checks). Use an `InstructionsLoaded` hook when exact Claude
+  file-level events are required.
   Use a Codex instruction-summary or session-log smoke check for Codex.
 
 ## Nested guidance
@@ -90,7 +91,9 @@ mechanics, not shared policy.
 Target about 90-120 lines and under 8 KiB for project `AGENTS.md`, and 10-20
 lines and under 1.5 KiB for `CLAUDE.md`. Codex defaults to a 32 KiB combined
 active-chain limit; keep the cumulative chain below 28 KiB so the nearest guide
-is retained.
+is retained. Claude strips block-level HTML comments from `CLAUDE.md` before
+loading it, so maintainer notes there cost no context; Codex reads `AGENTS.md`
+as written.
 
 `CONTINUITY.md` is read on demand rather than imported, but reading it every
 task still costs context. Keep current state within the project cap and rotate
@@ -123,10 +126,11 @@ an unrecorded skip is a process failure.
 Prefer contract changes over blanket directory matches when defining triggers.
 For example, name changes to data retention, authorization, or installation
 ownership; exclude mechanical maintenance only when those contracts remain
-unchanged. Ordinary implementations still receive self-verification and one
-fresh independent review before local completion. This standalone review does
-not require the full workflow's Implementation Plan. Existing user authorization
-continues to apply; do not repeat a permission question for the same scope.
+unchanged. Ordinary implementations still receive self-verification and,
+unless they are typo, link, formatting, or comment-only, one fresh independent
+review before local completion; that review does not require the full
+workflow's Implementation Plan. Existing user authorization continues to
+apply; do not repeat a permission question for the same scope.
 
 Personal preferences may live in gitignored `CLAUDE.local.md`, but they must
 remain compatible with tracked project instructions.

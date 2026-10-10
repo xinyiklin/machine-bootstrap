@@ -29,6 +29,8 @@ Keep this receipt factual. If a check was not run, say why.
 - `git diff --check`:
 - Self-review:
 - Independent review:
+  <!-- Reviewer and result, the user's waiver, or "not required:
+  typo/link/format/comment-only". -->
 - Visual / live / deployment checks skipped or unverified, with reason:
 
 ## Risk and follow-up

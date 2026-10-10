@@ -56,8 +56,10 @@ every Codex context. `AGENTS.md` therefore stays the only shared policy and
 - Runtime provider behavior (Claude native loading, Verifier tool removal) is
   documented but unverified by the static suite; see
   `docs/guidance-loading-smoke.md`.
-- Independent review and publication evidence are recorded in the pull request
-  and the local task plan, because this receipt is part of the diff they cover.
+- Independent review and publication evidence are recorded in
+  [PR #7](https://github.com/xinyiklin/machine-bootstrap/pull/7) and
+  [PR #8](https://github.com/xinyiklin/machine-bootstrap/pull/8), because this
+  receipt is part of the diff they cover.
 
 Existing project-owned starters are not synchronized. Sibling findings from the
 audit are routed to sessions in those projects.
