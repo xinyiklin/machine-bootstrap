@@ -38,6 +38,9 @@ project.
   0.159.2 passed all seven scenarios, including Claude's native `AGENTS.md`,
   `CLAUDE.local.md` turning it off, and discovery of the installed skills and
   `mb-*` roles.
+- 2026-10-10 Product Delivery 3.1.0: the Delivery Lead briefs the Verifier
+  once with a complete checklist; this repository's full-workflow triggers
+  narrow (D037); README's workflow detail moved to `docs/product-delivery.md`.
 - Bootstrap CI runs the full disposable suite on Linux, Windows, and macOS;
   a separate PR size check enforces the 1,000-line gate (D035).
 - Impeccable stays pinned at 4.0.2 with a recoverable 4.0.4 backup until a

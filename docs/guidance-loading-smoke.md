@@ -129,8 +129,9 @@ blocking any ancestor of a custom root must fail preflight before acquisition.
 4. In a fresh provider run, establish loaded skill paths and role discovery.
    Both providers should find the three namespaced roles; Codex discovers the
    canonical shared skills, while Claude uses its selected skill links.
-5. Launch both primary CLI roles using the README commands. Record role
-   activation and instruction sources; launch is not approval of an artifact.
+5. Launch both primary CLI roles using the commands in
+   `docs/product-delivery.md`. Record role activation and instruction sources;
+   launch is not approval of an artifact.
 
 The Node regression suite covers fixture installation, custom-root false
 success, and invalid destinations. It does not launch a model or establish
@@ -138,13 +139,13 @@ runtime skill discovery.
 
 ## Codex desktop
 
-In a fresh desktop task for the disposable project, follow the README's
-ordinary-review prompt. Confirm `mb_verifier` actually runs as a separate
-reviewer and returns evidence without requesting an unrelated full workflow.
-Check the full-workflow prompt separately: the Delivery Lead keeps one
-Implementation Plan, asks only material questions, does not re-request
-approval for routine progress, and still delegates independent review. A CLI
-profile command is not proof of desktop role activation.
+In a fresh desktop task for the disposable project, follow the ordinary-review
+prompt in `docs/product-delivery.md`. Confirm `mb_verifier` actually runs as a
+separate reviewer and returns evidence without requesting an unrelated full
+workflow. Check the full-workflow prompt separately: the Delivery Lead keeps one
+Implementation Plan, asks only material questions, does not re-request approval
+for routine progress, and still delegates independent review. A CLI profile
+command is not proof of desktop role activation.
 
 Where the app supports a separate worktree, repeat root/scoped discovery there
 and verify the effective repository and instruction sources. Record the app

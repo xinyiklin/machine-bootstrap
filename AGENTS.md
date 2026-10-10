@@ -66,13 +66,16 @@ repository. Besides its own triggers, its complete flow activates when a change
 alters any of these contracts:
 
 - installation ownership, target boundaries, overwrite or recovery behavior;
-- skill acquisition sources, reviewed revisions/hashes, or integrity validation;
-- provider adapter fields, discovery locations, or generated instruction meaning;
-- workflow activation, approval, delegation, review, or artifact policy;
-- the hard invariants above, or guidance propagated into sibling projects.
+- skill acquisition sources, pinned hashes, or integrity validation;
+- generated adapter fields or provider discovery locations;
+- workflow activation, authorization, delegation, review, or artifact policy;
+- starter safety, authorization, or review rules that seeded projects inherit;
+- the hard invariants above.
 
-Judge the resulting behavior, not which paths changed; everything else is
-maintenance. Record the classification with its evidence. When a listed
+Judge the resulting behavior, not which paths changed. Wording changes to role
+contracts, skills, and starter guidance that keep these contracts, and new
+first-party skills on the existing acquisition path, are ordinary changes with
+the normal review. Record the classification with its evidence. When a listed
 contract changes and the flow or its review is not run, say so and record it
 with the reason.
 

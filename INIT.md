@@ -74,10 +74,11 @@ that shared layer left untouched. Installing `product-delivery` makes its roles
 available but does not activate the workflow for ordinary work. An existing
 installation from an older workflow version differs from the new sources, so
 setup stops for review before writing; replace it only with the user's approval
-through the reviewed `--replace` path in `README.md`, which keeps backups.
+through the reviewed `--replace` path in `docs/product-delivery.md`, which
+keeps backups.
 
 Codex desktop is the primary interactive entry; use the task prompts in
-`README.md`. CLI profiles configure new CLI sessions only. Verify the selected
+`docs/product-delivery.md`. CLI profiles configure new CLI sessions only. Verify the selected
 provider roots: workflow adapters and Claude skill links honor
 `CLAUDE_CONFIG_DIR`; Codex adapters and duplicate-skill checks honor `CODEX_HOME`.
 Canonical shared skills remain under `~/.agents/skills/`. Use the expanded

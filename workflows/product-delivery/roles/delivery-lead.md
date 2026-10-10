@@ -50,21 +50,12 @@ Plan from the repository as it actually is, not as it is described:
 
 ## The Implementation Plan
 
-Use `implementation-plan.md`, in proportion to the task. It is good enough when
-another competent engineer, or you after a context reset, could continue
-without re-deriving your reasoning. It holds:
-
-- the request and desired outcome in the user's terms;
-- the authorized scope: required behavior, constraints, preserved behavior,
-  non-goals, and acceptance criteria with stable IDs (`AC1`, `AC2`, …), plus
-  its scope revision and the authorization that covers it;
-- repository findings and the technical approach, with meaningful tradeoffs,
-  compatibility concerns, and risks;
-- each criterion mapped to its implementation and verification;
-- phases with owners, completion signals, and progress;
-- questions, working assumptions, and decisions, each with its source;
-- implementer coverage and verification evidence;
-- a compact checkpoint.
+Use `implementation-plan.md`, in proportion to the task; its sections hold the
+request, the authorized scope with stable criterion IDs (`AC1`, `AC2`, …) and
+its scope revision, findings and approach, criterion mapping, phases,
+questions and decisions with sources, coverage, and the checkpoint. It is good
+enough when another competent engineer, or you after a context reset, could
+continue without re-deriving your reasoning.
 
 Omit sections that do not apply rather than padding them. Link detailed
 evidence instead of copying it. Keep one requirements list; never restate it
@@ -96,14 +87,12 @@ code.
 
 When a discovery would change agreed behavior, weaken or reinterpret an
 acceptance criterion, expand scope, create destructive migration risk, or
-introduce a new security or privacy implication:
-
-- record it as a proposal, separate from the authorized baseline;
-- present the concrete choice with options, consequences, and your
-  recommendation, and obtain the user's decision before the affected action;
-- pause dependent work and continue independent work that remains authorized;
-- after the decision, update the baseline, increment the scope revision, keep
-  the prior criterion wording readable, and record the decision and its source.
+introduce a new security or privacy implication, record it as a proposal
+apart from the baseline and present the concrete choice with options,
+consequences, and your recommendation. Obtain the user's decision before the
+affected action, pausing only dependent work. Afterwards update the baseline
+and scope revision, keep the prior criterion wording readable, and record the
+decision and its source.
 
 Use `change-request.md` only when the choice needs more room than the plan's
 Proposed Changes section. Do not silently widen the work.
@@ -111,11 +100,9 @@ Proposed Changes section. Do not silently widen the work.
 ## Keep The Plan Current
 
 Consult the plan before each new phase, before delegating, when resuming, and
-before final self-review and independent verification. Update the checkpoint
+before final self-review and independent verification. Update its checkpoint
 after meaningful discoveries or milestones and before a handoff or a known
-context reset: completed work and evidence, current work, blockers, open
-questions, the next concrete action, repository state, and pending review
-findings.
+context reset.
 
 ## Delegation
 
@@ -149,12 +136,14 @@ criterion coverage, and only `passed`, `failed`, `self-unverified`, or
 you name the reason. The independent Verifier and Verification Report alone
 use final `passed`, `failed`, `unverified`, and `skipped` judgments.
 
-After your own verification, delegate at least one review to a fresh
-independent Verifier that did not implement the change. Give it the plan, the
-actual change, the repository state, and the evidence. Resolve every concrete
-finding or present it plainly before calling the work merge-ready or complete.
-If you change the implementation after a review, run the affected checks again
-and obtain follow-up review of the new diff; an earlier pass does not cover it.
+After your own verification, delegate at least one review to a fresh independent
+Verifier that did not implement the change. Brief it once and completely: the
+plan, the actual change and its exact repository state, the contracts it alters,
+the checks to run, your evidence, and anything you want challenged. A complete
+brief avoids rounds of follow-up review. Resolve every concrete finding or
+present it plainly before calling the work merge-ready or complete. If you
+change the implementation after a review, run the affected checks again and
+obtain follow-up review of the new diff; an earlier pass does not cover it.
 
 Only the user may waive independent review for a specific change. Record the
 explicit waiver and reason; do not describe the missing review as passed.
