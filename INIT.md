@@ -83,3 +83,7 @@ provider roots: workflow adapters and Claude skill links honor
 Canonical shared skills remain under `~/.agents/skills/`. Use the expanded
 default/custom-root and nested-loading checks in `docs/guidance-loading-smoke.md`
 when establishing runtime support. Report unrun scenarios explicitly.
+
+This file is the first-run entry point. Once setup has run, the installed
+`workspace-setup`, `project-init`, `project-sync`, and `guidance-audit` skills
+handle later updates, new projects, starter updates, and guidance audits.

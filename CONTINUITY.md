@@ -31,6 +31,9 @@ project.
   tests skip until it does.
 - 2026-10-09 Project starters offer an optional `docs/decisions.md`, created
   on demand rather than seeded (D033).
+- 2026-10-10 Agent-facing skills `workspace-setup`, `project-init`,
+  `project-sync`, and `guidance-audit` drive the scripts; `starter-diff.mjs`
+  compares a project's starters read-only (D034).
 - Bootstrap CI runs the full disposable suite on Linux, Windows, and macOS.
 - Impeccable stays pinned at 4.0.2 with a recoverable 4.0.4 backup until a
   freshly reviewed upgrade recommendation.

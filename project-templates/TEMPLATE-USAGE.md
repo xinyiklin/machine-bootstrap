@@ -49,6 +49,11 @@ the template paths by hand.
 5. Start new Codex and Claude sessions in the project and run the loading smoke
    checks below.
 
+The installed `project-init` skill runs these steps from an ordinary request.
+Seeded projects are never synchronized automatically; the `project-sync` skill
+uses `scripts/starter-diff.mjs` to adopt later starter changes one at a time,
+and the `guidance-audit` skill recalibrates a project's guidance.
+
 ## Loading model
 
 - Codex builds its chain once per run. At a Git project root it loads that

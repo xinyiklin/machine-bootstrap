@@ -7,6 +7,26 @@
       "contentSha256": "247dcd6f7d1983c13db75cdba44c66f96daaf1035ae0c059079b378bb219afe2"
     },
     {
+      "name": "guidance-audit",
+      "localPath": "skills/guidance-audit",
+      "contentSha256": "21d8d9db242bc6ed87f33fd645943f5c7e9346719bae28774be8b975585c2385"
+    },
+    {
+      "name": "project-init",
+      "localPath": "skills/project-init",
+      "contentSha256": "3403b004e8b4025da3fb21bf557c5e9b699a3f686be82ac5a9d67edddb95f830"
+    },
+    {
+      "name": "project-sync",
+      "localPath": "skills/project-sync",
+      "contentSha256": "938f613a3c1afa0f611866baf42027a622ff2d5198091316c23df0a2b0ba0054"
+    },
+    {
+      "name": "workspace-setup",
+      "localPath": "skills/workspace-setup",
+      "contentSha256": "44bae771dc3a3a92b38e40062d005b79395ca7f8a115438dd4ac581368763396"
+    },
+    {
       "name": "find-skills",
       "repository": "https://github.com/vercel-labs/skills.git",
       "sourcePath": "skills/find-skills",

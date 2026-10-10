@@ -101,3 +101,10 @@ number.
 - 2026-10-09 [USER] D033 ACTIVE: project starters offer an optional
   `docs/decisions.md`, created on demand by the `continuity` skill or by hand,
   never seeded empty; entries keep their numbers and change status in place.
+- 2026-10-10 [USER] D034 ACTIVE: agent-facing operations ship as first-party
+  skills (`workspace-setup`, `project-init`, `project-sync`, `guidance-audit`,
+  `continuity`) that drive the audited scripts. Only the scripts install
+  shared capabilities or seed starters; project-owned files change only
+  through reviewed edits in a session in that project; `INIT.md` stays the
+  first-run entry; and seeded projects adopt starter changes only through
+  `project-sync`, never automatic synchronization.
