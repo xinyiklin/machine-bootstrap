@@ -10,8 +10,8 @@ Codex, folders with no guidance, and discovery of installed skills and roles.
 It is opt-in because it makes model calls, uses random markers in a deleted
 fixture, and counts a reply after any tool use as unverified. Use
 `--claude-only` or `--codex-only` for one provider. The manual checks below
-remain for nested guides, overrides, custom configuration roots, and the Codex
-desktop app.
+remain for the workspace-root start, duplicate and file-level Claude evidence,
+nested guides, overrides, custom configuration roots, and the desktop apps.
 
 Use a disposable directory with non-secret markers:
 
@@ -36,51 +36,20 @@ Workspace/
 The workspace root has no `AGENTS.md` or `CLAUDE.md`. Do not reuse real
 projects, credentials, personal data, or machine guidance.
 
-## Codex
+## Core scenarios
 
-Start a fresh run for each directory; navigating after startup is not a new
-discovery run.
+The smoke script runs the adapter, native `AGENTS.md`, `CLAUDE.local.md`, and
+scratch scenarios above, with the user's approval. Check the rest by hand in
+the fixture, starting a fresh session for each directory: navigating after
+startup is not a new discovery run.
 
-```bash
-codex --cd <Workspace/machine-bootstrap> --sandbox read-only --ask-for-approval never "List active instruction markers."
-codex --cd <Workspace/project-a> --sandbox read-only --ask-for-approval never "List active instruction markers."
-codex --cd <Workspace/project-b> --sandbox read-only --ask-for-approval never "List active instruction markers."
-codex --cd <Workspace> --sandbox read-only --ask-for-approval never "List active instruction markers."
-codex --cd <Workspace/scratch> --sandbox read-only --ask-for-approval never "List active instruction markers."
-```
-
-| Start directory | Expected project marker | Must be absent |
-| :--- | :--- | :--- |
-| `machine-bootstrap/` | `BOOTSTRAP_ROOT` | both project markers |
-| `project-a/` | `PROJECT_A_ROOT` | bootstrap and project B |
-| `project-b/` | `PROJECT_B_ROOT` | bootstrap and project A |
-| `Workspace/` | none | all three repository markers |
-| `Workspace/scratch/` | none | all three repository markers |
-
-Codex discovers project guidance from the detected project root down to the
-launch directory. With no detected project root it checks only the launch
-directory. Do not rely on sibling filesystem access to load or switch project
-instructions.
-
-## Claude Code
-
-Start separate Claude sessions at each repository root and inspect `/context`.
-Use a temporary `InstructionsLoaded` hook when exact file-level evidence is
-required. Each session should contain only its repository marker through that
-repository's `CLAUDE.md` adapter and single `@AGENTS.md` import. The workspace
-and scratch sessions should contain none of the three repository markers.
-
-Claude also reads `AGENTS.md` natively under the conditions in
-`docs/provider-contracts.md`. Record the Claude version, then check these
-separately in project B:
-
-| Scenario | Expected Claude sources |
-| :--- | :--- |
-| Adapter present | `CLAUDE.md` plus imported `AGENTS.md`, listed once |
-| Adapter removed | Native `AGENTS.md`; `/memory` lists it; `InstructionsLoaded` does not fire for it |
-| Adapter removed, `CLAUDE.local.md` added | `CLAUDE.local.md` only; the project marker is absent |
-
-Restore the adapter afterward. The last row is why starters keep `CLAUDE.md`.
+- Start both providers at `Workspace/` itself: it has children with guidance,
+  but no repository marker may load.
+- With the adapter present, Claude's `/context` lists `AGENTS.md` once.
+- With the adapter removed, `/memory` lists the natively read `AGENTS.md`, and
+  a temporary `InstructionsLoaded` hook does not fire for it; it does fire for
+  an imported `AGENTS.md`. `docs/provider-contracts.md` gives the expected
+  behavior. Restore the adapter afterward.
 
 ## Nested guidance and overrides
 
@@ -137,7 +106,7 @@ The Node regression suite covers fixture installation, custom-root false
 success, and invalid destinations. It does not launch a model or establish
 runtime skill discovery.
 
-## Codex desktop
+## Desktop apps
 
 In a fresh desktop task for the disposable project, follow the ordinary-review
 prompt in `docs/product-delivery.md`. Confirm `mb_verifier` actually runs as a
@@ -148,9 +117,13 @@ for routine progress, and still delegates independent review. A CLI profile
 command is not proof of desktop role activation.
 
 Where the app supports a separate worktree, repeat root/scoped discovery there
-and verify the effective repository and instruction sources. Record the app
-version separately from the CLI version; one does not prove the other's
-behavior. Replacing generated adapters requires a new discovery run.
+and verify the effective repository and instruction sources. In a Claude Code
+desktop worktree session under `.claude/worktrees/`, `/context` should list the
+worktree's `CLAUDE.md` and imported `AGENTS.md`, and
+`node scripts/init-workspace.mjs --check` should report the main checkout's
+workspace. Record the app version separately from the CLI version; one does not
+prove the other's behavior. Replacing generated adapters requires a new
+discovery run.
 
 ## Reporting
 
