@@ -80,9 +80,7 @@ fill `MACHINE.md`, verify with `--check`, seed one project with
 `node scripts/init-project.mjs ../project-a`, then fill its placeholders in a
 new session there. It also lists the root and ancestor instruction files that
 stop setup for manual review, the `.gitignore` environment policy, and the
-read-only `node scripts/audit-workspace.mjs` report. In Claude Code 2.1.283
-and later, `/doctor prompt-audit` also finds stale or conflicting
-instructions.
+read-only `node scripts/audit-workspace.mjs` report.
 
 To initialize only one project through an agent, specify its exact path:
 **“Initialize `../project-a` using machine-bootstrap. Preserve existing files,
@@ -94,8 +92,10 @@ requests in ordinary language from any session.
 
 ### Recommended Claude permissions
 
-Bootstrap installers never edit Claude's `settings.json`. Add these rules to
-the user settings yourself (or ask an agent to, preserving existing keys):
+Bootstrap installers never edit Claude's user `settings.json`; seeded projects
+get only a project `.claude/settings.json` with the `.env` read-deny rules. Add
+these rules to the user settings yourself (or ask an agent to, preserving
+existing keys):
 
 ```json
 {
@@ -118,15 +118,13 @@ sandbox for OS-level enforcement. Add a rule for any other environment file
 name your projects use, such as `.env.test` or `.env.staging`. Keep keys and
 credentials outside the workspace regardless.
 
-### Why projects keep `CLAUDE.md`
+### Provider facts
 
-Claude Code 2.1.277 and later can read `AGENTS.md` without a `CLAUDE.md`, but
-only while no `CLAUDE.md`, `.claude/CLAUDE.md`, or `CLAUDE.local.md` exists on
-the path. Starters keep a thin `CLAUDE.md` whose single `@AGENTS.md` import
-loads the shared guide once in every Claude version and session, survives a
-personal `CLAUDE.local.md`, and keeps `InstructionsLoaded` evidence. All shared
-policy stays in `AGENTS.md`; `CLAUDE.md` holds only Claude-specific mechanics,
-which Codex never loads.
+`docs/provider-contracts.md` owns the Claude Code and Codex loading rules this
+setup depends on, including why starters keep a thin `CLAUDE.md` that imports
+`AGENTS.md`, and the official sources. `providers.json` records when they were
+last checked and which provider versions last passed the live smoke check;
+`--check` advises when installed providers move past them.
 
 ## Product delivery workflow
 
@@ -204,6 +202,10 @@ node scripts/test-bootstrap.mjs
 node scripts/init-workspace.mjs --check
 ```
 
+From a linked worktree, such as a Claude Code worktree session, `--check`,
+`audit-workspace.mjs`, and `starter-diff.mjs` resolve the main checkout's
+workspace; setup and project seeding refuse there and name the main checkout.
+
 The regression suite uses disposable workspaces, projects, Git repositories, and
 home directories. It covers parent boundary checks, registry initialization,
 manual-only legacy detection, explicit project target safety, missing-only
@@ -225,18 +227,3 @@ Static tests are not runtime loading evidence. `node scripts/smoke-providers.mjs
 is an opt-in check that runs the real Claude Code and Codex CLIs against a
 disposable fixture and costs a few model calls; the remaining manual checks live
 in `docs/guidance-loading-smoke.md`.
-
-Provider contracts checked against official documentation on 2026-10-09:
-[Codex instructions](https://learn.chatgpt.com/docs/agent-configuration/agents-md),
-[Codex skills](https://learn.chatgpt.com/docs/build-skills),
-[Codex subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents),
-[Codex configuration](https://learn.chatgpt.com/docs/config-file/config-basic),
-[Claude memory and `AGENTS.md`](https://code.claude.com/docs/en/memory),
-[Claude subagents](https://code.claude.com/docs/en/sub-agents),
-[Claude permissions](https://code.claude.com/docs/en/permissions), and
-[Claude configuration directories](https://code.claude.com/docs/en/claude-directory).
-Guidance length follows
-[Evaluating AGENTS.md](https://arxiv.org/abs/2602.11988): unnecessary
-requirements lowered agent success and raised cost.
-These sources establish supported contracts, not successful loading on every
-installed provider version.

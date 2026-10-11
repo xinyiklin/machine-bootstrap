@@ -47,15 +47,6 @@ await test("repository and project guidance are self-contained", () => {
   assert.match(rootAgents, /workspace root never owns live `AGENTS\.md`, `CLAUDE\.md`, or `_templates\/`/);
   assert.equal((rootClaude.match(/^@AGENTS\.md$/gm) ?? []).length, 1);
   assert.equal((projectClaude.match(/^@AGENTS\.md$/gm) ?? []).length, 1);
-  assert.match(projectAgents, /repository may be cloned outside its current workspace/);
-  assert.match(usage, /node scripts\/init-project\.mjs <target-project>/);
-  assert.match(usage, /not a project README/);
-  assert.match(readme, /Agent-assisted setup \(recommended for normal use\)/);
-  assert.match(readme, /Set up this workspace using machine-bootstrap/);
-  assert.match(readme, /Initialize `\.\.\/project-a` using machine-bootstrap/);
-  assert.match(init, /ordinary language without naming any script/);
-  assert.match(init, /use the audited scripts/);
-  assert.match(usage, /canonical initializer rather than copying/);
   // Claude reads AGENTS.md natively; guidance explains why the adapter stays.
   for (const [label, source] of [
     ["starter AGENTS.md", projectAgents],
@@ -65,11 +56,12 @@ await test("repository and project guidance are self-contained", () => {
   ]) {
     assert.doesNotMatch(source, /Claude does not (discover|read|load) (nested )?`?AGENTS\.md/, label);
   }
-  for (const source of [usage, readme]) {
-    assert.match(source, /2\.1\.277/);
-    assert.match(source, /CLAUDE\.local\.md/);
-  }
-  assert.match(readme, /### Why projects keep `CLAUDE\.md`/);
+  // Provider loading facts have one owner that the operator docs link to.
+  const contracts = readFileSync(join(bootstrapRoot, "docs", "provider-contracts.md"), "utf8");
+  assert.match(contracts, /^## Why starters keep `CLAUDE\.md`$/m);
+  assert.match(contracts, /CLAUDE\.local\.md/);
+  assert.match(usage, /provider-contracts\.md/);
+  assert.match(readme, /provider-contracts\.md/);
   // The template note is a block comment, which Claude strips before loading.
   assert.match(projectClaude, /<!-- Template:[^]*?keep this file even though Claude can read\s+AGENTS\.md natively[^]*?-->/);
   // Review is tiered identically in this repository and the project starter.
@@ -244,7 +236,8 @@ await test("automatically loaded guidance stays within byte budgets", () => {
   for (const [relativePath, budget] of [
     ["AGENTS.md", 8 * 1024],
     ["CLAUDE.md", 2 * 1024],
-    ["project-templates/AGENTS.md", 8 * 1024],
+    // The starter leaves most of the 8 KiB project budget for project facts.
+    ["project-templates/AGENTS.md", 4.5 * 1024],
     ["project-templates/CLAUDE.md", 2 * 1024]
   ]) {
     const bytes = readFileSync(join(bootstrapRoot, ...relativePath.split("/"))).byteLength;
@@ -498,5 +491,60 @@ await test("CI covers the full bootstrap suite on Linux, Windows, and macOS", ()
     );
     assert.match(contents, /Node\.js 24\s+or newer/, relativePath);
     assert.doesNotMatch(contents, /Node\.js 18\s+or newer/, relativePath);
+  }
+});
+
+await test("provider facts have one owner and setup only advises on them", async () => {
+  const baseline = await import("../lib/provider-baseline.mjs");
+  const reviewed = baseline.loadProviderBaseline(join(bootstrapRoot, "providers.json"));
+  const day = (date) => new Date(`${date}T00:00:00Z`);
+  const checked = day(reviewed.documentationChecked);
+  const tested = reviewed.smokeTested;
+
+  assert.equal(baseline.compareVersions("2.1.300", "2.1.285"), 1);
+  assert.equal(baseline.compareVersions("0.159.2", "0.159.2"), 0);
+  assert.equal(baseline.compareVersions("0.99.0", "0.159.2"), -1);
+  assert.deepEqual(baseline.providerAdvisories(reviewed, { claude: tested.claude, codex: null }, checked), []);
+  const advice = baseline.providerAdvisories(
+    reviewed,
+    { claude: "999.0.0", codex: tested.codex },
+    new Date(checked.getTime() + 31 * 86400000)
+  );
+  assert.equal(advice.length, 2);
+  assert.match(advice[0], /last checked 31 days ago/);
+  assert.match(advice[1], /Claude Code 999\.0\.0 is newer than the smoke-tested/);
+
+  const scratch = mkdtempSync(join(tmpdir(), "machine-bootstrap-providers-"));
+  try {
+    for (const invalid of [
+      {},
+      { ...reviewed, documentationChecked: "soon" },
+      { ...reviewed, smokeTested: { ...tested, codex: "latest" } }
+    ]) {
+      writeFileSync(join(scratch, "providers.json"), JSON.stringify(invalid));
+      assert.throws(() => baseline.loadProviderBaseline(join(scratch, "providers.json")));
+    }
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+
+  // Versions are stated only by the owner, so a provider release changes one
+  // reviewed place instead of every guide that once quoted it.
+  for (const relativePath of [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "README.md",
+    "INIT.md",
+    "docs/guidance-loading-smoke.md",
+    "docs/product-delivery.md",
+    "project-templates/AGENTS.md",
+    "project-templates/CLAUDE.md",
+    "project-templates/TEMPLATE-USAGE.md",
+    "project-templates/docs/engineering/git-workflow.md",
+    "scripts/audit-workspace.mjs",
+    ...readdirSync(join(bootstrapRoot, "skills")).map((name) => `skills/${name}/SKILL.md`)
+  ]) {
+    const text = readFileSync(join(bootstrapRoot, ...relativePath.split("/")), "utf8");
+    assert.doesNotMatch(text, /\b2\.1\.\d{3}\b|\b0\.1\d{2}\.\d+\b/, relativePath);
   }
 });

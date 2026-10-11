@@ -13,7 +13,8 @@ report the resulting state. Do not require the user to translate the request
 into CLI commands.
 
 Read this file, `README.md`, and `CONTINUITY.md`. Confirm this repository is a
-direct child of the intended dedicated, non-Git workspace folder, then run:
+direct child of the intended dedicated, non-Git workspace folder, then run the
+following from that main checkout (a linked worktree can only run `--check`):
 
 ```bash
 node scripts/init-workspace.mjs

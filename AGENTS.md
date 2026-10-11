@@ -30,6 +30,8 @@ machine-local facts; it is not an agent-policy source.
   `audit-workspace.mjs` (read-only sibling guidance report),
   `starter-diff.mjs` (read-only starter comparison for one project), and
   `pr-size.mjs` (PR size count that CI enforces).
+- `providers.json`, `docs/provider-contracts.md` — provider loading facts,
+  their check date, and the smoke-tested versions `--check` compares against.
 - `scripts/test-bootstrap.mjs` — isolated regression suite; it runs the layer
   files in `scripts/test/` (skills, guidance, workspace, project, workflows)
   over the shared `harness.mjs`.
@@ -38,8 +40,10 @@ machine-local facts; it is not an agent-policy source.
 
 ## Hard invariants
 
-- The checkout's direct parent is the intended non-Git workspace root.
-  Initialization rejects a filesystem root, user home, or Git-owned parent.
+- The main checkout's direct parent is the intended non-Git workspace root.
+  Initialization rejects a filesystem root, user home, or Git-owned parent. A
+  linked worktree administers the same workspace but may only check or audit
+  it; installation and seeding run from the main checkout.
 - The workspace root never owns live `AGENTS.md`, `CLAUDE.md`, or `_templates/`.
   Those and the other root and ancestor instruction files listed in
   `INIT.md` stop initialization for manual review; automatic migration is

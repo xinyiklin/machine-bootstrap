@@ -7,20 +7,24 @@
 // never writes.
 
 import { lstatSync, readFileSync, realpathSync } from "node:fs";
-import { dirname, join, parse, resolve } from "node:path";
+import { dirname, join, parse, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { mainCheckoutOf, sanitizedGitEnvironment } from "./lib/bootstrap-location.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const bootstrapRoot = realpathSync.native(resolve(scriptDir, ".."));
-const workspaceRoot = dirname(bootstrapRoot);
+// A linked worktree compares its own starters against the main checkout's workspace.
+const mainCheckout = mainCheckoutOf(bootstrapRoot) ?? bootstrapRoot;
+const workspaceRoot = dirname(mainCheckout);
 
 // The files scripts/init-project.mjs seeds; the suite keeps both lists equal.
 const starterFiles = [
   "AGENTS.md",
   "CLAUDE.md",
   "docs/engineering/git-workflow.md",
-  ".github/pull_request_template.md"
+  ".github/pull_request_template.md",
+  ".claude/settings.json"
 ];
 
 function fail(message) {
@@ -60,9 +64,30 @@ try {
 } catch {
   fail(`Project must be a real directory: ${target}`);
 }
+// A project worktree is judged by where its main checkout lives, and must be
+// named by its own root rather than a subdirectory.
+let projectCheckout = projectRoot;
+const projectMain = mainCheckoutOf(projectRoot);
+if (projectMain) {
+  const top = spawnSync("git", ["-C", projectRoot, "rev-parse", "--show-toplevel"], {
+    encoding: "utf8",
+    env: sanitizedGitEnvironment(),
+    shell: false
+  });
+  let worktreeRoot = null;
+  try {
+    worktreeRoot = top.status === 0 ? realpathSync.native(top.stdout.trim()) : null;
+  } catch {
+    worktreeRoot = null;
+  }
+  if (!worktreeRoot || comparablePath(worktreeRoot) !== comparablePath(projectRoot)) {
+    fail(`Project worktree must be named by its root: ${target}`);
+  }
+  projectCheckout = projectMain;
+}
 if (
-  comparablePath(dirname(projectRoot)) !== comparablePath(workspaceRoot) ||
-  comparablePath(projectRoot) === comparablePath(bootstrapRoot)
+  comparablePath(dirname(projectCheckout)) !== comparablePath(workspaceRoot) ||
+  comparablePath(projectCheckout) === comparablePath(mainCheckout)
 ) {
   fail(`Project must be a sibling of machine-bootstrap inside ${workspaceRoot}`);
 }
@@ -201,8 +226,8 @@ for (const relativePath of starterFiles) {
     // Without a base, project facts and upstream changes are mixed together.
     const twoWay = git(workspaceRoot, [
       "diff", "--no-index", "--no-color", "--no-ext-diff",
-      `${parse(bootstrapRoot).base}/${templatePath}`,
-      `${parse(projectRoot).base}/${relativePath}`
+      relative(workspaceRoot, join(bootstrapRoot, ...templatePath.split("/"))),
+      relative(workspaceRoot, join(projectRoot, ...relativePath.split("/")))
     ]);
     console.log(
       `${base ? "This starter did not exist at the base." : "No base."} ` +

@@ -84,8 +84,8 @@ new head needs renewed confirmation, and the exception waives nothing else. If
 review was user-waived, only the user can grant a size exception. These are
 review-policy gates, not a CI check; adjust the defaults only in this contract,
 with rationale. When a machine-bootstrap checkout sits beside the project,
-`node ../machine-bootstrap/scripts/pr-size.mjs <base>` run from the project
-root counts a branch this way.
+its `scripts/pr-size.mjs <base>`, run from the project, counts a branch this
+way; from a Git worktree the checkout is beside the main checkout, not `../`.
 
 ## Verification and review
 

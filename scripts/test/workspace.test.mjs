@@ -11,6 +11,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync
 } from "node:fs";
@@ -90,6 +91,7 @@ await test("workspace check is read-only and allows an absent registry", () => {
     });
     assert.equal(absent.status, 0, absent.stderr);
     assert.match(absent.stdout, /Optional machine registry is not present/);
+    assert.match(absent.stdout, /^Provider baseline: docs checked \d{4}-\d{2}-\d{2}; smoke-tested /m);
     assert.equal(readdirSync(workspaceRoot).sort().join(","), "machine-bootstrap");
 
     copyFileSync(
@@ -103,6 +105,23 @@ await test("workspace check is read-only and allows an absent registry", () => {
     });
     assert.notEqual(incomplete.status, 0);
     assert.match(incomplete.stderr, /TODO placeholder/);
+  } finally {
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
+await test("a malformed provider baseline fails before workspace writes", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    writeFileSync(join(checkoutRoot, "providers.json"), "{\"schemaVersion\": 2}\n");
+    const result = spawnSync(
+      process.execPath,
+      [join(checkoutRoot, "scripts", "init-workspace.mjs"), "--skip-skills", "--skip-workflows"],
+      { encoding: "utf8", env: isolatedEnvironment(testRoot), shell: false }
+    );
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /providers\.json: schemaVersion must be 1/);
+    assert.equal(readdirSync(workspaceRoot).sort().join(","), "machine-bootstrap");
   } finally {
     rmSync(testRoot, { recursive: true, force: true });
   }
@@ -403,6 +422,64 @@ await test("guidance above the workspace stops setup; a home .claude stays user 
     }
   } finally {
     rmSync(otherHome, { recursive: true, force: true });
+    rmSync(testRoot, { recursive: true, force: true });
+  }
+});
+
+await test("a linked worktree checks and audits its main checkout's workspace but never installs", () => {
+  const { testRoot, workspaceRoot, checkoutRoot } = createTestWorkspace();
+  try {
+    const git = (args) => {
+      const result = spawnSync("git", ["-C", checkoutRoot, ...args], { encoding: "utf8", shell: false });
+      assert.equal(result.status, 0, result.stderr);
+    };
+    git(["add", "-A"]);
+    git(["-c", "user.name=Fixture", "-c", "user.email=fixture@example.com", "commit", "-q", "-m", "fixture"]);
+    // The default location of a Claude Code worktree session.
+    // Named like a sibling project, which the audit must still list.
+    const worktree = join(checkoutRoot, ".claude", "worktrees", "project-a");
+    git(["worktree", "add", "-q", "-b", "session", worktree]);
+    const project = join(workspaceRoot, "project-a");
+    mkdirSync(project);
+    writeFileSync(join(project, "AGENTS.md"), "# A\n");
+    const run = (script, args = []) =>
+      spawnSync(process.execPath, [join(worktree, "scripts", script), ...args], {
+        encoding: "utf8",
+        env: isolatedEnvironment(testRoot),
+        shell: false
+      });
+    const workspaceLine = `Workspace: ${realpathSync.native(workspaceRoot)}`;
+
+    const audit = run("audit-workspace.mjs");
+    assert.equal(audit.status, 0, audit.stderr);
+    assert.ok(audit.stdout.includes(workspaceLine), audit.stdout);
+    assert.match(audit.stdout, /^project-a\s/m);
+    assert.doesNotMatch(audit.stdout, /^machine-bootstrap\s/m);
+
+    const check = run("init-workspace.mjs", ["--check", "--skip-skills", "--skip-workflows"]);
+    assert.equal(check.status, 0, check.stderr);
+    assert.ok(check.stdout.includes(workspaceLine), check.stdout);
+
+    const before = readdirSync(workspaceRoot).sort();
+    const install = run("init-workspace.mjs", ["--skip-skills", "--skip-workflows"]);
+    assert.notEqual(install.status, 0);
+    assert.match(install.stderr, /linked worktree; run setup from the main checkout/);
+    const seed = run("init-project.mjs", [project]);
+    assert.notEqual(seed.status, 0);
+    assert.match(seed.stderr, /linked worktree; run project initialization from the main checkout/);
+    assert.deepEqual(readdirSync(workspaceRoot).sort(), before);
+    assert.deepEqual(readdirSync(project), ["AGENTS.md"]);
+
+    // A parent inside Git is not a workspace; the audit refuses it.
+    assert.equal(spawnSync("git", ["init", "-q", workspaceRoot]).status, 0);
+    const owned = spawnSync(process.execPath, [join(checkoutRoot, "scripts", "audit-workspace.mjs")], {
+      encoding: "utf8",
+      env: isolatedEnvironment(testRoot),
+      shell: false
+    });
+    assert.notEqual(owned.status, 0);
+    assert.match(owned.stderr, /Workspace root must stay outside Git/);
+  } finally {
     rmSync(testRoot, { recursive: true, force: true });
   }
 });

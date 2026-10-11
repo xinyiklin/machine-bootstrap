@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "documentationChecked": "2026-10-11",
+  "smokeTested": {
+    "date": "2026-10-10",
+    "claude": "2.1.285",
+    "codex": "0.159.2"
+  }
+}

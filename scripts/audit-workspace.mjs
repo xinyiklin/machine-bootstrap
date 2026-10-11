@@ -18,11 +18,15 @@ import {
 import { homedir } from "node:os";
 import { dirname, join, parse, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
+import { mainCheckoutOf, sanitizedGitEnvironment } from "./lib/bootstrap-location.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const bootstrapRoot = realpathSync.native(resolve(scriptDir, ".."));
-const workspaceRoot = dirname(bootstrapRoot);
-const bootstrapName = parse(bootstrapRoot).base;
+// A linked worktree audits the workspace its main checkout administers.
+const mainCheckout = mainCheckoutOf(bootstrapRoot) ?? bootstrapRoot;
+const workspaceRoot = dirname(mainCheckout);
+const bootstrapName = parse(mainCheckout).base;
 
 // Targets come from the project starter guidance and its continuity contract.
 const KIB = 1024;
@@ -53,6 +57,23 @@ const homeCandidates = [homedir(), process.env.HOME, process.env.USERPROFILE]
   });
 if (homeCandidates.includes(workspaceRoot)) {
   fail("Workspace root cannot be the user home");
+}
+// Inside a Git repository the parent is not a workspace, and auditing it would
+// report the wrong directory as if it were one.
+const workspaceGit = spawnSync("git", ["-C", workspaceRoot, "rev-parse", "--show-toplevel"], {
+  encoding: "utf8",
+  env: sanitizedGitEnvironment(),
+  shell: false
+});
+if (workspaceGit.status === 0) {
+  fail(`Workspace root must stay outside Git; found worktree ${workspaceGit.stdout.trim()}`);
+}
+if (!workspaceGit.stderr?.includes("not a git repository")) {
+  fail(
+    `Could not verify the workspace Git boundary: ${
+      workspaceGit.error?.message ?? workspaceGit.stderr.trim()
+    }`
+  );
 }
 
 // Inspects one named file without following a symbolic link. An unreadable
@@ -147,8 +168,8 @@ function auditProject(name) {
     row.claude = claude.state;
   } else if (agents.state !== "missing") {
     findings.push(
-      "no CLAUDE.md: Claude Code 2.1.277+ reads AGENTS.md natively; add the " +
-        "starter CLAUDE.md for sessions that cannot"
+      "no CLAUDE.md: Claude reads AGENTS.md natively only in some sessions; " +
+        "add the starter CLAUDE.md that imports it"
     );
   } else {
     findings.push("no AGENTS.md or CLAUDE.md");

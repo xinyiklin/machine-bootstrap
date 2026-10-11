@@ -170,6 +170,7 @@ await test("starter diff reports upstream changes without writing", () => {
     const project = join(workspace, "project-a");
     mkdirSync(join(checkout, "scripts"), { recursive: true });
     copyFileSync(join(scriptDir, "starter-diff.mjs"), join(checkout, "scripts", "starter-diff.mjs"));
+    cpSync(join(scriptDir, "lib"), join(checkout, "scripts", "lib"), { recursive: true });
     const starter = {
       "AGENTS.md": "# Guide\n\n- rule one\n",
       "CLAUDE.md": "# Adapter\n\n@AGENTS.md\n",
@@ -210,7 +211,8 @@ await test("starter diff reports upstream changes without writing", () => {
     commitAt(project, "2026-02-01T00:00:00Z", "seed");
     write(join(checkout, "project-templates"), {
       "AGENTS.md": "# Guide\n\n- rule one\n- upstream rule two\n",
-      ".github/pull_request_template.md": "## Summary\n\n## Verification\n"
+      ".github/pull_request_template.md": "## Summary\n\n## Verification\n",
+      ".claude/settings.json": "{}\n"
     });
     const second = commitAt(checkout, "2026-03-01T00:00:00Z", "starters v2");
 
@@ -230,6 +232,7 @@ await test("starter diff reports upstream changes without writing", () => {
     assert.match(report.stdout, /## docs\/engineering\/git-workflow\.md: missing/);
     assert.match(report.stdout, /pull_request_template\.md: unchanged since its base/);
     assert.match(report.stdout, /## \.gitignore: missing starter rules: CLAUDE\.local\.md/);
+    assert.match(report.stdout, /## \.claude\/settings\.json: missing/);
     assert.deepEqual(snapshotTree(project), before, "the report writes nothing");
     // Comparisons are commit to commit, so no working-tree diff can refresh
     // the checkout's index; uncommitted starter edits are named, not reported.
@@ -245,7 +248,32 @@ await test("starter diff reports upstream changes without writing", () => {
     assert.equal(synced.status, 0, synced.stderr);
     assert.match(synced.stdout, /No upstream starter changes since the base/);
 
-    for (const args of [[checkout], [testRoot], [project, "--since", "no-such-revision"], []]) {
+    // A session in a project worktree reports against the same workspace.
+    const projectWorktree = join(project, ".claude", "worktrees", "session");
+    assert.equal(
+      spawnSync("git", ["-C", project, "worktree", "add", "-q", "-b", "session", projectWorktree]).status,
+      0
+    );
+    const fromWorktree = run([projectWorktree, "--since", second]);
+    assert.equal(fromWorktree.status, 0, fromWorktree.stderr);
+    assert.match(fromWorktree.stdout, /No upstream starter changes since the base/);
+    // A starter added after the base falls back to a two-way comparison,
+    // which must find both files from the worktree too.
+    mkdirSync(join(projectWorktree, ".claude"));
+    writeFileSync(join(projectWorktree, ".claude", "settings.json"), "{\"worktree\": true}\n");
+    const twoWay = run([projectWorktree, "--since", first]);
+    assert.equal(twoWay.status, 0, twoWay.stderr);
+    assert.match(twoWay.stdout, /This starter did not exist at the base/);
+    assert.match(twoWay.stdout, /^\+\{"worktree": true\}$/m);
+
+    mkdirSync(join(projectWorktree, "src"));
+    for (const args of [
+      [checkout],
+      [testRoot],
+      [join(projectWorktree, "src")],
+      [project, "--since", "no-such-revision"],
+      []
+    ]) {
       const refused = run(args);
       assert.notEqual(refused.status, 0, args.join(" "));
       assert.match(refused.stderr, /Starter diff failed:/);

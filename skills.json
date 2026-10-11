@@ -9,22 +9,22 @@
     {
       "name": "guidance-audit",
       "localPath": "skills/guidance-audit",
-      "contentSha256": "21d8d9db242bc6ed87f33fd645943f5c7e9346719bae28774be8b975585c2385"
+      "contentSha256": "e4f7665b9632db3422c348927eb7747edaca485bcef0e1a44da2d8ae51cb11f0"
     },
     {
       "name": "project-init",
       "localPath": "skills/project-init",
-      "contentSha256": "3403b004e8b4025da3fb21bf557c5e9b699a3f686be82ac5a9d67edddb95f830"
+      "contentSha256": "4258f7459e47b01ae20fb82cfc7417754c35c415c22a41d22a35f99f5a1db0b7"
     },
     {
       "name": "project-sync",
       "localPath": "skills/project-sync",
-      "contentSha256": "938f613a3c1afa0f611866baf42027a622ff2d5198091316c23df0a2b0ba0054"
+      "contentSha256": "50623b9dfb2343dce66bd13486028445cfa4fa2fcb5558bae80d766bd2f6f96a"
     },
     {
       "name": "workspace-setup",
       "localPath": "skills/workspace-setup",
-      "contentSha256": "d34206a04541be8b71e8cfc4701ae982d3ea87b19e7e7012179825574e73c23b"
+      "contentSha256": "45f0b7d33995b0463f8c1907933acec434ff1d67ca8f1c7c28b609c7ffff01a1"
     },
     {
       "name": "archify",
