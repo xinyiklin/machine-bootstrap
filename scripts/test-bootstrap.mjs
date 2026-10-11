@@ -1887,6 +1887,9 @@ await test("CI covers the full bootstrap suite on Linux, Windows, and macOS", ()
   assert.match(workflow, /actions\/setup-node@v7/);
   assert.match(workflow, /node-version:\s*24/);
   assert.match(workflow, /node scripts\/test-bootstrap\.mjs/);
+  // The generated Codex TOML is parsed by a real tomllib on the runners that
+  // ship Python 3.11+, so that check is not silently skipped in CI.
+  assert.match(workflow, /MACHINE_BOOTSTRAP_TOML_PYTHON:.*runner\.os != 'Windows'/);
 
   for (const relativePath of [
     "README.md",

@@ -31,4 +31,8 @@ jobs:
           package-manager-cache: false
 
       - name: Run disposable workspace and project bootstrap tests
+        # Linux and macOS runners ship Python 3.11+, so the generated Codex TOML
+        # is also parsed by a real tomllib there instead of being skipped.
+        env:
+          MACHINE_BOOTSTRAP_TOML_PYTHON: ${{ runner.os != 'Windows' && 'python3' || '' }}
         run: node scripts/test-bootstrap.mjs

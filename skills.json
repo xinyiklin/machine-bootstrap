@@ -44,9 +44,8 @@
       "name": "impeccable",
       "repository": "https://github.com/pbakaus/impeccable.git",
       "sourcePath": ".agents/skills/impeccable",
-      "sourceRevision": "fc2e694afca1ac0cc384b4fe56bab3335fea7912",
-      "expectedVersion": "4.0.2",
-      "contentSha256": "c882be322c5f25047191b0675f0dcd6000b0b0ac7a9ce3d7fba649bf58f6abe5"
+      "sourceRevision": "c0f495212236129c2e92aaf7714a3a9914569d13",
+      "contentSha256": "00c08bdd7389f4219f3651903b09263c5de7df0d887dc608b89d908141e05a4d"
     },
     {
       "name": "playwright",
@@ -66,28 +65,28 @@
       "name": "systematic-debugging",
       "repository": "https://github.com/obra/superpowers.git",
       "sourcePath": "skills/systematic-debugging",
-      "sourceRevision": "3dcbd5c4b48e02263fbf4a3c01e3fe4f81d584d9",
-      "contentSha256": "912cbf0e9b769232f99fe80373ccd3b114441eb35115d35efab0974bd05ae754"
+      "sourceRevision": "bb92a77741419a4ab5f06e711a283343f1ada0c3",
+      "contentSha256": "c22adbfe96ad4ae969fe42e5bda30c937d3f73eda52a1ab9f52509c1a338b64c"
     },
     {
       "name": "vercel-composition-patterns",
       "repository": "https://github.com/vercel-labs/agent-skills.git",
       "sourcePath": "skills/composition-patterns",
-      "sourceRevision": "7c180d9044c9ae2b442b567aad4e42a28dd5ed62",
+      "sourceRevision": "063bee94c3f4df8453406c830b0a7df0f2860278",
       "contentSha256": "d60442200d59e98efd41a696422bcb239791d3eb08855fa7ad9c399f4f97a1a2"
     },
     {
       "name": "vercel-react-best-practices",
       "repository": "https://github.com/vercel-labs/agent-skills.git",
       "sourcePath": "skills/react-best-practices",
-      "sourceRevision": "7c180d9044c9ae2b442b567aad4e42a28dd5ed62",
+      "sourceRevision": "063bee94c3f4df8453406c830b0a7df0f2860278",
       "contentSha256": "5ec2c4c265afe01e6b5c38c7db4ea10010a1d329dc09230e3fcfe6d1986d00c2"
     },
     {
       "name": "verification-before-completion",
       "repository": "https://github.com/obra/superpowers.git",
       "sourcePath": "skills/verification-before-completion",
-      "sourceRevision": "3dcbd5c4b48e02263fbf4a3c01e3fe4f81d584d9",
+      "sourceRevision": "bb92a77741419a4ab5f06e711a283343f1ada0c3",
       "contentSha256": "cd00be4ff6118de6bd8f52c564d78ea3dadb22d853081ff719a2447aba2f69b3"
     }
   ]

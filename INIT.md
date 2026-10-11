@@ -20,21 +20,32 @@ node scripts/init-workspace.mjs
 ```
 
 The workspace initializer may create the optional parent `MACHINE.md` and
-install shared skills, workflows, and provider adapters. It never creates a
-parent `AGENTS.md`, `CLAUDE.md`, or `_templates/`. Replace `MACHINE.md` TODOs
-only with verified local facts and never add credentials, private documents, or
-secret filenames. Then run:
+install shared skills, workflows, and provider adapters. The canonical machine
+template must be a real in-checkout file and is snapshot-read with no-follow
+access before any workspace write. It never creates a parent `AGENTS.md`,
+`CLAUDE.md`, or `_templates/`. Replace `MACHINE.md` TODOs only with verified
+local facts and never add credentials, private documents, or secret filenames.
+Then run:
 
 ```bash
 node scripts/init-workspace.mjs --check
 ```
 
-If the parent contains a legacy `AGENTS.md`, `CLAUDE.md`, or `_templates/`, or
-another root or ancestor instruction file listed in README setup step 4, stop
-and report it. Automatic
-migration is not currently supported. Review the entries and move them manually
-before rerunning; never move sibling projects or `MACHINE.md` as part of that
-cleanup.
+Check mode is read-only. It allows the optional registry to be absent but
+fails on unresolved placeholders when the file exists, on shared-capability
+drift, and on retired parent guidance or template entries.
+
+If the parent contains a legacy `AGENTS.md`, `CLAUDE.md`, or `_templates/`,
+stop and report it. The same stop applies to `AGENTS.override.md`,
+`CLAUDE.local.md`, `.claude/AGENTS.md`, `.claude/CLAUDE.md`, or
+`.claude/rules/` at the workspace root, and to `AGENTS.md`, `CLAUDE.md`,
+`CLAUDE.local.md`, `.claude/AGENTS.md`, or `.claude/CLAUDE.md` in any folder
+above it, because Claude loads those into every sibling session. A user
+home's (or `CLAUDE_CONFIG_DIR`'s) `.claude/CLAUDE.md` is user memory and is
+not flagged; a path that cannot be inspected also stops setup. Automatic
+migration is not currently supported. Review the entries and move them
+manually before rerunning; never move sibling projects or `MACHINE.md` as part
+of that cleanup.
 
 Initialize one project explicitly:
 
@@ -45,10 +56,14 @@ node scripts/init-project.mjs ../project-a
 Add `--create` only when the target directory does not yet exist. The command
 seeds missing project-owned guidance directly from `project-templates/` and
 preserves existing files. With no existing environment ignore rules it appends
-the complete ordered environment block plus missing independent safety rules;
-incomplete or ambiguous environment rules stop for manual review before any
-write. It does not initialize Git, copy `TEMPLATE-USAGE.md`, replace a README,
-or edit any sibling project.
+the ordered `.env`, `.env.*`, `!.env.example` block plus missing independent
+safety rules, and Git must confirm the result ignores local environment files
+while exposing `.env.example`; ineffective, incomplete, or ambiguous rules stop
+for manual review before any write. Template sources, target parents, and
+seeded files are identity-checked for the whole run, and rollback moves
+run-owned files to named recovery paths instead of deleting them. It does not
+initialize Git, copy `TEMPLATE-USAGE.md`, replace a README, or edit any
+sibling project.
 
 The user may instead say “Initialize `<target-project>` using
 machine-bootstrap.” Resolve and repeat the exact target before execution, then
