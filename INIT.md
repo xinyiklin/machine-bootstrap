@@ -21,11 +21,10 @@ node scripts/init-workspace.mjs
 ```
 
 The workspace initializer may create the optional parent `MACHINE.md` and
-install shared skills, workflows, and provider adapters. The canonical machine
-template must be a real in-checkout file and is snapshot-read with no-follow
-access before any workspace write. It never creates a parent `AGENTS.md`,
-`CLAUDE.md`, or `_templates/`. Replace `MACHINE.md` TODOs only with verified
-local facts and never add credentials, private documents, or secret filenames.
+install shared skills, workflows, and provider adapters. It never creates a
+parent `AGENTS.md`, `CLAUDE.md`, or `_templates/`. Replace `MACHINE.md` TODOs
+only with verified local facts and never add credentials, private documents,
+or secret filenames.
 Then run:
 
 ```bash
@@ -55,14 +54,10 @@ node scripts/init-project.mjs ../project-a
 ```
 
 Add `--create` only when the target directory does not yet exist. The command
-seeds missing project-owned guidance directly from `project-templates/` and
-preserves existing files. With no existing environment ignore rules it appends
-the ordered `.env`, `.env.*`, `!.env.example` block plus missing independent
-safety rules, and Git must confirm the result ignores local environment files
-while exposing `.env.example`; ineffective, incomplete, or ambiguous rules stop
-for manual review before any write. Template sources, target parents, and
-seeded files are identity-checked for the whole run, and rollback moves
-run-owned files to named recovery paths instead of deleting them. It does not
+seeds only missing starter files from `project-templates/` and preserves
+existing ones. It appends the ordered `.env`, `.env.*`, `!.env.example` ignore
+policy when absent, and stops for manual review before any write when existing
+environment rules are ineffective, incomplete, or ambiguous. It does not
 initialize Git, copy `TEMPLATE-USAGE.md`, replace a README, or edit any
 sibling project.
 
@@ -94,12 +89,10 @@ through the reviewed `--replace` path in `docs/product-delivery.md`, which
 keeps backups.
 
 Codex desktop is the primary interactive entry; use the task prompts in
-`docs/product-delivery.md`. CLI profiles configure new CLI sessions only. Verify the selected
-provider roots: workflow adapters and Claude skill links honor
-`CLAUDE_CONFIG_DIR`; Codex adapters and duplicate-skill checks honor `CODEX_HOME`.
-Canonical shared skills remain under `~/.agents/skills/`. Use the expanded
-default/custom-root and nested-loading checks in `docs/guidance-loading-smoke.md`
-when establishing runtime support. Report unrun scenarios explicitly.
+`docs/product-delivery.md`, which lists the workflow adapter paths under
+`CLAUDE_CONFIG_DIR` and `CODEX_HOME`; README "Updating" gives the skill-link
+paths. Runtime loading checks are in
+`docs/guidance-loading-smoke.md`; report unrun scenarios explicitly.
 
 This file is the first-run entry point. Once setup has run, the installed
 `workspace-setup`, `project-init`, `project-sync`, and `guidance-audit` skills

@@ -182,7 +182,7 @@ definitions.
 
 Claude retains its native `--agent` entry and `@AGENTS.md` shared-guidance
 adapter. Its upward and lazy nested `CLAUDE.md` loading differs from Codex's
-startup guide chain; use the provider-specific checks in
+startup guide chain; use the runtime checks in
 `docs/guidance-loading-smoke.md`.
 
 ## Updating a workflow

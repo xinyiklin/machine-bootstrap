@@ -29,7 +29,6 @@ await test("repository and project guidance are self-contained", () => {
   const rootAgents = readFileSync(join(bootstrapRoot, "AGENTS.md"), "utf8");
   const rootClaude = readFileSync(join(bootstrapRoot, "CLAUDE.md"), "utf8");
   const readme = readFileSync(join(bootstrapRoot, "README.md"), "utf8");
-  const init = readFileSync(join(bootstrapRoot, "INIT.md"), "utf8");
   const projectAgents = readFileSync(
     join(bootstrapRoot, "project-templates", "AGENTS.md"),
     "utf8"

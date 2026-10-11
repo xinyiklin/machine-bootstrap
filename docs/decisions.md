@@ -136,7 +136,8 @@ number.
   closed on a Git-owned workspace. Skills locate the checkout beside a
   project's main checkout rather than assuming `../`. A worktree of a bare or
   separate-git-dir repository is not recognized and keeps the pre-D039
-  behavior.
+  behavior. The lower-level `install-skills.mjs` and `install-workflows.mjs`
+  are not gated; run them from a worktree only on the user's explicit request.
 - 2026-10-11 [USER] D040 ACTIVE: the project starter `AGENTS.md` carries only
   project facts and the rules a model cannot infer (authorization, secrets,
   Git authority, review, the workflow hook); the suite caps it at 4.5 KiB so

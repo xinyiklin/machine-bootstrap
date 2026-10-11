@@ -93,7 +93,8 @@ with the reason.
 
 - Keep changes scoped to the requested behavior and its necessary cleanup.
 - Current official Claude and Codex documentation is the authority for loading,
-  configuration, and adapter formats.
+  configuration, and adapter formats; `docs/provider-contracts.md` records
+  what was last checked.
 - Update templates, scripts, tests, README/INIT, and continuity together when
   their shared contract changes.
 - Use disposable workspace, project, and home directories for setup tests;
