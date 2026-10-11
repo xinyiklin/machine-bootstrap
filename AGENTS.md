@@ -17,10 +17,14 @@ machine-local facts; it is not an agent-policy source.
   files become project-owned and are not synchronized afterward.
 - `docs/engineering/git-workflow.md` — this repository's Git/publication
   contract.
-- `skills.json`, `skills/`, `scripts/lib/skill-*` — reviewed skill roster,
-  first-party skills, and the content-integrity contract.
-- `workflows/`, `scripts/lib/workflow-*` — provider-neutral workflow source and
-  deterministic adapter generation.
+- `skills.json`, `skills/`, `scripts/install-skills.mjs`, `scripts/lib/skill-*`
+  — reviewed skill roster, first-party skills, missing-only installation, and
+  the content-integrity contract.
+- `workflows/`, `scripts/install-workflows.mjs`, `scripts/lib/workflow-*` —
+  provider-neutral workflow source, reviewed installation, and deterministic
+  adapter generation.
+- `.github/workflows/`, `scripts/hooks/pre-push` — CI gates (full suite on
+  three OSes, PR size) and the opt-in pre-push suite run.
 - `scripts/init-workspace.mjs` (machine registry and shared capabilities),
   `init-project.mjs` (missing-only seeding of one target),
   `audit-workspace.mjs` (read-only sibling guidance report),

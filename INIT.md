@@ -20,14 +20,20 @@ node scripts/init-workspace.mjs
 ```
 
 The workspace initializer may create the optional parent `MACHINE.md` and
-install shared skills, workflows, and provider adapters. It never creates a
-parent `AGENTS.md`, `CLAUDE.md`, or `_templates/`. Replace `MACHINE.md` TODOs
-only with verified local facts and never add credentials, private documents, or
-secret filenames. Then run:
+install shared skills, workflows, and provider adapters. The canonical machine
+template must be a real in-checkout file and is snapshot-read with no-follow
+access before any workspace write. It never creates a parent `AGENTS.md`,
+`CLAUDE.md`, or `_templates/`. Replace `MACHINE.md` TODOs only with verified
+local facts and never add credentials, private documents, or secret filenames.
+Then run:
 
 ```bash
 node scripts/init-workspace.mjs --check
 ```
+
+Check mode is read-only. It allows the optional registry to be absent but
+fails on unresolved placeholders when the file exists, on shared-capability
+drift, and on retired parent guidance or template entries.
 
 If the parent contains a legacy `AGENTS.md`, `CLAUDE.md`, or `_templates/`,
 stop and report it. The same stop applies to `AGENTS.override.md`,

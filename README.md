@@ -36,8 +36,8 @@ the current session.
 
 ## What belongs here
 
-`AGENTS.md` carries the ownership map for every tracked path; this README adds
-only the operator view. `project-templates/TEMPLATE-USAGE.md` documents the
+`AGENTS.md` carries the ownership map; this README adds only the operator
+view. `project-templates/TEMPLATE-USAGE.md` documents the
 starter set but is never copied into a project or renamed as its README. Once
 starter files are copied, they are project-owned and are not synchronized
 against machine-bootstrap.
