@@ -55,12 +55,16 @@ project.
   content. README setup steps moved into `INIT.md`, which now owns the
   ancestor-instruction stop list; CI parses the generated Codex TOML with a
   real tomllib on Linux and macOS.
-- Impeccable stays pinned at 4.0.2. Reviewed 2026-10-10: upstream 4.5.2 (and
-  every release from 4.2.0) replaces the Node scripts with a launcher that
-  downloads a platform binary from GitHub releases on first run, verified only
-  against a `.sha256` sidecar from the same URL. 4.1.3 (c0f49521, hash
-  00c08bdd…) is the last Node-only release. Awaiting the user's decision: hold,
-  move to 4.1.3, or accept the binary download.
+- 2026-10-10 Impeccable pinned at 4.1.3 (c0f49521), the last Node-only
+  release, by the user's choice. Releases from 4.2.0 replace the Node scripts
+  with a launcher that downloads a platform binary from GitHub releases on
+  first run, verified only against a `.sha256` sidecar from the same URL;
+  moving past 4.1.3 needs that reviewed explicitly. 4.1.3 keeps 4.0.2's
+  outbound hosts (impeccable.style update check and concept seeds, OpenAI image
+  generation only when invoked) and its local `claude`/`codex` auth probe.
+  Its version moved under frontmatter `metadata:`, which the installer's
+  top-level `version:` check cannot read, so the entry relies on the content
+  hash alone and carries no `expectedVersion`.
 
 ## Next
 

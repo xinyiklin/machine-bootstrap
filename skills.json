@@ -44,9 +44,8 @@
       "name": "impeccable",
       "repository": "https://github.com/pbakaus/impeccable.git",
       "sourcePath": ".agents/skills/impeccable",
-      "sourceRevision": "fc2e694afca1ac0cc384b4fe56bab3335fea7912",
-      "expectedVersion": "4.0.2",
-      "contentSha256": "c882be322c5f25047191b0675f0dcd6000b0b0ac7a9ce3d7fba649bf58f6abe5"
+      "sourceRevision": "c0f495212236129c2e92aaf7714a3a9914569d13",
+      "contentSha256": "00c08bdd7389f4219f3651903b09263c5de7df0d887dc608b89d908141e05a4d"
     },
     {
       "name": "playwright",
