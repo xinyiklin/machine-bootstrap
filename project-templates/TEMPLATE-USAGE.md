@@ -10,6 +10,17 @@ copied or renamed as one.
 - `.gitignore`: local agent state, environment, and OS exclusions.
 - `docs/engineering/git-workflow.md`: project-owned Git/publication contract.
 - `.github/pull_request_template.md`: PR scope and verification receipt.
+- `.claude/settings.json`: shared Claude permission rules that deny reading
+  `.env` and `.env.*` while keeping `.env.example` readable. They cover
+  Claude's file tools and recognized shell file commands; Claude's sandbox
+  gives OS-level enforcement. The rules anchor at the session's starting
+  directory, also block Claude from editing those files, and their
+  `.env.example` carve-out cannot reopen a deny from user or managed settings.
+  Add rules for any other secret file names.
+
+Keep project guidance self-contained, because the repository may be cloned
+outside its current workspace, and never rely on load order to resolve a
+contradiction between guides.
 
 The Git contract defines a 500-line PR target and a 1,000-line review gate;
 the PR template records size, exclusions, and any required explanation or
@@ -56,28 +67,12 @@ and the `guidance-audit` skill recalibrates a project's guidance.
 
 ## Loading model
 
-- Codex builds its chain once per run. At a Git project root it loads that
-  root's `AGENTS.md`; from a scoped starting directory it loads applicable
-  guides from the project root down. A parent workspace guide is not inherited.
-- With no detected project root, Codex checks only the starting directory. It
-  does not walk upward to an arbitrary workspace guide or rebuild its chain
-  after navigating elsewhere. Start or restart at the intended root or scope.
-- Claude loads `CLAUDE.md` and `CLAUDE.local.md` from its starting directory and
-  every directory above it, and expands the project's explicit `@AGENTS.md`
-  import. Do not depend on a workspace parent for project policy or create
-  intentional contradictions.
-- Claude Code 2.1.277 and later can also read `AGENTS.md` natively, but only
-  when no `CLAUDE.md`, `.claude/CLAUDE.md`, or `CLAUDE.local.md` exists on the
-  path. Keep the starter `CLAUDE.md` adapter anyway: a personal
-  `CLAUDE.local.md` would otherwise silently turn native reading off, some
-  sessions and versions cannot read `AGENTS.md` directly, and
-  `InstructionsLoaded` hooks fire only for imported files. The import never
-  loads `AGENTS.md` twice. `AGENTS.md` stays the single shared policy; put only
-  Claude-specific mechanics in `CLAUDE.md`, because Codex never reads it.
-- Use `/context` to inspect loaded instruction files (`/memory` lists the
-  locations Claude checks). Use an `InstructionsLoaded` hook when exact Claude
-  file-level events are required.
-  Use a Codex instruction-summary or session-log smoke check for Codex.
+`docs/provider-contracts.md` in machine-bootstrap owns how Codex and Claude
+load guidance and why the starter keeps a thin `CLAUDE.md`. For a project:
+start sessions at its root or the relevant scoped directory, never depend on a
+workspace parent guide, keep shared policy in `AGENTS.md` and only
+Claude-specific mechanics in `CLAUDE.md`, and confirm loading with `/context`
+in Claude or an instruction summary or session log in Codex.
 
 ## Nested guidance
 
@@ -113,9 +108,8 @@ Claude's default file read returns only its first 2,000 lines.
 Shorter guides are followed more reliably: unnecessary requirements make agent
 tasks harder and more expensive, so state only what an agent cannot infer from
 the repository. From machine-bootstrap, `node scripts/audit-workspace.mjs`
-reports these budgets for every sibling without changing anything. In Claude
-Code 2.1.283 and later, `/doctor prompt-audit` finds stale or conflicting
-instructions.
+reports these budgets for every sibling without changing anything, and the
+`guidance-audit` skill recalibrates a project's guidance.
 
 ## Optional product-delivery workflow
 
@@ -132,7 +126,10 @@ contracts, or artifact kinds — and name the reviewer that satisfies independen
 review. A self-assessed test such as "non-trivial work" is not a condition, and
 an unrecorded skip is a process failure.
 
-Prefer contract changes over blanket directory matches when defining triggers.
+Projects may also add material-change triggers, required plan sections, or
+name maintenance that stays outside their conditions while the named
+contracts are unchanged. Prefer contract changes over blanket directory
+matches when defining triggers.
 For example, name changes to data retention, authorization, or installation
 ownership; exclude mechanical maintenance only when those contracts remain
 unchanged. Ordinary implementations still receive self-verification and,

@@ -70,9 +70,9 @@ required. Each session should contain only its repository marker through that
 repository's `CLAUDE.md` adapter and single `@AGENTS.md` import. The workspace
 and scratch sessions should contain none of the three repository markers.
 
-Claude Code 2.1.277 and later also reads `AGENTS.md` natively when no
-`CLAUDE.md`, `.claude/CLAUDE.md`, or `CLAUDE.local.md` exists on the path.
-Record the Claude version, then check these separately in project B:
+Claude also reads `AGENTS.md` natively under the conditions in
+`docs/provider-contracts.md`. Record the Claude version, then check these
+separately in project B:
 
 | Scenario | Expected Claude sources |
 | :--- | :--- |

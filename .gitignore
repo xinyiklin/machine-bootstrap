@@ -8,7 +8,7 @@ MACHINE.md
 .npmrc
 .skill-lock.json
 CLAUDE.local.md
-.claude/
+/.claude/
 
 # Active product-delivery task artifacts stay local
 .agent-work/

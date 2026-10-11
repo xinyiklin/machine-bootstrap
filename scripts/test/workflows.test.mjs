@@ -174,7 +174,7 @@ await test("one living Implementation Plan replaces the brief and plan gates", (
   }
   const starter = readNormalized(bootstrapRoot, "project-templates/AGENTS.md");
   assert.match(starter, /continues an active Implementation Plan/);
-  assert.match(starter, /Additional material-change triggers/);
+  assert.match(readNormalized(bootstrapRoot, "project-templates/TEMPLATE-USAGE.md"), /material-change triggers/);
 
   // Workflow 3.0.0 retired 1.x support: no live source keeps the old
   // artifacts, their activation clause, or consolidation rules.

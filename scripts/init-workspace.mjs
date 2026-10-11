@@ -23,10 +23,18 @@ import {
 } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { mainCheckoutOf, sanitizedGitEnvironment } from "./lib/bootstrap-location.mjs";
+import {
+  loadProviderBaseline,
+  probeProviderVersion,
+  providerAdvisories,
+  providers
+} from "./lib/provider-baseline.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const bootstrapRoot = resolve(scriptDir, "..");
-const workspaceRoot = resolve(bootstrapRoot, "..");
+const mainCheckout = mainCheckoutOf(bootstrapRoot);
+const workspaceRoot = mainCheckout ? dirname(mainCheckout) : resolve(bootstrapRoot, "..");
 const canonicalBootstrapRoot = realpathSync.native(bootstrapRoot);
 const canonicalWorkspaceRoot = realpathSync.native(workspaceRoot);
 const rawArgs = process.argv.slice(2);
@@ -47,6 +55,14 @@ function fail(message) {
 }
 
 if (unknownArgs.length) fail(`Unknown argument(s): ${unknownArgs.join(", ")}`);
+// A worktree may hold unmerged skills, workflows, or templates, so it may check
+// the workspace but never install from it.
+if (mainCheckout && !checkOnly) {
+  fail(
+    `This is a linked worktree; run setup from the main checkout ${mainCheckout}, ` +
+      "or add --check for a read-only check from here"
+  );
+}
 if (canonicalWorkspaceRoot === parse(canonicalWorkspaceRoot).root) {
   fail("Workspace root cannot be the filesystem root");
 }
@@ -63,7 +79,7 @@ const userHomeCandidates = [homedir(), process.env.HOME, process.env.USERPROFILE
 if (userHomeCandidates.includes(canonicalWorkspaceRoot)) {
   fail("Workspace root cannot be the user home; use a dedicated workspace folder");
 }
-if (dirname(canonicalBootstrapRoot) !== canonicalWorkspaceRoot) {
+if (!mainCheckout && dirname(canonicalBootstrapRoot) !== canonicalWorkspaceRoot) {
   fail("machine-bootstrap must resolve as a direct child of the workspace root");
 }
 
@@ -82,13 +98,17 @@ const requiredFiles = [
   "project-templates/TEMPLATE-USAGE.md",
   "project-templates/docs/engineering/git-workflow.md",
   "project-templates/.github/pull_request_template.md",
+  "project-templates/.claude/settings.json",
+  "providers.json",
   "skills.json",
   "workflows/registry.json",
   "scripts/install-skills.mjs",
   "scripts/install-workflows.mjs",
   "scripts/init-project.mjs",
+  "scripts/lib/bootstrap-location.mjs",
   "scripts/lib/fs-safety.mjs",
   "scripts/lib/portable-path.mjs",
+  "scripts/lib/provider-baseline.mjs",
   "scripts/lib/skill-integrity.mjs",
   "scripts/lib/skill-manifest.mjs",
   "scripts/lib/skill-source.mjs",
@@ -156,6 +176,12 @@ try {
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error));
 }
+let providerBaseline;
+try {
+  providerBaseline = loadProviderBaseline(join(bootstrapRoot, "providers.json"));
+} catch (error) {
+  fail(`providers.json: ${error instanceof Error ? error.message : String(error)}`);
+}
 if (!skipWorkflows) {
   try {
     const { loadWorkflowPackages } = await import("./lib/workflow-manifest.mjs");
@@ -178,23 +204,6 @@ function run(command, commandArgs, options = {}) {
     fail(`${options.label ?? command} exited with status ${result.status}`);
   }
   return result;
-}
-
-const gitEnvironmentOverrides = [
-  "GIT_DIR",
-  "GIT_WORK_TREE",
-  "GIT_COMMON_DIR",
-  "GIT_INDEX_FILE",
-  "GIT_OBJECT_DIRECTORY",
-  "GIT_ALTERNATE_OBJECT_DIRECTORIES",
-  "GIT_CEILING_DIRECTORIES",
-  "GIT_DISCOVERY_ACROSS_FILESYSTEM"
-];
-
-function sanitizedGitEnvironment() {
-  const environment = { ...process.env, LANG: "C", LC_ALL: "C" };
-  for (const name of gitEnvironmentOverrides) delete environment[name];
-  return environment;
 }
 
 function gitProbe(path) {
@@ -426,4 +435,19 @@ if (todoCount > 0) {
   console.log(`Optional machine registry is not present at ${machinePath}.`);
 } else {
   console.log(`Machine-local facts are populated in ${machinePath}.`);
+}
+
+// Advisory only: provider releases outpace this repository's reviewed facts.
+const installedProviders = Object.fromEntries(
+  providers.map(({ id, command }) => [id, probeProviderVersion(command)])
+);
+console.log(
+  `Provider baseline: docs checked ${providerBaseline.documentationChecked}; smoke-tested ` +
+    providers.map(({ id, label }) => `${label} ${providerBaseline.smokeTested[id]}`).join(", ") +
+    "; installed " +
+    providers.map(({ id, label }) => `${label} ${installedProviders[id] ?? "not detected"}`).join(", ") +
+    "."
+);
+for (const advisory of providerAdvisories(providerBaseline, installedProviders)) {
+  console.log(`Advisory: ${advisory}`);
 }

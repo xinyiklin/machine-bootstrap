@@ -1,6 +1,6 @@
 ---
 name: project-sync
-description: Bring an existing project's agent guidance up to date with machine-bootstrap's current starters without overwriting project-specific content. Use when the user asks to sync, update, or refresh a project's AGENTS.md, CLAUDE.md, Git contract, PR template, or ignore rules from machine-bootstrap's starters.
+description: Bring an existing project's agent guidance up to date with machine-bootstrap's current starters without overwriting project-specific content. Use when the user asks to sync, update, or refresh a project's AGENTS.md, CLAUDE.md, Git contract, PR template, Claude permission settings, or ignore rules from machine-bootstrap's starters.
 ---
 
 # Project sync
@@ -10,11 +10,14 @@ improvements change by change; it never replaces a customized file.
 
 ## Compare
 
-Work in a session started in the project. The machine-bootstrap checkout is
-`../machine-bootstrap`; otherwise ask the user. Run the read-only report:
+Work in a session started in the project. The machine-bootstrap checkout
+(`<checkout>` below) is `../machine-bootstrap` from the project root; from a
+Git worktree it sits beside the main checkout, at
+`"$(git rev-parse --path-format=absolute --git-common-dir)/../../machine-bootstrap"`.
+Otherwise ask the user. Run the read-only report:
 
 ```bash
-node ../machine-bootstrap/scripts/starter-diff.mjs <project-root>
+node <checkout>/scripts/starter-diff.mjs <project-root>
 ```
 
 Add `--since <revision>` when the project's continuity records the
@@ -46,6 +49,6 @@ changes the project's process waits for the user's decision.
 ## Finish
 
 Run the project's own checks and
-`node ../machine-bootstrap/scripts/audit-workspace.mjs`. Record "starters
+`node <checkout>/scripts/audit-workspace.mjs`. Record "starters
 synced to machine-bootstrap <commit>" in the project's continuity if it keeps
 one. Review and publication follow the project's `AGENTS.md` and Git contract.

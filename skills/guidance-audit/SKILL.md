@@ -11,8 +11,11 @@ every rule an agent cannot infer, without silently losing one.
 
 ## Measure
 
-- Run `node ../machine-bootstrap/scripts/audit-workspace.mjs` (read-only) and
-  read the repository's row: guide sizes, the Claude import, and continuity
+- Run `node <checkout>/scripts/audit-workspace.mjs` (read-only), where
+  `<checkout>` is `../machine-bootstrap` from a project root or, from a Git
+  worktree,
+  `"$(git rev-parse --path-format=absolute --git-common-dir)/../../machine-bootstrap"`.
+  Read the repository's row: guide sizes, the Claude import, and continuity
   length.
 - List what loads when: always (root `CLAUDE.md` with its imports, the
   `AGENTS.md` chain, unscoped rules, skill and subagent descriptions), on a
@@ -34,8 +37,8 @@ every rule an agent cannot infer, without silently losing one.
 
 Compare loading and configuration claims with current official docs (Claude
 Code memory, skills, subagents, and settings; Codex `AGENTS.md`, skills, and
-configuration) and note the date checked. In Claude Code 2.1.283 or later,
-suggest the user run `/doctor prompt-audit`, which is interactive.
+configuration) and note the date checked. In Claude Code, also suggest the
+user run `/doctor prompt-audit`, which is interactive.
 
 ## Report, then apply
 

@@ -1,13 +1,16 @@
 ---
 name: project-init
-description: Seed a project in this workspace with machine-bootstrap's starter guidance (AGENTS.md, CLAUDE.md, Git contract, PR template, .gitignore rules), then replace its placeholders with facts verified from the real project. Use when the user asks to initialize, bootstrap, or add agent guidance to a new or existing project.
+description: Seed a project in this workspace with machine-bootstrap's starter guidance (AGENTS.md, CLAUDE.md, Git contract, PR template, Claude permission settings, .gitignore rules), then replace its placeholders with facts verified from the real project. Use when the user asks to initialize, bootstrap, or add agent guidance to a new or existing project.
 ---
 
 # Project init
 
 `scripts/init-project.mjs` in the machine-bootstrap checkout does the seeding;
 the agent's job is choosing the target and filling the placeholders truthfully.
-The checkout is `../machine-bootstrap` from any project root; otherwise ask.
+The checkout is `../machine-bootstrap` from a project root; from a Git
+worktree it sits beside the main checkout, at
+`"$(git rev-parse --path-format=absolute --git-common-dir)/../../machine-bootstrap"`.
+Otherwise ask. Seeding runs only from machine-bootstrap's main checkout.
 
 ## Seed
 

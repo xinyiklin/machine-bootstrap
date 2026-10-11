@@ -11,10 +11,13 @@ skill does not exist; follow the checkout's `INIT.md` instead.
 
 ## Locate the checkout
 
-`machine-bootstrap` is a direct child of the workspace folder, so from any
-project root it is `../machine-bootstrap`. Confirm that
-`scripts/init-workspace.mjs` exists there, or ask the user for the path. Run
-every command from that checkout, and read its `AGENTS.md` first.
+`machine-bootstrap` is a direct child of the workspace folder, so from a
+project root it is `../machine-bootstrap`. From a Git worktree it sits beside
+the main checkout instead:
+`"$(git rev-parse --path-format=absolute --git-common-dir)/../../machine-bootstrap"`.
+Confirm that `scripts/init-workspace.mjs` exists there, or ask the user for the
+path. Read its `AGENTS.md` first. Run installs from that main checkout; a
+machine-bootstrap worktree can run only `--check`.
 
 ## Check, then act on what it reports
 

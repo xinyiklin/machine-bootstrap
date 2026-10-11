@@ -166,7 +166,7 @@ await test("workspace audit reports sibling guidance budgets without writing", (
     assert.match(out, /project-a: CLAUDE\.md imports AGENTS\.md 0 time\(s\)/);
     assert.match(out, /project-a: 1 TODO marker\(s\)/);
     assert.match(out, /project-a: CONTINUITY\.md is 200 lines .* over the default 160-line cap/);
-    assert.match(out, /project-b: no CLAUDE\.md: Claude Code 2\.1\.277\+ reads AGENTS\.md natively/);
+    assert.match(out, /project-b: no CLAUDE\.md: Claude reads AGENTS\.md natively only in some sessions/);
     assert.doesNotMatch(out, /project-c:/);
     assert.match(out, /^project-c\s+no\s+0\.0 KiB\s+0\.0 KiB\s+1\s+1 lines$/m);
     assert.doesNotMatch(out, /scratch|\.hidden|linked-project|machine-bootstrap\s/);
@@ -215,10 +215,15 @@ await test("project initialization changes only its explicit target", () => {
       "CLAUDE.md",
       ".gitignore",
       "docs/engineering/git-workflow.md",
-      ".github/pull_request_template.md"
+      ".github/pull_request_template.md",
+      ".claude/settings.json"
     ]) {
       assert.equal(existsSync(join(projectA, ...path.split("/"))), true, path);
     }
+    assert.deepEqual(
+      JSON.parse(readFileSync(join(projectA, ".claude", "settings.json"), "utf8")).permissions.deny,
+      ["Read(.env)", "Read(.env.*)", "Read(!.env.example)"]
+    );
     assert.equal(existsSync(join(projectA, "README.md")), false);
     assert.equal(existsSync(join(projectA, "TEMPLATE-USAGE.md")), false);
     assert.equal(directoryByteHash(projectB), siblingBefore);
@@ -553,6 +558,8 @@ await test("existing project guidance is preserved and gitignore entries merge",
     writeFileSync(join(project, "CLAUDE.md"), "@AGENTS.md\ncustom adapter\n");
     writeFileSync(join(project, ".gitignore"), "dist/\n");
     writeFileSync(join(project, ".env.example"), "SAFE=value\n");
+    mkdirSync(join(project, ".claude"));
+    writeFileSync(join(project, ".claude", "settings.json"), "{\"mine\": 1}\n");
 
     const result = runProjectInitializer(checkoutRoot, project, testRoot);
     assert.equal(result.status, 0, result.stderr);
@@ -584,6 +591,7 @@ await test("existing project guidance is preserved and gitignore entries merge",
     assert.equal(gitCheckIgnore(project, ".env.local").status, 0);
     assert.equal(gitCheckIgnore(project, ".env.production").status, 0);
     assert.match(result.stdout, /Preserved: AGENTS\.md, CLAUDE\.md/);
+    assert.equal(readFileSync(join(project, ".claude", "settings.json"), "utf8"), "{\"mine\": 1}\n");
   } finally {
     rmSync(testRoot, { recursive: true, force: true });
   }

@@ -31,6 +31,7 @@ import {
 } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { mainCheckoutOf } from "./lib/bootstrap-location.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const bootstrapRoot = resolve(scriptDir, "..");
@@ -67,6 +68,12 @@ if (positional.length !== 1) {
     "Provide exactly one target: " +
       "node scripts/init-project.mjs <target> [--create]"
   );
+}
+
+// A worktree may hold unmerged starters; seed only from the main checkout.
+const mainCheckout = mainCheckoutOf(bootstrapRoot);
+if (mainCheckout) {
+  fail(`This is a linked worktree; run project initialization from the main checkout ${mainCheckout}`);
 }
 
 const [nodeMajor] = process.versions.node
@@ -336,7 +343,8 @@ const seedFiles = [
   "AGENTS.md",
   "CLAUDE.md",
   "docs/engineering/git-workflow.md",
-  ".github/pull_request_template.md"
+  ".github/pull_request_template.md",
+  ".claude/settings.json"
 ];
 const templateContents = new Map();
 for (const relativePath of [...seedFiles, ".gitignore"]) {

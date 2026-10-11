@@ -43,28 +43,18 @@ project.
   narrow (D037); README's workflow detail moved to `docs/product-delivery.md`.
 - 2026-10-10 Product Delivery 3.2.0 (D038): the plan owner tells the user which
   assumptions the plan added, at the start and in the PR body or final report.
-- 2026-10-10 `archify` pinned at upstream 10722002 (2.17.0-dev.1). It has no
-  install scripts; at runtime it makes a throttled update-check GET to its
-  GitHub Pages manifest (opt out: `ARCHIFY_UPDATE_CHECK_DISABLED=1`) and
-  fetches brand URLs the user supplies, refusing private addresses.
+- Skill pin notes (archify's runtime network use; Impeccable held at 4.1.3
+  because 4.2.0 and later download a platform binary, which needs explicit
+  review) rotated to `docs/continuity/2026-10.md` on 2026-10-11.
 - Bootstrap CI runs the full disposable suite on Linux, Windows, and macOS;
   a separate PR size check enforces the 1,000-line gate (D035).
-- 2026-10-10 Skill pins refreshed: `systematic-debugging` moved to superpowers
-  bb92a777 (two shell-portability lines); `verification-before-completion` and
-  both Vercel skills re-pinned to current upstream heads with identical
-  content. README setup steps moved into `INIT.md`, which now owns the
-  ancestor-instruction stop list; CI parses the generated Codex TOML with a
-  real tomllib on Linux and macOS.
-- 2026-10-10 Impeccable pinned at 4.1.3 (c0f49521), the last Node-only
-  release, by the user's choice. Releases from 4.2.0 replace the Node scripts
-  with a launcher that downloads a platform binary from GitHub releases on
-  first run, verified only against a `.sha256` sidecar from the same URL;
-  moving past 4.1.3 needs that reviewed explicitly. 4.1.3 keeps 4.0.2's
-  outbound hosts (impeccable.style update check and concept seeds, OpenAI image
-  generation only when invoked) and its local `claude`/`codex` auth probe.
-  Its version moved under frontmatter `metadata:`, which the installer's
-  top-level `version:` check cannot read, so the entry relies on the content
-  hash alone and carries no `expectedVersion`.
+- 2026-10-11 Guidance review fixes (D039–D042): worktree-aware read-only
+  scripts, slimmed starter `AGENTS.md` (4.1 KiB), one provider-facts owner with
+  a `--check` advisory, prose-free guidance tests, and a seeded project
+  `.claude/settings.json`. Installed first-party skills differ from their new
+  pins until reinstalled through `workspace-setup`. Deferred: an emphasis and
+  duplication pass over `WORKFLOW.md` and the role contracts, which needs a
+  workflow version bump and reinstall.
 
 ## Next
 

@@ -222,6 +222,7 @@ function main() {
     console.log(`${outcome.padEnd(10)} ${scenario.provider} ${scenario.dir}: ${scenario.label} — ${detail}`);
   }
   console.log("Results cover only these provider versions and scenarios.");
+  console.log("After a full pass, record these versions under smokeTested in providers.json.");
   process.exit(results.some((result) => result.outcome === "failed") ? 1 : 0);
 }
 

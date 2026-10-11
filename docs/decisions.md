@@ -128,3 +128,28 @@ number.
   the `assumption` items the plan added when it starts work on them and again
   in the PR body or final report, because the plan is a local file the user may
   never read. Listing is not an approval request; work proceeds (extends D026).
+- 2026-10-11 [USER-DELEGATED] D039 ACTIVE: a linked worktree of this checkout
+  administers its main checkout's workspace. `init-workspace --check`,
+  `audit-workspace.mjs`, and `starter-diff.mjs` resolve that workspace from a
+  worktree; setup and `init-project.mjs` refuse there, naming the main
+  checkout, because a worktree may hold unmerged sources. The audit now fails
+  closed on a Git-owned workspace. Skills locate the checkout beside a
+  project's main checkout rather than assuming `../`. A worktree of a bare or
+  separate-git-dir repository is not recognized and keeps the pre-D039
+  behavior.
+- 2026-10-11 [USER] D040 ACTIVE: the project starter `AGENTS.md` carries only
+  project facts and the rules a model cannot infer (authorization, secrets,
+  Git authority, review, the workflow hook); the suite caps it at 4.5 KiB so
+  most of the 8 KiB budget stays for project facts. Authoring notes and
+  optional workflow additions live in `TEMPLATE-USAGE.md`.
+- 2026-10-11 [USER-DELEGATED] D041 ACTIVE: `docs/provider-contracts.md` is the
+  one owner of provider loading facts and `providers.json` records the docs
+  check date and smoke-tested versions; other guidance does not quote
+  provider versions (suite-enforced). `init-workspace.mjs` prints the
+  baseline and advises, never fails, when an installed provider is newer or
+  the check is over 30 days old. Guidance tests assert rules and structure,
+  not operator prose.
+- 2026-10-11 [USER] D042 ACTIVE: project starters seed `.claude/settings.json`
+  denying Claude reads of `.env` and `.env.*` except `.env.example`, matching
+  the `.gitignore` policy; seeding stays missing-only and existing projects
+  adopt it through `project-sync`.
