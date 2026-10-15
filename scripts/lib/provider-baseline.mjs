@@ -3,7 +3,8 @@
 // were last checked and which provider versions last passed the live smoke
 // check; setup compares it with the installed CLIs and only ever advises.
 
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
 export const providers = [
@@ -39,9 +40,84 @@ export function compareVersions(left, right) {
   return 0;
 }
 
+// Windows runs a .cmd or .bat file only through cmd.exe, and npm installs
+// provider CLIs as such shims, so a plain spawn of "codex" finds nothing there.
+// The command is resolved on PATH alone, never the current directory, and a
+// shim runs through cmd.exe with quoted arguments that cannot expand. A
+// trailing backslash would escape the closing quote for the program the shim
+// starts, so it is refused too; NoDefaultCurrentDirectoryInExePath keeps the
+// shim's own lookups (npm shims call a bare `node`) off the current directory.
+const windowsDirect = new Set([".com", ".exe"]);
+const windowsShim = new Set([".bat", ".cmd"]);
+const shimUnsafe = /["%!^\r\n]|\\$/;
+
+function environmentValue(env, name) {
+  const key = Object.keys(env).find((candidate) => candidate.toUpperCase() === name.toUpperCase());
+  return key === undefined ? undefined : env[key];
+}
+
+function isFile(path) {
+  try {
+    return statSync(path).isFile();
+  } catch {
+    return false;
+  }
+}
+
+// Returns { file, args, verbatim } to spawn, or null when the command is not
+// on PATH. Throws when a shim cannot be passed these arguments safely.
+export function resolveProviderSpawn(command, args, { platform = process.platform, env = process.env } = {}) {
+  if (platform !== "win32") return { file: command, args, verbatim: false };
+  const extensions = (environmentValue(env, "PATHEXT") || ".COM;.EXE;.BAT;.CMD")
+    .split(";")
+    .map((extension) => extension.trim().toLowerCase())
+    .filter((extension) => windowsDirect.has(extension) || windowsShim.has(extension));
+  for (const entry of (environmentValue(env, "PATH") ?? "").split(";")) {
+    const directory = entry.trim().replace(/^"(.*)"$/, "$1");
+    if (!directory) continue;
+    for (const extension of extensions) {
+      const candidate = join(directory, command + extension);
+      if (!isFile(candidate)) continue;
+      if (windowsDirect.has(extension)) return { file: candidate, args, verbatim: false };
+      const parts = [candidate, ...args];
+      const unsafe = parts.find((part) => shimUnsafe.test(part));
+      if (unsafe !== undefined) {
+        throw new Error(`cannot pass ${JSON.stringify(unsafe)} to ${candidate} through cmd.exe`);
+      }
+      const shell =
+        environmentValue(env, "ComSpec") ||
+        join(environmentValue(env, "SystemRoot") || "C:\\Windows", "System32", "cmd.exe");
+      const line = parts.map((part) => `"${part}"`).join(" ");
+      return { file: shell, args: ["/d", "/v:off", "/s", "/c", `"${line}"`], verbatim: true };
+    }
+  }
+  return null;
+}
+
+// spawnSync for a provider CLI. A command that is missing or cannot be run
+// safely comes back as a result with `error` set, as spawnSync reports ENOENT.
+export function spawnProvider(command, args, options = {}) {
+  let resolved;
+  try {
+    resolved = resolveProviderSpawn(command, args, { env: options.env ?? process.env });
+  } catch (error) {
+    return { error, status: null, stdout: "", stderr: "" };
+  }
+  if (!resolved) {
+    return { error: new Error(`${command} was not found on PATH`), status: null, stdout: "", stderr: "" };
+  }
+  const env = options.env ?? process.env;
+  return spawnSync(resolved.file, resolved.args, {
+    ...options,
+    env: resolved.verbatim ? { ...env, NoDefaultCurrentDirectoryInExePath: "1" } : env,
+    shell: false,
+    windowsVerbatimArguments: resolved.verbatim
+  });
+}
+
 // Returns the installed version, or null when the CLI is absent or unreadable.
-export function probeProviderVersion(command) {
-  const probe = spawnSync(command, ["--version"], { encoding: "utf8", shell: false, timeout: 10000 });
+export function probeProviderVersion(command, env = process.env) {
+  const probe = spawnProvider(command, ["--version"], { encoding: "utf8", timeout: 10000, env });
   if (probe.error || probe.status !== 0) return null;
   return probe.stdout.match(/\d+\.\d+\.\d+/)?.[0] ?? null;
 }

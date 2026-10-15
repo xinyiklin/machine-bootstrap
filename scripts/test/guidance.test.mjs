@@ -3,6 +3,7 @@
 
 import assert from "node:assert/strict";
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -572,5 +573,88 @@ await test("provider facts have one owner and setup only advises on them", async
   ]) {
     const text = readFileSync(join(bootstrapRoot, ...relativePath.split("/")), "utf8");
     assert.doesNotMatch(text, /\b2\.1\.\d{3}\b|\b0\.1\d{2}\.\d+\b/, relativePath);
+  }
+});
+
+await test("provider CLIs are found on PATH, including Windows npm shims", async () => {
+  const baseline = await import("../lib/provider-baseline.mjs");
+  const scratch = mkdtempSync(join(tmpdir(), "machine-bootstrap-provider-path-"));
+  try {
+    // Resolution follows PATH and PATHEXT order, skips extensionless npm
+    // shell shims, and never looks in the current directory.
+    const early = join(scratch, "early");
+    const late = join(scratch, "late");
+    mkdirSync(early);
+    mkdirSync(late);
+    writeFileSync(join(early, "fake"), "#!/bin/sh\n");
+    writeFileSync(join(late, "fake.cmd"), "@echo off\r\n");
+    writeFileSync(join(late, "fake.exe"), "");
+    const windows = (pathEntries, extra = {}) => ({
+      platform: "win32",
+      env: { Path: pathEntries.join(";"), PATHEXT: ".JS;.CMD;.EXE", ComSpec: "C:\\cmd.exe", ...extra }
+    });
+    const shim = baseline.resolveProviderSpawn("fake", ["--version"], windows([early, `"${late}"`]));
+    assert.equal(shim.file, "C:\\cmd.exe");
+    assert.equal(shim.verbatim, true);
+    assert.deepEqual(shim.args, ["/d", "/v:off", "/s", "/c", `""${join(late, "fake.cmd")}" "--version""`]);
+    const direct = baseline.resolveProviderSpawn("fake", ["--version"], windows([late], { PATHEXT: ".EXE;.CMD" }));
+    assert.deepEqual(direct, { file: join(late, "fake.exe"), args: ["--version"], verbatim: false });
+    assert.equal(baseline.resolveProviderSpawn("fake", [], windows([early])), null);
+    assert.throws(
+      () => baseline.resolveProviderSpawn("fake", ["%PATH%"], windows([late])),
+      /cannot pass "%PATH%"/
+    );
+    assert.throws(() => baseline.resolveProviderSpawn("fake", ["C:\\dir\\", "--sandbox"], windows([late])));
+    assert.deepEqual(baseline.resolveProviderSpawn("fake", ["-v"], { platform: "linux", env: {} }), {
+      file: "fake",
+      args: ["-v"],
+      verbatim: false
+    });
+
+    // A real spawn on this host, from a directory whose name cmd.exe would
+    // otherwise split or interpret.
+    const bin = join(scratch, "fake providers & co");
+    mkdirSync(bin);
+    if (process.platform === "win32") {
+      writeFileSync(join(bin, "fakeprovider.cmd"), "@echo off\r\necho fakeprovider 9.8.7\r\n");
+    } else {
+      writeFileSync(join(bin, "fakeprovider"), '#!/bin/sh\necho "fakeprovider 9.8.7"\n');
+      chmodSync(join(bin, "fakeprovider"), 0o755);
+    }
+    const env = { ...process.env, PATH: bin };
+    // The inherited setting would hide a spawnProvider that stopped adding it.
+    for (const key of Object.keys(env)) {
+      const name = key.toUpperCase();
+      if ((name === "PATH" && key !== "PATH") || name === "NODEFAULTCURRENTDIRECTORYINEXEPATH") delete env[key];
+    }
+    assert.equal(baseline.probeProviderVersion("fakeprovider", env), "9.8.7");
+    assert.equal(baseline.probeProviderVersion("missing-provider", env), null);
+
+    // Arguments, stdin, and the exit status reach the real program intact,
+    // as npm's shim hands them to node.
+    const reporter = join(scratch, "report.mjs");
+    writeFileSync(
+      reporter,
+      "let stdin = '';\nprocess.stdin.on('data', (chunk) => { stdin += chunk; });\n" +
+        "process.stdin.on('end', () => {\n" +
+        "  console.log(JSON.stringify({ args: process.argv.slice(2), stdin, " +
+        "noCwd: process.env.NoDefaultCurrentDirectoryInExePath ?? null }));\n" +
+        "  process.exit(4);\n});\n"
+    );
+    if (process.platform === "win32") {
+      writeFileSync(join(bin, "fakeargs.cmd"), `@echo off\r\n"${process.execPath}" "${reporter}" %*\r\n`);
+    } else {
+      writeFileSync(join(bin, "fakeargs"), `#!/bin/sh\nexec "${process.execPath}" "${reporter}" "$@"\n`);
+      chmodSync(join(bin, "fakeargs"), 0o755);
+    }
+    const args = ["--cd", join(scratch, "a b & c"), "--sandbox", "read-only", "x|y", "(p)", "-"];
+    const run = baseline.spawnProvider("fakeargs", args, { env, input: "from stdin\n", encoding: "utf8" });
+    assert.equal(run.status, 4, run.stderr);
+    const reported = JSON.parse(run.stdout);
+    assert.deepEqual(reported.args, args);
+    assert.equal(reported.stdin.replace(/\r\n/g, "\n"), "from stdin\n");
+    if (process.platform === "win32") assert.equal(reported.noCwd, "1");
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
   }
 });
