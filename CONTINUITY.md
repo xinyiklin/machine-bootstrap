@@ -34,10 +34,16 @@ project.
 - 2026-10-10 Agent-facing skills `workspace-setup`, `project-init`,
   `project-sync`, and `guidance-audit` drive the scripts; `starter-diff.mjs`
   compares a project's starters read-only (D034).
-- 2026-10-10 Live smoke, implementer run (D036): Claude Code 2.1.285 and Codex
-  0.159.2 passed all seven scenarios, including Claude's native `AGENTS.md`,
-  `CLAUDE.local.md` turning it off, and discovery of the installed skills and
-  `mb-*` roles.
+- 2026-10-15 Live smoke, implementer run with the user's approval (D036):
+  Claude Code 2.1.300 and Codex 0.162.1 passed all seven scenarios;
+  `providers.json` records them. A delta check of the memory and Codex
+  `AGENTS.md` pages and both changelogs found one refinement (the Bedrock and
+  telemetry-off sessions unable to read `AGENTS.md` natively are those before
+  2.1.281), now in
+  `docs/provider-contracts.md`; `documentationChecked` stays 2026-10-14
+  because the skills, subagents, and configuration pages were not rechecked.
+  The 2.1.285 / 0.159.2 entry rotated to `docs/continuity/2026-10.md`.
+  Receipt: `docs/continuity/2026-10-15-provider-smoke.md`.
 - 2026-10-10 Product Delivery 3.1.0: the Delivery Lead briefs the Verifier
   once with a complete checklist; this repository's full-workflow triggers
   narrow (D037); README's workflow detail moved to `docs/product-delivery.md`.
