@@ -61,6 +61,16 @@ project.
   on this machine the same day with the user's approval (old copy in the
   Trash), and `--check` passes. Receipt:
   `docs/continuity/2026-10-14-guidance-audit.md`.
+- 2026-10-15 Provider CLI lookup: `--check` and `smoke-providers.mjs` resolve
+  `claude` and `codex` on PATH, never the current directory, through
+  `spawnProvider` in `scripts/lib/provider-baseline.mjs`. A Windows npm
+  `.cmd`/`.bat` shim runs through `cmd.exe` with quoted arguments,
+  `NoDefaultCurrentDirectoryInExePath=1`, and a refusal of arguments cmd could
+  expand or that end in a backslash. Before this, an npm-installed Codex on
+  Windows showed as "not detected" and its advisory never fired. Known limit:
+  a timeout kills `cmd.exe` but not the provider it started. Classified as an
+  ordinary change: lookup feeds only the advisory and the opt-in smoke run,
+  and no listed contract changes.
 - Deferred: an emphasis and duplication pass over `WORKFLOW.md` and the role
   contracts (44 emphatic lines across 32 KiB; the material-change and review
   paragraphs are restated between `WORKFLOW.md` and `delivery-lead.md`),

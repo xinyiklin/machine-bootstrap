@@ -12,6 +12,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomBytes } from "node:crypto";
 import { spawnSync } from "node:child_process";
+import { spawnProvider } from "./lib/provider-baseline.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 
@@ -117,11 +118,11 @@ function runProvider(scenario, available) {
   if (scenario.provider === "claude") {
     // File and shell tools are off, and the event stream shows any other tool
     // use, so a marker can only count when it came from loading.
-    const result = spawnSync(
+    const result = spawnProvider(
       "claude",
       ["-p", "--output-format", "stream-json", "--verbose", "--no-session-persistence",
         "--disallowedTools", "Read,Grep,Glob,Bash,LS,WebFetch,WebSearch"],
-      { cwd: scenario.cwd, input: prompt, encoding: "utf8", timeout: 240000, shell: false }
+      { cwd: scenario.cwd, input: prompt, encoding: "utf8", timeout: 240000 }
     );
     if (result.error || result.status !== 0) {
       return { skipped: `claude exited: ${(result.stderr || result.error?.message || "").trim().slice(0, 200)}` };
@@ -135,11 +136,11 @@ function runProvider(scenario, available) {
     }
     return { text, usedTools };
   }
-  const result = spawnSync(
+  const result = spawnProvider(
     "codex",
     ["exec", "--cd", scenario.cwd, "--sandbox", "read-only", "--skip-git-repo-check",
       "--ephemeral", "--json", "-"],
-    { input: prompt, encoding: "utf8", timeout: 240000, shell: false }
+    { input: prompt, encoding: "utf8", timeout: 240000 }
   );
   if (result.error || result.status !== 0) {
     return { skipped: `codex exited: ${(result.stderr || result.error?.message || "").trim().slice(0, 200)}` };
@@ -174,7 +175,7 @@ export function runSmoke({ run = runProvider, available, expectations, root }) {
 }
 
 function commandExists(name) {
-  const probe = spawnSync(name, ["--version"], { encoding: "utf8", shell: false });
+  const probe = spawnProvider(name, ["--version"], { encoding: "utf8" });
   return !probe.error && probe.status === 0 ? probe.stdout.trim() : null;
 }
 
