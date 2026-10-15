@@ -32,9 +32,10 @@ live smoke check makes model calls, so it runs only with the user's approval.
   while no `CLAUDE.md`, `.claude/CLAUDE.md`, or `CLAUDE.local.md` exists in the
   launch directory or above it. The **Project instructions** setting
   `claude-md-and-agents-md` reads both and lazily loads nested `AGENTS.md`.
-  `InstructionsLoaded` hooks do not fire for a natively read `AGENTS.md`, and
-  some sessions cannot read it at all. Claude never reads `AGENTS.override.md`,
-  `AGENTS.local.md`, or anything under `.agents/`.
+  `InstructionsLoaded` hooks do not fire for a natively read `AGENTS.md`.
+  Before 2.1.281, some sessions (for example on Amazon Bedrock or with
+  telemetry disabled) could not read it at all. Claude never reads
+  `AGENTS.override.md`, `AGENTS.local.md`, or anything under `.agents/`.
 
 ## Why starters keep `CLAUDE.md`
 
