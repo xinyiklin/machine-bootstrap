@@ -74,6 +74,33 @@ await test("repository and project guidance are self-contained", () => {
     );
     assert.match(normalized, /Only the user may waive a required review/, label);
   }
+  // Operator docs point to those two owners instead of restating the rule.
+  for (const path of [
+    "README.md",
+    "docs/product-delivery.md",
+    "docs/engineering/git-workflow.md",
+    "project-templates/TEMPLATE-USAGE.md",
+    "project-templates/docs/engineering/git-workflow.md"
+  ]) {
+    const normalized = readFileSync(join(bootstrapRoot, path), "utf8").replace(/\s+/g, " ");
+    assert.doesNotMatch(normalized, /typos?, (broken )?links?, formatting,? (and |or )?comment/i, path);
+  }
+  // Authoring notes live in the template note that project-init deletes, not
+  // in lines every seeded session loads.
+  assert.doesNotMatch(
+    projectAgents.replace(/^>.*$/gm, ""),
+    /keep the guide under|cannot infer from the repository/
+  );
+  // Provider loading limits have one owner; other guides describe them in words.
+  for (const path of [
+    "AGENTS.md",
+    "README.md",
+    "INIT.md",
+    "project-templates/AGENTS.md",
+    "project-templates/TEMPLATE-USAGE.md"
+  ]) {
+    assert.doesNotMatch(readFileSync(join(bootstrapRoot, path), "utf8"), /project_doc_max_bytes|32 KiB/, path);
+  }
   assert.equal(existsSync(join(bootstrapRoot, "project-templates", "README.md")), false);
   const retiredGuides = join(bootstrapRoot, "guides");
   assert.equal(

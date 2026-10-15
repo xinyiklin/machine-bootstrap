@@ -9,7 +9,12 @@
     {
       "name": "guidance-audit",
       "localPath": "skills/guidance-audit",
-      "contentSha256": "e4f7665b9632db3422c348927eb7747edaca485bcef0e1a44da2d8ae51cb11f0"
+      "contentSha256": "4691192a572e2fdbe39d2245f97efd34c06a08247e6e858c9751b16c0e78529c"
+    },
+    {
+      "name": "guidance-capture",
+      "localPath": "skills/guidance-capture",
+      "contentSha256": "6417f8cd5d4366e5d8ac41f2544656b2bd996cbf521ca14121cca17a66d60f8b"
     },
     {
       "name": "project-init",

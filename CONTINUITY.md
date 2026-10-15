@@ -49,12 +49,22 @@ project.
 - Bootstrap CI runs the full disposable suite on Linux, Windows, and macOS;
   a separate PR size check enforces the 1,000-line gate (D035).
 - 2026-10-11 Guidance review fixes (D039–D042): worktree-aware read-only
-  scripts, slimmed starter `AGENTS.md` (4.1 KiB), one provider-facts owner with
-  a `--check` advisory, prose-free guidance tests, and a seeded project
-  `.claude/settings.json`. Installed first-party skills differ from their new
-  pins until reinstalled through `workspace-setup`. Deferred: an emphasis and
-  duplication pass over `WORKFLOW.md` and the role contracts, which needs a
-  workflow version bump and reinstall.
+  scripts, slimmed starter `AGENTS.md`, one provider-facts owner with a
+  `--check` advisory, prose-free guidance tests, and a seeded project
+  `.claude/settings.json`.
+- 2026-10-14 Guidance audit against current Claude Code and Codex docs
+  (D043): root and starter `AGENTS.md` hold only non-inferable rules,
+  `TEMPLATE-USAGE.md` defers loading facts to `docs/provider-contracts.md`,
+  provider facts rechecked (Codex agent sandbox, subagent model fallback,
+  description budgets), `guidance-audit` rewritten around the official
+  include/exclude test, and a new `guidance-capture` skill; both reinstalled
+  on this machine the same day with the user's approval (old copy in the
+  Trash), and `--check` passes. Receipt:
+  `docs/continuity/2026-10-14-guidance-audit.md`.
+- Deferred: an emphasis and duplication pass over `WORKFLOW.md` and the role
+  contracts (44 emphatic lines across 32 KiB; the material-change and review
+  paragraphs are restated between `WORKFLOW.md` and `delivery-lead.md`),
+  which needs a workflow version bump and a reviewed reinstall.
 
 ## Next
 

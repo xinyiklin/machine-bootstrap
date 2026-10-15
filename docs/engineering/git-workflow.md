@@ -65,9 +65,8 @@ affected owners, verification, skipped evidence, review result, and risks.
 
 Before opening or updating a PR, confirm the branch, base, and exact changed
 paths; run the owner and consumer checks plus `git diff --check`; and inspect
-the complete diff. Review follows `AGENTS.md`: implementer verification, then
-one fresh independent review unless the change is typo, link, formatting, or
-comment-only, or the user waives it.
+the complete diff. Review, its exception, and waivers follow the Verification
+section of `AGENTS.md`.
 
 Merge only the exact reviewed and verified head; never merge a red, stale,
 conflicted, or unresolved PR. Squash is the default. A new commit, conflict

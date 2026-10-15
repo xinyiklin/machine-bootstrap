@@ -154,3 +154,11 @@ number.
   denying Claude reads of `.env` and `.env.*` except `.env.example`, matching
   the `.gitignore` policy; seeding stays missing-only and existing projects
   adopt it through `project-sync`.
+- 2026-10-14 [USER-DELEGATED] D043 ACTIVE: always-loaded guidance holds only
+  rules an agent cannot infer, each tested by whether removing it would cause
+  a mistake; procedures live in skills, subtree rules in nested guides or
+  scoped rules, and must-always rules in tests, hooks, or permissions. A rule
+  enters only after a repeated mistake or review finding, through the
+  `guidance-capture` skill; periodic trimming is `guidance-audit`; both apply
+  the current official Claude and Codex authoring guidance recorded in
+  `docs/provider-contracts.md` (extends D020, D034, D040).

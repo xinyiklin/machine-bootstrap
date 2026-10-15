@@ -160,6 +160,15 @@ await test("first-party skills are listed, portable, and call real scripts", () 
   const audit = read("guidance-audit");
   assert.match(audit, /Never drop a hard invariant or an authorization, review, or safety rule silently/);
   assert.match(audit, /Edit a repository's guidance only in a session started in that repository/);
+  assert.match(audit, /would removing it cause an agent to make a mistake/);
+  const capture = read("guidance-capture");
+  assert.match(capture, /the same mistake twice/);
+  assert.match(capture, /is the user's decision; propose the wording and wait/);
+  // Every first-party skill is documented in the README's skill table.
+  const readme = readFileSync(join(bootstrapRoot, "README.md"), "utf8");
+  for (const skill of local) {
+    assert.match(readme, new RegExp("^\\| `" + skill.name + "` \\|", "m"), `${skill.name} in README skill table`);
+  }
 });
 
 await test("starter diff reports upstream changes without writing", () => {
