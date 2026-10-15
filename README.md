@@ -132,10 +132,8 @@ This repository also owns a portable, provider-neutral delivery workflow: a
 Delivery Lead (`mb-delivery-lead` / `mb_delivery_lead`) that owns one living
 Implementation Plan, an optional Product Partner, and a fresh independent
 Verifier (`mb-verifier` / `mb_verifier`). Installing it only makes the roles
-available; it activates when a role is selected, the complete workflow is
-requested, an active plan continues, or project guidance names the work.
-Activation, launch prompts, installed paths, upgrades, and project additions
-are in `docs/product-delivery.md`; the contract is
+available. Activation, launch prompts, installed paths, upgrades, and project
+additions are in `docs/product-delivery.md`; the contract is
 `workflows/product-delivery/WORKFLOW.md`.
 
 ## Updating
@@ -177,6 +175,7 @@ also run one by name (`/<name>` in Claude Code, `$<name>` in Codex).
 | `project-init` | Seed a project and fill its placeholders from the real repository | `init-project`, `audit-workspace` |
 | `project-sync` | Adopt starter updates in an existing project, change by change | `starter-diff`, `init-project`, `audit-workspace` |
 | `guidance-audit` | Trim and recalibrate a repository's agent guidance | `audit-workspace` |
+| `guidance-capture` | Add one earned rule after a repeated mistake or review finding, in the place that holds it best | `audit-workspace` |
 | `continuity` | Update and compact `CONTINUITY.md`, near its cap or on request | none |
 
 `INIT.md` stays the first-run entry point, because no skill exists before the

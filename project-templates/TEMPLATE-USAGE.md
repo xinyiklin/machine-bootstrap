@@ -76,24 +76,23 @@ in Claude or an instruction summary or session log in Codex.
 
 ## Nested guidance
 
-Use nested `AGENTS.md` only for genuine subtree differences. Tell both agents
-in the root guide to inspect the nearest shared guide before scoped work. Start
-Codex in that subtree for automatic inclusion. Because the project root has a
-`CLAUDE.md`, Claude does not load a nested `AGENTS.md` by itself; add a nested
-`CLAUDE.md` containing only `@AGENTS.md` when lazy Claude loading is useful.
-A user who sets Claude's **Project instructions** to `claude-md-and-agents-md`
-also gets nested `AGENTS.md` files lazily, but project guidance must not depend
-on that machine setting. Use `.claude/rules/*.md` for Claude-only path
-mechanics, not shared policy.
+Use nested `AGENTS.md` only for genuine subtree differences, and tell both
+agents in the root guide to inspect the nearest shared guide before scoped
+work. Start Codex in that subtree for automatic inclusion. Because the project
+root has a `CLAUDE.md`, Claude loads a nested `AGENTS.md` only through a nested
+`CLAUDE.md` containing `@AGENTS.md`; add one where lazy Claude loading is
+useful, and never make project guidance depend on a user's Claude **Project
+instructions** setting. Use `.claude/rules/*.md` for Claude-only path
+mechanics, not shared policy. `docs/provider-contracts.md` owns the loading
+rules behind this.
 
 ## Context and continuity budgets
 
 Target about 90-120 lines and under 8 KiB for project `AGENTS.md`, and 10-20
-lines and under 1.5 KiB for `CLAUDE.md`. Codex defaults to a 32 KiB combined
-active-chain limit; keep the cumulative chain below 28 KiB so the nearest guide
-is retained. Claude strips block-level HTML comments from `CLAUDE.md` before
-loading it, so maintainer notes there cost no context; Codex reads `AGENTS.md`
-as written.
+lines and under 1.5 KiB for `CLAUDE.md`, and keep the cumulative `AGENTS.md`
+chain under 28 KiB so the nearest guide survives Codex's default combined
+limit. Maintainer notes in `CLAUDE.md` go in block-level HTML comments, which
+Claude strips before loading; Codex reads `AGENTS.md` as written.
 
 `CONTINUITY.md` is read on demand rather than imported, but reading it every
 task still costs context. Keep current state within the project cap and rotate
@@ -108,23 +107,18 @@ Claude's default file read returns only its first 2,000 lines.
 Shorter guides are followed more reliably: unnecessary requirements make agent
 tasks harder and more expensive, so state only what an agent cannot infer from
 the repository. From machine-bootstrap, `node scripts/audit-workspace.mjs`
-reports these budgets for every sibling without changing anything, and the
-`guidance-audit` skill recalibrates a project's guidance.
+reports these budgets for every sibling without changing anything; the
+`guidance-audit` skill recalibrates a project's guidance, and the
+`guidance-capture` skill adds one rule after a repeated mistake or review
+finding, in the place that holds it best.
 
 ## Optional product-delivery workflow
 
-The installed workflow is inactive during ordinary work. Its complete flow
-activates only when Delivery Lead or Product Partner is selected, the user
-explicitly requests the complete workflow, an active Implementation Plan is
-continued, or project guidance requires it for named work. Selecting the
-Verifier activates only independent verification for the supplied change.
-When active, the Delivery Lead keeps one living Implementation Plan; routine
-progress never requires re-approval.
-
-Fill the project's activating conditions with checkable facts — paths,
-contracts, or artifact kinds — and name the reviewer that satisfies independent
-review. A self-assessed test such as "non-trivial work" is not a condition, and
-an unrecorded skip is a process failure.
+The starter's Product-delivery hook states when the installed workflow
+activates. Fill the project's activating conditions with checkable facts —
+paths, contracts, or artifact kinds — and name the reviewer that satisfies
+independent review. A self-assessed test such as "non-trivial work" is not a
+condition, and an unrecorded skip is a process failure.
 
 Projects may also add material-change triggers, required plan sections, or
 name maintenance that stays outside their conditions while the named
@@ -132,11 +126,8 @@ contracts are unchanged. Prefer contract changes over blanket directory
 matches when defining triggers.
 For example, name changes to data retention, authorization, or installation
 ownership; exclude mechanical maintenance only when those contracts remain
-unchanged. Ordinary implementations still receive self-verification and,
-unless they are typo, link, formatting, or comment-only, one fresh independent
-review before local completion; that review does not require the full
-workflow's Implementation Plan. Existing user authorization continues to
-apply; do not repeat a permission question for the same scope.
+unchanged. Review of ordinary work follows the starter's Verification and
+completion section, without the full workflow's Implementation Plan.
 
 Personal preferences may live in gitignored `CLAUDE.local.md`, but they must
 remain compatible with tracked project instructions.

@@ -96,8 +96,7 @@ Before opening or updating a PR:
 3. Run `git diff --check` and inspect the complete diff for scope, regressions,
    stale paths, and secrets.
 4. Complete self-review, then obtain the independent review `AGENTS.md`
-   requires; it names the reviewer and the typo, link, formatting, and
-   comment-only exception. Only the user may waive a required review.
+   requires; it names the reviewer, the exception, and who may waive it.
 5. Update product, engineering, guidance, and continuity docs when behavior,
    ownership, commands, or durable state changed.
 

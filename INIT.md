@@ -95,5 +95,6 @@ paths. Runtime loading checks are in
 `docs/guidance-loading-smoke.md`; report unrun scenarios explicitly.
 
 This file is the first-run entry point. Once setup has run, the installed
-`workspace-setup`, `project-init`, `project-sync`, and `guidance-audit` skills
-handle later updates, new projects, starter updates, and guidance audits.
+`workspace-setup`, `project-init`, `project-sync`, `guidance-audit`, and
+`guidance-capture` skills handle later updates, new projects, starter updates,
+guidance audits, and new guidance rules.

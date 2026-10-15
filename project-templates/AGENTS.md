@@ -1,11 +1,12 @@
 # Project Agent Guide
 
 > Template: copy to a project root as `AGENTS.md`, replace every `TODO` with a
-> verified project fact, and delete this note and irrelevant sections.
+> verified project fact, and delete this note and irrelevant sections. State
+> only what an agent cannot infer from the repository, keep the guide under
+> 8 KiB, and link detail from its owning documents.
 
-Canonical provider-neutral guidance for this project. State only what an agent
-cannot infer from the repository; keep this guide under 8 KiB and link detail
-from its owning documents.
+Provider-neutral guidance for this project; `CLAUDE.md` adds only Claude
+mechanics.
 
 ## Project map
 
@@ -60,9 +61,9 @@ or required compatibility. -->
 
 Run the checks for the changed surface and its consumers; when no harness
 covers the change, run the strongest lightweight check and state the gap.
-Report passed, failed, unverified, and skipped checks honestly; missing
-evidence is not a pass. When a harness or session limit prevents a required
-process, say so and continue authorized work; never skip it silently.
+Report passed, failed, unverified, and skipped checks; missing evidence is not
+a pass. When a harness or session limit prevents a required process, say so
+and continue authorized work.
 
 After your own verification and before local completion, every change gets one
 fresh independent review by a reviewer that did not make it: TODO exact agent

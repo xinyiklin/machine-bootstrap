@@ -19,22 +19,11 @@ Verifier activates only independent verification for the supplied change; it
 does not retroactively create a missing plan or authorization. Ordinary work
 creates no workflow artifacts by default.
 
-For this repository, `AGENTS.md` names the activating contracts: installation
-ownership and recovery, acquisition integrity, adapter fields and discovery,
-workflow policy, the hard invariants, and starter safety, authorization, or
-review rules that seeded projects inherit. Changes that keep those contracts
-stay outside the full flow. Every implementation still receives
-self-verification and, unless it is typo, link, formatting, or comment-only, one
-fresh independent review before local completion. Record the classification
-rather than judging a task by its apparent size. Existing project-owned starters
-are never synchronized when these defaults change.
-
-The Git contracts and PR templates use a 500-line target and a 1,000-line
-review gate, measured as additions plus deletions. Changes over 1,000 require a
-split or an explicit reviewer exception; generated/lockfile/rename/binary
-changes are reported separately. See `docs/engineering/git-workflow.md` for
-counting, exceptions, and review requirements. CI's PR size check enforces
-the 1,000-line gate.
+For this repository, the Product-delivery hook in `AGENTS.md` names the
+activating contracts, and its Verification section sets the review for work
+outside the full flow; inside it, `WORKFLOW.md` governs. PR size limits and
+their exceptions belong to `docs/engineering/git-workflow.md`. Existing
+project-owned starters are never synchronized when these defaults change.
 
 ## The three roles
 
@@ -60,9 +49,8 @@ state. Other agents return findings for the owner to integrate.
 
 The plan separates its **authorized scope**, which only the user settles, from
 its evolving **execution record**; routine progress never needs re-approval,
-and a material change waits for the user's decision. Every implementation is
-self-verified and then reviewed by at least one fresh independent Verifier
-unless the user waives it. The installed `WORKFLOW.md` is the full contract.
+and a material change waits for the user's decision. The installed
+`WORKFLOW.md` is the full contract, including review and waivers.
 
 ## Installed paths
 
@@ -80,8 +68,9 @@ generated from them, carries a provenance comment naming its source contract,
 and pins no model, so each provider keeps its own default. The Claude Verifier
 adapter also removes `Edit`, `Write`, and `NotebookEdit`, enforcing that the
 Verifier does not edit the change it reviews while keeping the shell for checks.
-Its Codex adapter inherits the parent sandbox, because a read-only sandbox would
-block test suites that write disposable files.
+Its Codex adapter inherits the parent sandbox: a custom agent file cannot
+override it, and a read-only sandbox would block test suites that write
+disposable files.
 
 An activated task normally creates two artifacts: the Implementation Plan and
 the Verification Report. Implementation Report, Alignment Review, Decision Log,

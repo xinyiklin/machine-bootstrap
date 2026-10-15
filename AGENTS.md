@@ -23,18 +23,15 @@ machine-local facts; it is not an agent-policy source.
 - `workflows/`, `scripts/install-workflows.mjs`, `scripts/lib/workflow-*` —
   provider-neutral workflow source, reviewed installation, and deterministic
   adapter generation.
-- `.github/workflows/`, `scripts/hooks/pre-push` — CI gates (full suite on
-  three OSes, PR size) and the opt-in pre-push suite run.
-- `scripts/init-workspace.mjs` (machine registry and shared capabilities),
-  `init-project.mjs` (missing-only seeding of one target),
-  `audit-workspace.mjs` (read-only sibling guidance report),
-  `starter-diff.mjs` (read-only starter comparison for one project), and
-  `pr-size.mjs` (PR size count that CI enforces).
+- `.github/workflows/`, `scripts/hooks/pre-push` — CI gates and the opt-in
+  pre-push suite run.
+- `scripts/init-workspace.mjs` (shared capabilities), `init-project.mjs`
+  (seeding one target), `audit-workspace.mjs` and `starter-diff.mjs`
+  (read-only reports), `pr-size.mjs` (the count CI enforces).
 - `providers.json`, `docs/provider-contracts.md` — provider loading facts,
   their check date, and the smoke-tested versions `--check` compares against.
-- `scripts/test-bootstrap.mjs` — isolated regression suite; it runs the layer
-  files in `scripts/test/` (skills, guidance, workspace, project, workflows)
-  over the shared `harness.mjs`.
+- `scripts/test-bootstrap.mjs` — isolated regression suite over
+  `scripts/test/`.
 - `CONTINUITY.md` — current state; `docs/decisions.md` — active decisions;
   `docs/continuity/` — history and receipts, read only when needed.
 
@@ -91,7 +88,6 @@ with the reason.
 
 ## Working method
 
-- Keep changes scoped to the requested behavior and its necessary cleanup.
 - Current official Claude and Codex documentation is the authority for loading,
   configuration, and adapter formats; `docs/provider-contracts.md` records
   what was last checked.
