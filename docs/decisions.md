@@ -93,7 +93,7 @@ number.
   only; active decisions live in `docs/decisions.md`; resolved entries rotate
   verbatim to archives named for the rotation month, beside dated task
   receipts. The CI line cap remains the backstop (extends D018).
-- 2026-10-09 [USER-DELEGATED] D032 ACTIVE: first-party skills ship from
+- 2026-10-09 [USER-DELEGATED] D032 AMENDED by D045: first-party skills ship from
   `skills/` with a `localPath` and pinned content hash, installed missing-only
   like reviewed upstream skills without running anything. As the user asked,
   the `continuity` skill compacts the ledger both ways: agents invoke it near
@@ -173,3 +173,9 @@ number.
   "Generated with Claude Code/Codex" lines; this checkout's opt-in
   `scripts/hooks/commit-msg` delegates to it. Prompted by another project's
   leaked trailers despite empty attribution settings.
+- 2026-10-18 [USER] D045 ACTIVE: the continuity cap stays 160 lines; the
+  `continuity` skill compacts once the ledger passes 80% of the cap (128) and
+  rotates until it is at most 60% (96), so compaction does not re-trigger
+  within a few updates. `audit-workspace.mjs` reports ledgers past the trigger
+  as well as over the cap. Prompted by ledgers compacted only after passing
+  160 (extends D032).

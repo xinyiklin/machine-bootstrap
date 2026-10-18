@@ -96,7 +96,11 @@ await test("the continuity skill is portable and invocable both ways", () => {
   assert.doesNotMatch(frontmatter, /disable-model-invocation|allow_implicit_invocation/);
   const body = skill.replace(/\s+/g, " ");
   assert.match(body, /Move resolved entries verbatim/);
-  assert.match(body, /When the user invokes this skill, compact even below that threshold/);
+  assert.match(body, /When the user invokes this skill, compact even below the trigger/);
+  // Compaction starts at 80% of the cap and stops at 60%, so it does not re-trigger at once.
+  assert.match(body, /compaction trigger: 80% of the cap \(128 lines by default\)/);
+  assert.match(body, /compaction target: at most 60% of the cap \(96 lines by default\)/);
+  assert.match(body, /Rotate until the ledger is at or below the target/);
   assert.match(body, /never an ignored local file/);
   // The optional decisions log is created on demand, never seeded empty.
   assert.match(body, /## Decisions log \(optional\)/);

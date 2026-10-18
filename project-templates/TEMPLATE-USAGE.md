@@ -110,7 +110,8 @@ Claude strips before loading; Codex reads `AGENTS.md` as written.
 `CONTINUITY.md` is read on demand rather than imported, but reading it every
 task still costs context. Keep current state within the project cap and rotate
 resolved history to append-only `docs/continuity/YYYY-MM.md` files; the shared
-`continuity` skill compacts automatically near the cap and on request
+`continuity` skill compacts once the ledger passes 80% of its cap, down to at
+most 60% (128 and 96 lines of the default 160), and on request
 (`/continuity` in Claude Code, `$continuity` in Codex). Decisions may stay in
 the ledger; when they crowd it, move them to an optional `docs/decisions.md`,
 which the skill creates on demand rather than the starter seeding it empty. A

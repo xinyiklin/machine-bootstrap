@@ -129,6 +129,10 @@ await test("workspace audit reports sibling guidance budgets without writing", (
     const agentsOnly = join(workspaceRoot, "project-b");
     mkdirSync(agentsOnly);
     writeFileSync(join(agentsOnly, "AGENTS.md"), "# B\n");
+    writeFileSync(
+      join(agentsOnly, "CONTINUITY.md"),
+      Array.from({ length: 130 }, (_, index) => `- entry ${index}`).join("\n") + "\n"
+    );
     const healthy = join(workspaceRoot, "project-c");
     mkdirSync(healthy);
     writeFileSync(join(healthy, "AGENTS.md"), "# C\n");
@@ -166,6 +170,8 @@ await test("workspace audit reports sibling guidance budgets without writing", (
     assert.match(out, /project-a: CLAUDE\.md imports AGENTS\.md 0 time\(s\)/);
     assert.match(out, /project-a: 1 TODO marker\(s\)/);
     assert.match(out, /project-a: CONTINUITY\.md is 200 lines .* over the default 160-line cap/);
+    assert.doesNotMatch(out, /project-a: .*compaction trigger/);
+    assert.match(out, /project-b: CONTINUITY\.md is 130 lines, past the 128-line compaction trigger; compact it to at most 96 lines/);
     assert.match(out, /project-b: no CLAUDE\.md: Claude reads AGENTS\.md natively only in some sessions/);
     assert.doesNotMatch(out, /project-c:/);
     assert.match(out, /^project-c\s+no\s+0\.0 KiB\s+0\.0 KiB\s+1\s+1 lines$/m);
