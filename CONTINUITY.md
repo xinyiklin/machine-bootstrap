@@ -12,8 +12,8 @@ project.
   the month of rotation (`2026-07.md` holds the first rotation, made
   2026-08-14). Dated task receipts sit beside them. Read history only when a
   task needs it.
-- Update and compact with the shared `continuity` skill: agents run it near
-  the cap, and the user can run it at any time.
+- Update and compact with the shared `continuity` skill: past 128 lines
+  agents compact to at most 96, and the user can run it at any time.
 
 ## Current state
 
@@ -66,6 +66,12 @@ project.
   checkout's opt-in `scripts/hooks/commit-msg`. Seeded projects adopt the
   contract rules through `project-sync`. Full product-delivery flow (the
   rename rule is a starter authorization change).
+- 2026-10-18 Continuity compaction target (D045): the `continuity` skill
+  names its trigger (128 lines) and a compaction target (96), and
+  `audit-workspace.mjs` reports ledgers past the trigger. An existing machine
+  picks up the skill with a reviewed reinstall. Ordinary change: skill
+  wording on the existing acquisition path, its pin updated as designed, and
+  a new read-only audit finding; no hook contract changes.
 - Deferred: an emphasis and duplication pass over `WORKFLOW.md` and the role
   contracts (44 emphatic lines across 32 KiB; the material-change and review
   paragraphs are restated between `WORKFLOW.md` and `delivery-lead.md`),

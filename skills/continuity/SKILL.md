@@ -1,6 +1,6 @@
 ---
 name: continuity
-description: Update or compact a repository's CONTINUITY.md handoff ledger. Use when a finished task changed durable project state, when the ledger nears or exceeds its line cap (past about 80% of a 160-line default), or when the user asks to update, compact, or rotate continuity.
+description: Update or compact a repository's CONTINUITY.md handoff ledger. Use when a finished task changed durable project state, when the ledger is past its compaction trigger (128 lines, 80% of a 160-line default cap), or when the user asks to update, compact, or rotate continuity.
 ---
 
 # Continuity
@@ -14,6 +14,9 @@ archives under `docs/continuity/`, read only when a task needs it.
 The project's own guidance overrides these defaults:
 
 - cap: 160 lines;
+- compaction trigger: 80% of the cap (128 lines by default);
+- compaction target: at most 60% of the cap (96 lines by default), so the
+  next few updates do not trigger it again;
 - archives: `docs/continuity/YYYY-MM.md`, named for the month of rotation;
 - decisions: in the ledger, or in an optional `docs/decisions.md` when the
   project keeps one.
@@ -26,12 +29,15 @@ Record only what the next session needs and cannot get from the code, Git
 history, or the PR: current state, decisions with their source (`[USER]`,
 `[CODE]`), next actions, and open questions. Cite a PR or commit, never an
 ignored local file such as `.agent-work/`. Replace stale lines rather than
-appending near-duplicates. Then compact if the ledger is past about 80% of its
-cap.
+appending near-duplicates. Then count the ledger's lines
+(for example `wc -l CONTINUITY.md`); past the trigger, compact now rather than waiting
+for the cap.
 
 ## Compact
 
-When the user invokes this skill, compact even below that threshold.
+When the user invokes this skill, compact even below the trigger. Rotate until
+the ledger is at or below the target; if current entries alone exceed it,
+shorten them as step 2 allows and report the remaining size.
 
 1. Classify each entry as **current** (still true and needed for handoff),
    **resolved** (done, superseded, or only historical), or **decision** (a rule
@@ -61,7 +67,8 @@ Then point the ledger's header at it. Do not create an empty log.
 
 ## Verify
 
-- The ledger is within its cap.
+- After a compaction the ledger is at or below the target, or you report its
+  remaining size; it is always within its cap.
 - Every line removed from the ledger appears in the archive or the decisions
   log, or was a stale duplicate you replaced: compare the removals in
   `git diff -U0 CONTINUITY.md` against them.

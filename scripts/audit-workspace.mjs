@@ -34,6 +34,9 @@ const agentsTarget = 8 * KIB;
 const claudeTarget = 1.5 * KIB;
 const chainLimit = 28 * KIB;
 const continuityLineCap = 160;
+// The continuity skill compacts past 80% of the cap, down to at most 60%.
+const continuityTrigger = 128;
+const continuityTarget = 96;
 const largestReadableFile = 16 * KIB * KIB;
 
 function fail(message) {
@@ -194,6 +197,12 @@ function auditProject(name) {
         `CONTINUITY.md is ${row.continuity} (${kib(continuity.size)}), over the ` +
           `default ${continuityLineCap}-line cap; rotate resolved entries to ` +
           "docs/continuity/YYYY-MM.md (the shared continuity skill does this)"
+      );
+    } else if (lines > continuityTrigger) {
+      findings.push(
+        `CONTINUITY.md is ${row.continuity}, past the ${continuityTrigger}-line ` +
+          `compaction trigger; compact it to at most ${continuityTarget} lines with the ` +
+          "shared continuity skill"
       );
     }
   }

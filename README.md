@@ -176,7 +176,7 @@ also run one by name (`/<name>` in Claude Code, `$<name>` in Codex).
 | `project-sync` | Adopt starter updates in an existing project, change by change | `starter-diff`, `init-project`, `audit-workspace` |
 | `guidance-audit` | Trim and recalibrate a repository's agent guidance | `audit-workspace` |
 | `guidance-capture` | Add one earned rule after a repeated mistake or review finding, in the place that holds it best | `audit-workspace` |
-| `continuity` | Update and compact `CONTINUITY.md`, near its cap or on request | none |
+| `continuity` | Update and compact `CONTINUITY.md` past 80% of its cap (down to 60%) or on request | none |
 
 `INIT.md` stays the first-run entry point, because no skill exists before the
 first installation.
