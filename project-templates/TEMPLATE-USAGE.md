@@ -22,6 +22,19 @@ Keep project guidance self-contained, because the repository may be cloned
 outside its current workspace, and never rely on load order to resolve a
 contradiction between guides.
 
+`.githooks/commit-msg` is an optional starter and is not seeded. It rejects
+agent `Co-authored-by` trailers with an Anthropic or OpenAI noreply address
+and "Generated with Claude Code" or "Generated with Codex" lines; human
+co-authors pass. A project that wants no agent attribution, whatever a
+provider setting adds, copies it to its own `.githooks/commit-msg`, keeps it
+executable with LF endings, and on the user's request runs
+`git config core.hooksPath .githooks` once per clone. That setting replaces
+the clone's `.git/hooks` directory and applies to every linked worktree; a
+branch without `.githooks/` then runs no hooks. Where the project already
+sets `core.hooksPath` or uses a hook manager, add the check there instead.
+The Git contract's explicit squash subject and body keep GitHub's combined
+squash message clean either way.
+
 The Git contract defines a 500-line PR target and a 1,000-line review gate;
 the PR template records size, exclusions, and any required explanation or
 reviewer exception. Keep related code/tests/docs together. Projects may adjust

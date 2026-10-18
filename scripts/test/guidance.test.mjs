@@ -414,6 +414,75 @@ await test("CI enforces the PR size gate and the push hook runs the suite", () =
   }
 });
 
+await test("commit-msg hooks reject agent attribution and pass human co-authors", () => {
+  const starterHook = join(bootstrapRoot, "project-templates", ".githooks", "commit-msg");
+  const repoHook = join(scriptDir, "hooks", "commit-msg");
+  assert.match(
+    readFileSync(join(bootstrapRoot, ".gitattributes"), "utf8"),
+    /^project-templates\/\.githooks\/\* text eol=lf$/m
+  );
+  // The starter hook is optional: neither seeding script copies it.
+  for (const script of ["init-project.mjs", "starter-diff.mjs"]) {
+    assert.doesNotMatch(readFileSync(join(scriptDir, script), "utf8"), /\.githooks/, script);
+  }
+  if (process.platform !== "win32") {
+    for (const path of [starterHook, repoHook]) assert.ok(statSync(path).mode & 0o111, path);
+  }
+  const repo = mkdtempSync(join(tmpdir(), "machine-bootstrap-commit-msg-"));
+  try {
+    const git = (...gitArgs) =>
+      spawnSync(
+        "git",
+        ["-C", repo, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.com", ...gitArgs],
+        { encoding: "utf8", shell: false }
+      );
+    assert.equal(git("init", "-q").status, 0);
+    // This checkout's hook delegates to the starter copy at the same relative path.
+    for (const [source, relative] of [
+      [starterHook, ["project-templates", ".githooks", "commit-msg"]],
+      [repoHook, ["scripts", "hooks", "commit-msg"]]
+    ]) {
+      const destination = join(repo, ...relative);
+      mkdirSync(dirname(destination), { recursive: true });
+      writeFileSync(destination, readFileSync(source));
+      chmodSync(destination, 0o755);
+    }
+    let commits = 0;
+    const commit = (message) => {
+      writeFileSync(join(repo, "file.txt"), `${commits++}\n`);
+      assert.equal(git("add", "file.txt").status, 0);
+      const cleanup = message.includes(">8") ? "scissors" : "verbatim";
+      return git("-c", "core.hooksPath=scripts/hooks", "commit", "-q", `--cleanup=${cleanup}`, "-m", message);
+    };
+    for (const message of [
+      "feat: plain change",
+      "fix: pair work\n\nCo-authored-by: Ada Lovelace <ada@example.com>",
+      "docs: name the tool\n\nCode generated with codex-gen, a project script.",
+      "docs: quote history\n\n# Co-Authored-By: Claude <noreply@anthropic.com>",
+      "fix: parse files generated with Codex",
+      // A `commit -v` diff below the scissors line may quote a trailer.
+      "fix: scissors\n# ------------------------ >8 ------------------------\n" +
+        "+Co-Authored-By: Claude <noreply@anthropic.com>\nGenerated with Codex"
+    ]) {
+      const result = commit(message);
+      assert.equal(result.status, 0, `${message}\n${result.stderr}`);
+    }
+    for (const message of [
+      "feat: change\n\nCo-Authored-By: Claude <noreply@anthropic.com>",
+      "feat: change\n\nco-authored-by: Claude Opus <noreply@anthropic.com>",
+      "feat: change\n\nCo-authored-by: Codex <noreply@openai.com>",
+      "feat: change\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+      "feat: change\n\nGenerated with Codex"
+    ]) {
+      const result = commit(message);
+      assert.notEqual(result.status, 0, message);
+      assert.match(result.stderr, /commit-msg: remove the agent/, message);
+    }
+  } finally {
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
+
 await test("provider smoke harness judges loading without calling providers", async () => {
   const smoke = await import("../smoke-providers.mjs");
   const root = mkdtempSync(join(tmpdir(), "machine-bootstrap-smoke-test-"));

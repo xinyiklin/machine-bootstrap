@@ -1,0 +1,6 @@
+#!/bin/sh
+# Opt-in with pre-push: git config core.hooksPath scripts/hooks
+# Applies the starter's agent-attribution check to this checkout's commits.
+hook=project-templates/.githooks/commit-msg
+[ -f "$hook" ] || exit 0
+exec sh "$hook" "$@"

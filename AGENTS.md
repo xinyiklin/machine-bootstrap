@@ -23,8 +23,8 @@ machine-local facts; it is not an agent-policy source.
 - `workflows/`, `scripts/install-workflows.mjs`, `scripts/lib/workflow-*` —
   provider-neutral workflow source, reviewed installation, and deterministic
   adapter generation.
-- `.github/workflows/`, `scripts/hooks/pre-push` — CI gates and the opt-in
-  pre-push suite run.
+- `.github/workflows/`, `scripts/hooks/` — CI gates, the opt-in pre-push
+  suite run, and the commit-msg attribution check.
 - `scripts/init-workspace.mjs` (shared capabilities), `init-project.mjs`
   (seeding one target), `audit-workspace.mjs` and `starter-diff.mjs`
   (read-only reports), `pr-size.mjs` (the count CI enforces).

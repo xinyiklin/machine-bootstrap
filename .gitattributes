@@ -2,3 +2,4 @@
 # sh even on Windows; keep their text line endings LF on every checkout.
 skills/** text=auto eol=lf
 scripts/hooks/* text eol=lf
+project-templates/.githooks/* text eol=lf

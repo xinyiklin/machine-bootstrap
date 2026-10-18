@@ -162,3 +162,14 @@ number.
   `guidance-capture` skill; periodic trimming is `guidance-audit`; both apply
   the current official Claude and Codex authoring guidance recorded in
   `docs/provider-contracts.md` (extends D020, D034, D040).
+- 2026-10-18 [USER-DELEGATED] D044 ACTIVE: the user chose the attribution
+  wording and delegated the rest. Agent attribution in commits and PR bodies
+  comes only from the provider's attribution setting, never copied from
+  history; squash merges use an explicit subject and body because GitHub's
+  default joins every branch commit message; a harness-named session branch
+  (`claude/<session>`) is renamed to `<type>/<task>` before its first push.
+  Both Git contracts carry these rules. An optional, unseeded starter
+  `.githooks/commit-msg` rejects agent noreply co-author trailers and
+  "Generated with Claude Code/Codex" lines; this checkout's opt-in
+  `scripts/hooks/commit-msg` delegates to it. Prompted by another project's
+  leaked trailers despite empty attribution settings.

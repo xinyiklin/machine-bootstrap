@@ -23,6 +23,12 @@ Use the project's existing documented prefix when one exists. Otherwise prefer
 `release/`. Keep the task specific and do not commit directly to a protected
 base branch when the project uses pull requests.
 
+A harness that names session branches with a fixed prefix (for example
+`claude/<session-name>`) cannot pick the type, so rename such a branch with
+`git branch -m <type>/<short-kebab-task>` before its first push. Renaming the
+session's own unpushed branch is not switching branches; never rename a pushed
+branch or one the user or another session owns.
+
 ## Commits
 
 Use Conventional Commit subjects:
@@ -37,6 +43,11 @@ reviewable; include required consumer updates in the same commit when splitting
 would leave the branch broken. Put rationale or migration notes in the body.
 Do not leave WIP, fixup, unrelated, private-generated, or secret material in a
 merge-ready commit. Stage exact paths and never bypass hooks.
+
+Add agent attribution, such as an agent `Co-authored-by` trailer or a
+"Generated with" line, to commits and PR bodies only when the provider's
+attribution setting supplies it; never copy such lines from existing history
+or other PRs.
 
 Examples:
 
@@ -111,6 +122,12 @@ Default to squash merge with remote feature-branch deletion. Use rebase merge
 only for a small set of independently useful atomic commits with no WIP/fixup
 noise. Avoid solo merge commits. Follow project branch protection over example
 commands.
+
+Give a squash merge an explicit subject and body: the PR title (GitHub
+appends ` (#<number>)` by default) and a summary from the PR body. The
+platform's default squash message joins every branch commit message, so one
+stale trailer or WIP subject would reach the base branch. With GitHub CLI:
+`gh pr merge <number> --squash --subject "<title> (#<number>)" --body "<summary>"`.
 
 After merge, verify the final merge/squash commit and tree, update the local
 base branch with fast-forward-only synchronization, confirm the change is
