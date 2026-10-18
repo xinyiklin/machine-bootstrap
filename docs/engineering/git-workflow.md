@@ -21,8 +21,17 @@ has its own project-owned copy under `project-templates/`.
 
 Branches are `<type>/<short-kebab-task>` with types such as `feature`, `fix`,
 `refactor`, `docs`, `test`, `chore`, `ci`, `build`, and `release`; do not rename
-an existing branch for style. Commit subjects follow Conventional Commits:
+an existing branch for style. The exception is a harness-named session branch
+such as `claude/<session-name>`: the session renames its own branch to this
+form with `git branch -m` before the first push, which is not switching
+branches; never rename a pushed branch or one the user or another session
+owns. Commit subjects follow Conventional Commits:
 `<type>(<optional-scope>): <imperative summary>`.
+
+Commits and PR bodies carry agent attribution (an agent `Co-authored-by`
+trailer or a "Generated with" line) only when the provider's attribution
+setting supplies it; never copy such lines from history. The opt-in
+`scripts/hooks/` also runs a `commit-msg` check that rejects them.
 
 ## PR size
 
@@ -69,7 +78,10 @@ the complete diff. Review, its exception, and waivers follow the Verification
 section of `AGENTS.md`.
 
 Merge only the exact reviewed and verified head; never merge a red, stale,
-conflicted, or unresolved PR. Squash is the default. A new commit, conflict
+conflicted, or unresolved PR. Squash is the default, with an explicit
+`--subject "<PR title> (#<number>)"` and a `--body` summarized from the PR
+body, because GitHub's default squash message joins every branch commit
+message. A new commit, conflict
 resolution, or material scope change needs re-review. When the task's final PR
 merges, delete its local `.agent-work/tasks/<task-id>/` folder, preferring the
 trash.

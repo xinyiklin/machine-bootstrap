@@ -219,8 +219,9 @@ provider roots.
 does, and the PR size check in CI enforces its 1,000-line gate unless the PR
 body records the reviewer's `size-exception: <head SHA>` for the current head.
 To run the suite before every push from
-this checkout, opt in once with `git config core.hooksPath scripts/hooks`;
-that setting replaces the checkout's `.git/hooks` directory.
+this checkout and reject agent attribution lines in commit messages, opt in
+once with `git config core.hooksPath scripts/hooks`; that setting replaces the
+checkout's `.git/hooks` directory.
 
 Static tests are not runtime loading evidence. `node scripts/smoke-providers.mjs`
 is an opt-in check that runs the real Claude Code and Codex CLIs against a

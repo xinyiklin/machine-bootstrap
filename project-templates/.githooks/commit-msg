@@ -1,0 +1,17 @@
+#!/bin/sh
+# Optional starter hook, not seeded: rejects agent attribution in a commit
+# message, meaning a Co-authored-by trailer with an agent noreply address or a
+# "Generated with Claude Code" or "Generated with Codex" line. Human co-authors
+# and comment lines pass. Enable per clone with
+# `git config core.hooksPath .githooks`; worktrees share that setting.
+# A line that starts with prose ("fix: files generated with Codex") passes, and
+# the `commit -v` diff below the scissors line is not checked.
+# The C locale keeps BSD sed from stopping on bytes that are not UTF-8.
+LC_ALL=C
+export LC_ALL
+pattern='^[[:space:]]*co-authored-by:.*noreply@(anthropic|openai)\.com|^[^[:alnum:]]*generated with \[?(claude code|codex)([^[:alnum:]-]|$)'
+if sed '/^# -* >8 -*[[:space:]]*$/,$d' "$1" | grep -v '^#' | grep -Eiq "$pattern"; then
+  echo "commit-msg: remove the agent Co-authored-by or \"Generated with\" line;" >&2
+  echo "add attribution only when the provider's attribution setting supplies it." >&2
+  exit 1
+fi

@@ -34,16 +34,10 @@ project.
 - 2026-10-10 Agent-facing skills `workspace-setup`, `project-init`,
   `project-sync`, and `guidance-audit` drive the scripts; `starter-diff.mjs`
   compares a project's starters read-only (D034).
-- 2026-10-15 Live smoke, implementer run with the user's approval (D036):
-  Claude Code 2.1.300 and Codex 0.162.1 passed all seven scenarios;
-  `providers.json` records them. A delta check of the memory and Codex
-  `AGENTS.md` pages and both changelogs found one refinement (the Bedrock and
-  telemetry-off sessions unable to read `AGENTS.md` natively are those before
-  2.1.281), now in
-  `docs/provider-contracts.md`; `documentationChecked` stays 2026-10-14
-  because the skills, subagents, and configuration pages were not rechecked.
-  The 2.1.285 / 0.159.2 entry rotated to `docs/continuity/2026-10.md`.
-  Receipt: `docs/continuity/2026-10-15-provider-smoke.md`.
+- 2026-10-15 Live smoke (D036): Claude Code 2.1.300 and Codex 0.162.1 passed
+  all seven scenarios; `providers.json` records them and
+  `documentationChecked` stays 2026-10-14. Receipt:
+  `docs/continuity/2026-10-15-provider-smoke.md`.
 - 2026-10-10 Product Delivery 3.1.0: the Delivery Lead briefs the Verifier
   once with a complete checklist; this repository's full-workflow triggers
   narrow (D037); README's workflow detail moved to `docs/product-delivery.md`.
@@ -59,24 +53,19 @@ project.
   `--check` advisory, prose-free guidance tests, and a seeded project
   `.claude/settings.json`.
 - 2026-10-14 Guidance audit against current Claude Code and Codex docs
-  (D043): root and starter `AGENTS.md` hold only non-inferable rules,
-  `TEMPLATE-USAGE.md` defers loading facts to `docs/provider-contracts.md`,
-  provider facts rechecked (Codex agent sandbox, subagent model fallback,
-  description budgets), `guidance-audit` rewritten around the official
-  include/exclude test, and a new `guidance-capture` skill; both reinstalled
-  on this machine the same day with the user's approval (old copy in the
-  Trash), and `--check` passes. Receipt:
+  (D043), with a rewritten `guidance-audit` and a new `guidance-capture`
+  skill, both installed on this machine; `--check` passes. Receipt:
   `docs/continuity/2026-10-14-guidance-audit.md`.
-- 2026-10-15 Provider CLI lookup: `--check` and `smoke-providers.mjs` resolve
-  `claude` and `codex` on PATH, never the current directory, through
-  `spawnProvider` in `scripts/lib/provider-baseline.mjs`. A Windows npm
-  `.cmd`/`.bat` shim runs through `cmd.exe` with quoted arguments,
-  `NoDefaultCurrentDirectoryInExePath=1`, and a refusal of arguments cmd could
-  expand or that end in a backslash. Before this, an npm-installed Codex on
-  Windows showed as "not detected" and its advisory never fired. Known limit:
-  a timeout kills `cmd.exe` but not the provider it started. Classified as an
-  ordinary change: lookup feeds only the advisory and the opt-in smoke run,
-  and no listed contract changes.
+- 2026-10-15 Provider CLI lookup (#23): `--check` and `smoke-providers.mjs`
+  resolve `claude` and `codex` on PATH through `spawnProvider` in
+  `scripts/lib/provider-baseline.mjs`, including Windows npm shims. Known
+  limit: a timeout kills `cmd.exe` but not the provider it started.
+- 2026-10-18 Git attribution guards (D044): both Git contracts gain the
+  attribution-from-setting, explicit-squash-message, and harness-branch rename
+  rules; optional unseeded `project-templates/.githooks/commit-msg` plus this
+  checkout's opt-in `scripts/hooks/commit-msg`. Seeded projects adopt the
+  contract rules through `project-sync`. Full product-delivery flow (the
+  rename rule is a starter authorization change).
 - Deferred: an emphasis and duplication pass over `WORKFLOW.md` and the role
   contracts (44 emphatic lines across 32 KiB; the material-change and review
   paragraphs are restated between `WORKFLOW.md` and `delivery-lead.md`),
